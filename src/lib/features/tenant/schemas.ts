@@ -26,7 +26,7 @@ export const PASSWORD_MIN_LENGTH_CEILING = PasswordPolicyDto.shape.min_length.ma
 
 /**
  * Tenant lifecycle status: the generated enum is Go's own
- * (`pending | active | suspended | pending_deletion | deleted`).
+ * (`pending | active | suspended`).
  */
 export const tenantStatusSchema = TenantDto.shape.status;
 export type TenantStatus = z.output<typeof tenantStatusSchema>;

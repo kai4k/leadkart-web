@@ -64,7 +64,6 @@ const person = {
 	first_name: 'Ada',
 	last_name: 'Lovelace',
 	is_active: true,
-	is_anonymised: false,
 	is_globally_suspended: false,
 	created_at: '2026-01-01T00:00:00Z',
 	global_suspension_reason: ''
@@ -127,7 +126,6 @@ describe.each(GO_ONLY_ADDRESSES)('response schemas accept %s', (email) => {
 			first_name: 'Ada',
 			last_name: 'Lovelace',
 			is_active: true,
-			is_anonymised: false,
 			is_globally_suspended: false,
 			created_at: '2026-01-01T00:00:00Z'
 		});

@@ -31,15 +31,13 @@ export function tenantDisplayName(tenant: Tenant): string {
 
 /**
  * The one tenant-status map (label + Badge variant), keyed by Go's generated enum
- * (`pending | active | suspended | pending_deletion | deleted`). Used by the tenant settings
+ * (`pending | active | suspended`). Used by the tenant settings
  * header, the operator tenants list and the operator scope profile.
  */
 export const tenantStatus = defineStatusMap<TenantStatus>({
 	pending: { label: 'Pending', variant: 'info' },
 	active: { label: 'Active', variant: 'success' },
-	suspended: { label: 'Suspended', variant: 'warning' },
-	pending_deletion: { label: 'Pending deletion', variant: 'danger' },
-	deleted: { label: 'Deleted', variant: 'neutral' }
+	suspended: { label: 'Suspended', variant: 'warning' }
 });
 
 /**

@@ -30,7 +30,7 @@ describe("go-personas: Go's effective_permissions rules", () => {
 		for (const reserved of PLATFORM_RESERVED) {
 			if (reserved !== 'tenant.admin') expect(eff).not.toContain(reserved);
 		}
-		expect(eff).not.toContain(P.identityUsersAnonymise);
+		expect(eff).not.toContain(P.identityTenantsSuspend);
 	});
 
 	it('a platform operator holding platform.tenants.view also gets identity.tenants.view, and nothing else', () => {

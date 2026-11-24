@@ -51,9 +51,7 @@ describe('tenantStatus (the one tenant-status map, keyed by the Go enum)', () =>
 	it.each([
 		['pending', 'Pending', 'info'],
 		['active', 'Active', 'success'],
-		['suspended', 'Suspended', 'warning'],
-		['pending_deletion', 'Pending deletion', 'danger'],
-		['deleted', 'Deleted', 'neutral']
+		['suspended', 'Suspended', 'warning']
 	] as const)('%s -> %s (%s)', (status, label, variant) => {
 		expect(tenantStatus(status)).toEqual({ label, variant });
 	});

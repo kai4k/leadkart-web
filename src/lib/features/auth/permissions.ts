@@ -33,7 +33,6 @@ export const P = {
 	identityTenantsUpdateSettings: 'identity.tenants.update_settings',
 	identityTenantsSuspend: 'identity.tenants.suspend',
 	identityTenantsActivate: 'identity.tenants.activate',
-	identityTenantsDelete: 'identity.tenants.delete',
 
 	// Users.
 	identityUsersView: 'identity.users.view',
@@ -42,7 +41,6 @@ export const P = {
 	identityUsersDeactivate: 'identity.users.deactivate',
 	identityUsersReactivate: 'identity.users.reactivate',
 	identityUsersUnlock: 'identity.users.unlock',
-	identityUsersAnonymise: 'identity.users.anonymise',
 	identityUsersUpdatePermissions: 'identity.users.update_permissions',
 
 	// Roles.
@@ -110,7 +108,7 @@ export type Permission = (typeof P)[keyof typeof P];
  *   - 403 to an `identity.*` gate unless the caller is a super user or holds the `platform.*`
  *     equivalent: `effective_permissions` is Go's projection in the caller's OWN tenant, and an
  *     own-tenant `identity.*` name (implied by `tenant.admin`, or granted) does not count in a
- *     foreign one. The tenant-lifecycle names and `identity.users.anonymise` are platform-reserved
+ *     foreign one. The tenant-lifecycle names are platform-reserved
  *     (only an operator holds them, Go never implies them) and are not tenant-plane gates, so they
  *     are left alone.
  * A permission blocked here is not usable in tenant context even when the operator holds it.
@@ -129,9 +127,7 @@ const SCOPE_MODULES: ReadonlySet<string> = new Set([
 const NON_SUPER_BLOCKED_READS: ReadonlySet<string> = new Set(['platform.lead_credits.read']);
 const PLATFORM_RESERVED_IDENTITY: ReadonlySet<string> = new Set([
 	P.identityTenantsSuspend,
-	P.identityTenantsActivate,
-	P.identityTenantsDelete,
-	P.identityUsersAnonymise
+	P.identityTenantsActivate
 ]);
 const SCOPE_UNSUPPORTED: ReadonlySet<string> = new Set([
 	P.identityMetaRequestPermissionElevation,

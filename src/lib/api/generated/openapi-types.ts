@@ -44,12 +44,12 @@ export interface paths {
 				 *     answered only after the password was verified, so a wrong password or an unknown
 				 *     email still answers `401 invalid_credentials` and the code tells a stranger
 				 *     nothing. `tenant_not_active`: the password was CORRECT but the company is
-				 *     neither active nor suspended nor deleted, that is `pending` or marked for
-				 *     deletion (`pending_deletion`); same rule (owner ruling 2026-11-21: only an active
-				 *     company's members sign in; restoring the company or an operator's activation
+				 *     neither active nor suspended, that is `pending`; same rule (owner ruling
+				 *     2026-11-21: only an active company's members sign in; an operator's activation
 				 *     brings them back). A company registered by an operator is created `active`, so
-				 *     its first admin signs in. A deleted company, and one with no usable membership,
-				 *     stay `401 invalid_credentials`.
+				 *     its first admin signs in. A company with no usable membership stays
+				 *     `401 invalid_credentials`. A company is never deleted: it is pending, active or
+				 *     suspended.
 				 */
 				403: {
 					headers: {
@@ -64,7 +64,7 @@ export interface paths {
 				 *     failed login attempts within [person.LockoutWindow] per
 				 *     NIST 800-63B §5.2.2 + ADR 0053. Retry-After header carries
 				 *     integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
-				 *     An email with no usable account (unknown, deactivated, anonymised, GLOBALLY
+				 *     An email with no usable account (unknown, deactivated, GLOBALLY
 				 *     SUSPENDED) locks on the same schedule and answers identically, so 423 does not
 				 *     reveal that an account exists (ADR 0068 D12). While locked, even the correct
 				 *     password answers 423.
@@ -102,7 +102,7 @@ export interface paths {
 		/**
 		 * Rotate refresh token + reissue access token
 		 * @description Rotates the refresh token and reissues the access token. Re-presenting a just-rotated token within the grace window (default 30 s, at most 120 s, `Refresh.GraceWindow`) returns the SAME successor (a deterministic derivation: no new token row is written), so two tabs or a retried request after a lost response do not end the session. That holds ONLY for the client that rotated the token (the client address the rate limiters use: behind the BFF its `X-Forwarded-For`; only a keyed hash of it is stored) and for at most 3 replays per token. A replay from another client, a 4th replay, a token whose consumer was not recorded, a replay outside the window, a token two or more generations old, or one whose successor has been used is token reuse: the whole family is revoked and the answer is `401 refresh_rejected`. A client whose address changes inside the window (a phone switching networks) between a lost response and its retry is therefore signed out. A revoked family never answers a replay, whatever the window says (logout, password change and reset revoke every family of the person). The answer to a replay is indistinguishable from the first answer, apart from the access token's own issue time.
-		 *     A session ends `Refresh.AbsoluteTTL` (default 14 days, `LEADKART_REFRESH__ABSOLUTE_TTL`) after the login that opened it, however often it was refreshed: the first refresh after that answers `401 refresh_rejected` with `reason: session_expired` (sign in again) and the family is revoked (`absolute_ttl`). A session also ends when it sits IDLE: each refresh token lives `Refresh.SlidingTTL` (default 24 hours, `LEADKART_REFRESH__SLIDING_TTL`; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same `401 refresh_rejected` with `reason: session_expired` and the family is revoked (`idle_timeout`). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: `401 refresh_rejected` with `reason: tenant_suspended` (the family is revoked as `tenant_suspended`; a reactivated company's members sign in again, the old session does not return). A member of a company that is `pending` or marked for deletion is refused the same way with `reason: tenant_not_active` (the family is revoked as `tenant_not_active`; a restored company's members sign in again). A deleted company's members are refused without a reason. Suspending a company or marking it for deletion also revokes its members' families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
+		 *     A session ends `Refresh.AbsoluteTTL` (default 14 days, `LEADKART_REFRESH__ABSOLUTE_TTL`) after the login that opened it, however often it was refreshed: the first refresh after that answers `401 refresh_rejected` with `reason: session_expired` (sign in again) and the family is revoked (`absolute_ttl`). A session also ends when it sits IDLE: each refresh token lives `Refresh.SlidingTTL` (default 24 hours, `LEADKART_REFRESH__SLIDING_TTL`; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same `401 refresh_rejected` with `reason: session_expired` and the family is revoked (`idle_timeout`). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: `401 refresh_rejected` with `reason: tenant_suspended` (the family is revoked as `tenant_suspended`; a reactivated company's members sign in again, the old session does not return). A member of a company that is `pending` is refused the same way with `reason: tenant_not_active` (the family is revoked as `tenant_not_active`; an activated company's members sign in again). Suspending a company also revokes its members' families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
 		 */
 		post: {
 			parameters: {
@@ -131,7 +131,7 @@ export interface paths {
 				 * @description Refresh rejected (consumed / expired / family revoked / reuse). For a session that
 				 *     ended by time (absolute lifetime or idle timeout) the body carries
 				 *     `reason: session_expired`; for a member of a suspended company
-				 *     `reason: tenant_suspended`; for a member of a pending or marked-for-deletion
+				 *     `reason: tenant_suspended`; for a member of a pending
 				 *     company `reason: tenant_not_active`.
 				 */
 				401: {
@@ -897,7 +897,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -906,22 +906,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1016,7 +1016,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1025,22 +1025,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1149,7 +1149,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1158,22 +1158,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1278,7 +1278,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1287,22 +1287,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1403,7 +1403,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1412,22 +1412,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1526,7 +1526,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1535,22 +1535,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1649,7 +1649,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1658,22 +1658,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1733,9 +1733,7 @@ export interface paths {
 		 * Activate a pending or suspended tenant (Platform-only)
 		 * @description A company registered through `POST /api/v1/tenants` is created `active`, so activating
 		 *     it answers 204 and changes nothing (no event, `activated_at` is kept): idempotent, not
-		 *     an error. Activating a company in `pending_deletion` is 422 `tenant_invalid` (restore it instead) and a
-		 *     deleted one is 422 `tenant_invalid`.
-		 *     Requires `identity.tenants.activate` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
+		 *     an error.         Requires `identity.tenants.activate` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
 		 */
 		post: {
 			parameters: {
@@ -1776,7 +1774,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -1785,22 +1783,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -1815,255 +1813,6 @@ export interface paths {
 			requestBody?: never;
 			responses: {
 				/** @description Tenant activated */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['BadRequest'];
-				403: components['responses']['TenantScopeForbidden'];
-				404: components['responses']['NotFound'];
-				/** @description Conflict with the current state of the resource (see the `error` code) */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tenants/{tenantId}/mark-for-deletion': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Mark tenant for deletion (Platform-only)
-		 * @description Schedules the tenant for hard-deletion after the retention window.
-		 *     Reason is mandatory (DPDP §12 + SOC2 CC4.1 audit requirement).
-		 *     Tenants holding an active SuperAdmin role refuse the transition
-		 *     with 422 (`platform_tenant_undeletable`).
-		 *
-		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
-		 *
-		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `tenant_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
-					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
-					 *     within the retention window (24h, Stripe canon). The scope is the verified
-					 *     tenant + person + membership + impersonation session + acted-on tenant
-					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
-					 *     route, tenant or session is a different command. Only 2xx answers are stored.
-					 *
-					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
-					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
-					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
-					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
-					 *     operations. Per ADR 0031 and ADR 0068 D11.
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					tenantId: components['parameters']['TenantId'];
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					'application/json': components['schemas']['MarkTenantForDeletionRequest'];
-				};
-			};
-			responses: {
-				/** @description Tenant marked for deletion */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['BadRequest'];
-				403: components['responses']['TenantScopeForbidden'];
-				404: components['responses']['NotFound'];
-				/** @description Conflict with the current state of the resource (see the `error` code) */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/tenants/{tenantId}/restore': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Restore a tenant from marked-for-deletion (Platform-only)
-		 * @description Requires `identity.tenants.delete` (there is no dedicated restore permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
-					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
-					 *     within the retention window (24h, Stripe canon). The scope is the verified
-					 *     tenant + person + membership + impersonation session + acted-on tenant
-					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
-					 *     route, tenant or session is a different command. Only 2xx answers are stored.
-					 *
-					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
-					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
-					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
-					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
-					 *     operations. Per ADR 0031 and ADR 0068 D11.
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					tenantId: components['parameters']['TenantId'];
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Tenant restored */
 				204: {
 					headers: {
 						[name: string]: unknown;
@@ -2189,7 +1938,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2198,22 +1947,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2291,7 +2040,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2300,22 +2049,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2401,7 +2150,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2410,22 +2159,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2507,7 +2256,7 @@ export interface paths {
 		 * Member picker (search active members by name)
 		 * @description The picker behind lead reassignment. Requires `crm.leads.assign` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068), and searches the caller's effective tenant only.
 		 *
-		 *     Returns ACTIVE members whose display name (first name, a space, last name) contains `q`, case-insensitively, best first (by name), at most `limit`. A hit carries `membership_id`, `display_name` and `designation` only: no email, no phone, no person id. A deactivated, anonymised or globally suspended person is never offered. `q` is trimmed and measured in characters: under 2 is 400 `search_query_too_short`, over 100 is 400 `search_query_too_long`. An empty match is 200 with `members: []`, which a client shows as "no match" and keeps apart from a failed call.
+		 *     Returns ACTIVE members whose display name (first name, a space, last name) contains `q`, case-insensitively, best first (by name), at most `limit`. A hit carries `membership_id`, `display_name` and `designation` only: no email, no phone, no person id. A deactivated or globally suspended person is never offered. `q` is trimmed and measured in characters: under 2 is 400 `search_query_too_short`, over 100 is 400 `search_query_too_long`. An empty match is 200 with `members: []`, which a client shows as "no match" and keeps apart from a failed call.
 		 */
 		get: {
 			parameters: {
@@ -2536,7 +2285,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2545,22 +2294,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2633,7 +2382,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2642,22 +2391,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2752,7 +2501,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2761,22 +2510,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2873,7 +2622,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -2882,22 +2631,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -2996,7 +2745,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3005,22 +2754,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3115,7 +2864,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3124,22 +2873,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3240,7 +2989,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3249,22 +2998,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3370,7 +3119,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3379,22 +3128,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3490,7 +3239,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3499,22 +3248,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3592,7 +3341,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3601,22 +3350,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3658,135 +3407,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/users/{userId}/anonymise': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Anonymise a user (DPDP §12 / GDPR Art. 17 right-to-erasure; Platform-only)
-		 * @description Cross-tenant blast radius — one Person can hold many Memberships;
-		 *     the cascade is gated on Platform tier per multi-tenancy.md
-		 *     "SuperUser god-mode" + `identity.users.anonymise` permission.
-		 *
-		 *     Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
-		 *
-		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
-					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
-					 *     within the retention window (24h, Stripe canon). The scope is the verified
-					 *     tenant + person + membership + impersonation session + acted-on tenant
-					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
-					 *     route, tenant or session is a different command. Only 2xx answers are stored.
-					 *
-					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
-					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
-					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
-					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
-					 *     operations. Per ADR 0031 and ADR 0068 D11.
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					userId: components['parameters']['UserId'];
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					'application/json': components['schemas']['AnonymiseRequest'];
-				};
-			};
-			responses: {
-				/** @description User anonymised */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['BadRequest'];
-				403: components['responses']['AuthorityForbidden'];
-				404: components['responses']['NotFound'];
-				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/api/v1/roles': {
 		parameters: {
 			query?: never;
@@ -3822,7 +3442,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3831,22 +3451,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -3917,7 +3537,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -3926,22 +3546,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4034,7 +3654,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4043,22 +3663,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4138,7 +3758,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4147,22 +3767,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4259,7 +3879,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4268,22 +3888,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4418,7 +4038,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4427,22 +4047,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4563,7 +4183,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4572,22 +4192,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4692,7 +4312,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4701,22 +4321,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4820,7 +4440,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -4829,22 +4449,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -4927,123 +4547,6 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/api/v1/platform/tenants/{tenantId}': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/**
-		 * Hard-delete a tenant (irrecoverable; Platform-only)
-		 * @description Bypasses the marked-for-deletion lifecycle. Tenants holding an
-		 *     active SuperAdmin role refuse with 422
-		 *     (`platform_tenant_undeletable`).
-		 *
-		 *     The transition to `deleted`, its `tenant_deleted` outbox event and the row delete
-		 *     run in ONE transaction. A tenant that still has dependent records (members, roles,
-		 *     ...) is refused with 409 `tenant_has_dependents`: nothing is changed, the tenant
-		 *     keeps its status and no event is published. Remove or reassign the dependents first;
-		 *     there is no cascade.
-		 *
-		 *     Requires `identity.tenants.delete` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
-		 *     The tenant comes from the path only: `X-Tenant-Id` is never applied here, and a
-		 *     value that differs from the path tenant is 400 `tenant_scope_conflict`. The
-		 *     operator is attributed on the outbox row (`act_operator_id`, reason `platform-route`).
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					tenantId: components['parameters']['TenantId'];
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Tenant hard-deleted */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['TenantScopeInvalid'];
-				403: components['responses']['Forbidden'];
-				404: components['responses']['NotFound'];
-				/** @description The tenant still has dependent records (`tenant_has_dependents`); nothing was changed */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5375,82 +4878,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	'/api/v1/platform/persons/{personId}/anonymise': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Anonymise a Person record directly (DPDP §12 / GDPR Art. 17)
-		 * @description Requires `identity.users.anonymise` held by a platform-tenant operator; platform-tenant membership alone is refused with 403 `forbidden`.
-		 *     An operator cannot change their own Person: the caller's own `personId` is refused with 403 `self_modification_forbidden` (super users exempt).
-		 *
-		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `person_invalid` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
-					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
-					 *     within the retention window (24h, Stripe canon). The scope is the verified
-					 *     tenant + person + membership + impersonation session + acted-on tenant
-					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
-					 *     route, tenant or session is a different command. Only 2xx answers are stored.
-					 *
-					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
-					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
-					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
-					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
-					 *     operations. Per ADR 0031 and ADR 0068 D11.
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-				};
-				path: {
-					personId: components['parameters']['PersonId'];
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					'application/json': components['schemas']['AnonymiseRequest'];
-				};
-			};
-			responses: {
-				/** @description Person anonymised */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['BadRequest'];
-				403: components['responses']['AuthorityForbidden'];
-				404: components['responses']['NotFound'];
-				/** @description `last_owner_protected` — the person is the only active owner of a tenant; nothing was changed. `person_memberships_changing` — the person's memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	'/api/v1/platform/persons': {
 		parameters: {
 			query?: never;
@@ -5640,6 +5067,15 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
+				/** @description `tenant_not_active` — the target company is pending or suspended. A session writes with tenant-admin authority, so it is refused like an `X-Tenant-Id` write to such a company; read it, and reactivate it, through the tenant scope routes instead. Nothing is stored and no token is minted. */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 				429: components['responses']['TooManyRequests'];
 			};
@@ -5817,7 +5253,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -5826,22 +5262,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -5924,7 +5360,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -5933,22 +5369,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -6042,7 +5478,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -6051,22 +5487,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -6181,7 +5617,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -6190,22 +5626,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -6324,7 +5760,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -6333,22 +5769,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -6461,7 +5897,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -6470,22 +5906,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7067,7 +6503,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7076,22 +6512,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7164,7 +6600,7 @@ export interface paths {
 					category?: string;
 					/** @description `true`: only products with `reorder_level` above 0 whose `stock_on_hand` is below it (the rule of the daily reorder alert; a product with `reorder_level` 0 is never low on stock). `false` or absent: no filter. Any other value: 400 `invalid_query`, `errors.low_stock: [invalid_type]`. */
 					low_stock?: 'true' | 'false';
-					/** @description Only products whose `earliest_expiry` is on or before today plus this many days (so: an unexpired batch that holds stock expires within the window; the bound is inclusive; 0 matches nothing, because a batch expiring today is already expired). 400 `invalid_query`, `errors.expiring_within_days`: `invalid_type` (not an integer), `too_small` (below 0), `too_large` (above 36500). */
+					/** @description Only products with a SELLABLE batch holding stock whose LAST SELLABLE DAY (not the printed expiry) is on or before the business day plus this many days; the bound is inclusive. 400 `invalid_query`, `errors.expiring_within_days`: `invalid_type` (not an integer), `too_small` (below 0), `too_large` (above 36500). */
 					expiring_within_days?: number;
 				};
 				header?: {
@@ -7188,7 +6624,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7197,22 +6633,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7298,7 +6734,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7307,22 +6743,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7406,7 +6842,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7415,22 +6851,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7491,7 +6927,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7500,22 +6936,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7606,7 +7042,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7615,22 +7051,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7713,7 +7149,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7722,22 +7158,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7782,8 +7218,9 @@ export interface paths {
 		/**
 		 * List Batches for a Product (cursor-paginated, FEFO-ordered)
 		 * @description Requires `inventory.stock.read` OR `inventory.stock.manage`.
-		 *     Returns live batches ordered by expiry_date DESC. Expired batches
-		 *     excluded by default (pass `include_expired=true` to include).
+		 *     Returns live batches ordered by expiry_date DESC. Batches past the
+		 *     company sellable cut-off (`sellable: false`) are excluded by default
+		 *     (pass `include_expired=true` to include them).
 		 */
 		get: {
 			parameters: {
@@ -7814,7 +7251,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7823,22 +7260,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -7923,7 +7360,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -7932,22 +7369,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8044,7 +7481,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8053,22 +7490,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8141,7 +7578,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8150,22 +7587,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8221,7 +7658,16 @@ export interface paths {
 					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
-					type?: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+					type?:
+						| 'inbound'
+						| 'outbound'
+						| 'adjustment'
+						| 'reservation'
+						| 'release'
+						| 'quarantine'
+						| 'release_quarantine'
+						| 'write_off'
+						| 'return_to_maker';
 				};
 				header?: {
 					/**
@@ -8244,7 +7690,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8253,22 +7699,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8308,11 +7754,16 @@ export interface paths {
 		 *     Type (Outbound subtracts). Adjustment writes the positive
 		 *     magnitude in slice 1; future `direction` field for up/down.
 		 *
-		 *     Rejections (409): insufficient_stock (Outbound > on-hand),
-		 *     batch_expired (Inbound on expired batch), conflict (concurrent
+		 *     Rejections (409): insufficient_stock (an `outbound`, or an
+		 *     `adjustment` that takes units away, for more than the FREE units:
+		 *     on hand minus reserved minus quarantined), insufficient_quarantined
+		 *     (`release_quarantine`, `write_off` or `return_to_maker` for more than is
+		 *     set apart), batch_expired (`inbound`, `outbound` or `release_quarantine`
+		 *     on a batch past its printed expiry month), conflict (concurrent
 		 *     modification after retry cap).
 		 *
-		 *     Only `inbound`, `outbound` and `adjustment` are accepted here.
+		 *     Accepted types: `inbound`, `outbound`, `adjustment`, `quarantine`,
+		 *     `release_quarantine`, `write_off` and `return_to_maker`.
 		 *     `reservation` and `release` belong to the order saga; asking for
 		 *     them (or any other type) is `422 invalid_movement_type`, nothing
 		 *     written.
@@ -8356,7 +7807,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8365,22 +7816,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8419,7 +7870,7 @@ export interface paths {
 						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
-				/** @description `invalid_movement_type` — type is not inbound, outbound or adjustment (`reservation` and `release` are not public); otherwise validation (`validation_failed`) */
+				/** @description `invalid_movement_type` — type is not one of inbound, outbound, adjustment, quarantine, release_quarantine, write_off, return_to_maker (`reservation` and `release` are not public); otherwise validation (`validation_failed`) */
 				422: {
 					headers: {
 						[name: string]: unknown;
@@ -8495,7 +7946,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8504,22 +7955,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8594,7 +8045,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8603,22 +8054,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8714,7 +8165,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8723,22 +8174,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8854,7 +8305,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -8863,22 +8314,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -8991,7 +8442,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9000,22 +8451,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9120,7 +8571,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9129,22 +8580,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9259,7 +8710,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9268,22 +8719,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9375,7 +8826,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9384,22 +8835,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9476,7 +8927,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9485,22 +8936,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9581,7 +9032,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9590,22 +9041,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9674,7 +9125,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9683,22 +9134,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9786,7 +9237,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9795,22 +9246,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -9903,7 +9354,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -9912,22 +9363,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10020,7 +9471,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10029,22 +9480,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10155,7 +9606,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10164,22 +9615,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10272,7 +9723,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10281,22 +9732,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10372,7 +9823,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10381,22 +9832,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10486,7 +9937,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10495,22 +9946,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10598,7 +10049,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10607,22 +10058,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10651,7 +10102,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description Invalid status transition */
+				/** @description `invalid_status_transition` — the note is not `pending`. A `pending` note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: `order_not_invoiced` — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); `order_not_dispatchable` — the order has an invoice but is not `invoiced` (cancelled, or already past dispatch; an invoice is never removed); `order_stock_not_held` — the order holds no stock to ship (goods never leave without a deduction); `order_stock_mismatch` — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered); `order_stock_expired` — a batch the order holds is past its printed expiry month on the company's business day (the goods are still in the warehouse until this call). The note stays `pending` and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past `pending` is not judged again. A step that cannot answer is a 500, never a dispatch. The order is `invoiced` while its note is `pending` and `dispatched` after this call; stock falls here, not at the pack. */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -10728,7 +10179,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10737,22 +10188,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10846,7 +10297,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10855,22 +10306,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -10964,7 +10415,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -10973,22 +10424,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11099,7 +10550,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11108,22 +10559,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11204,7 +10655,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11213,22 +10664,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11320,7 +10771,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11329,22 +10780,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11450,7 +10901,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11459,22 +10910,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11570,7 +11021,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11579,22 +11030,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11683,7 +11134,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11692,22 +11143,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11795,7 +11246,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11804,22 +11255,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -11925,7 +11376,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -11934,22 +11385,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12043,7 +11494,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12052,22 +11503,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12096,7 +11547,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description Invalid state transition */
+				/** @description `invalid_state_transition` — the order is not `confirmed`. `order_stock_expired` — the order holds units on a batch past its printed expiry month (judged on the company's business day): expired stock is never sold, so the order stays `confirmed`, nothing is published (no invoice, no consignment note) and it can be cancelled, which releases the hold. */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -12156,7 +11607,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12165,22 +11616,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12252,7 +11703,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12261,22 +11712,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12371,7 +11822,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12380,22 +11831,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12501,7 +11952,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12510,22 +11961,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12602,7 +12053,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12611,22 +12062,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12708,7 +12159,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12717,22 +12168,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12859,7 +12310,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -12868,22 +12319,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -12991,7 +12442,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13000,22 +12451,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13131,7 +12582,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13140,22 +12591,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13254,7 +12705,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13263,22 +12714,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13371,7 +12822,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13380,22 +12831,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13496,7 +12947,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13505,22 +12956,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13907,7 +13358,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -13916,22 +13367,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -13978,9 +13429,13 @@ export interface paths {
 		 *     A refusal names the setting: `422 validation_failed` with
 		 *     `errors{"<group>.<setting>": [<code>]}` (codes: `out_of_range`, `invalid_type`,
 		 *     `not_an_option`, `required`, `duplicate`, `too_many`, `not_in_allowed`,
-		 *     `value_required`, `value_not_allowed`, `invalid_format`, `unknown_setting`,
-		 *     `managed_elsewhere`) or on `reason`, `expected_version`, `changes`; nothing is
-		 *     changed. Option sets and bounds: `GET` `options`.
+		 *     `value_required`, `value_not_allowed`, `invalid_format`, `in_future`,
+		 *     `unknown_setting`, `managed_elsewhere`) or on `reason` (`required`, `too_long`,
+		 *     `invalid_characters`), `expected_version`, `changes`; nothing is changed. Changing
+		 *     `payment.advance_mode` to `percent` or `fixed` needs `payment.advance_value` in the
+		 *     same patch (`value_required`); the invoice and credit-note prefixes must differ
+		 *     (`duplicate`). The body is read strictly: an unknown key, trailing data, or a group
+		 *     or setting named twice is `400 invalid_body`. Option sets and bounds: `GET` `options`.
 		 */
 		patch: {
 			parameters: {
@@ -14021,7 +13476,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -14030,22 +13485,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -14128,7 +13583,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -14137,22 +13592,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -14227,7 +13682,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -14236,22 +13691,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -14326,7 +13781,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -14335,22 +13790,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -14448,7 +13903,7 @@ export interface paths {
 					 *     Writes are read-only under a foreign header by default: a non-read
 					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes, anonymise) or a
+					 *     permissions, permission overrides, manager changes) or a
 					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 					 *     dispatch and inventory mutations are never accepted under a foreign
 					 *     header.
@@ -14457,22 +13912,22 @@ export interface paths {
 					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 					 *     (the operator) with reason `tenant-via-header` (header) or
 					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, hard delete, platform person
+					 *     neither (header-less lifecycle calls, platform person
 					 *     operations, platform-module writes) use reason `platform-route`.
 					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-					 *     hard delete) a header equal to the path tenant selects nothing: no scope
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
 					 *     authority is needed and no tenant is looked up, so the answer is the
 					 *     route's own permission gate whether or not the header is sent.
 					 *
 					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+					 *     wins), 403
 					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended or pending-deletion tenant on a non-path route; reads and
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
 					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 					 *     (routes that act on the caller's own tenant only: permission requests
 					 *     and the marketplace lead purchase).
@@ -14497,6 +13952,437 @@ export interface paths {
 					};
 					content: {
 						'application/json': components['schemas']['CompanyGstRateChangedDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		trace?: never;
+	};
+	'/api/v1/company/drug-schedule-classes': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * List the company drug schedule classes
+		 * @description Requires `company_settings.read` OR `inventory.catalog.read` OR
+		 *     `inventory.catalog.manage` (the picker a product form reads). The company's own
+		 *     list of classes a product may carry, in label order. It starts from the
+		 *     defaults of the market the company is created in and is the company's to add
+		 *     to, rename or remove: nothing in the API is tied to a particular class. `mode`
+		 *     is the current `drug_schedule.mode`; `policy_version` is the policy version the
+		 *     list was read at.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The class list */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeForbidden'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		put?: never;
+		/**
+		 * Add a drug schedule class to the company list
+		 * @description Requires `company_settings.tax.manage` (Administrator tier or above). `reason` is
+		 *     required. The same `label` (any case) is `422` with `errors.label: [duplicate]`;
+		 *     a list at its cap of 30 is `errors.label: [too_many]`. Adding a class moves the
+		 *     policy to a new version. Returns `201` with the updated list, the new class in
+		 *     `class` and the new `policy_version`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CreateCompanyScheduleClassRequest'];
+				};
+			};
+			responses: {
+				/** @description The class added */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/company/drug-schedule-classes/{classId}': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Remove a drug schedule class
+		 * @description Requires `company_settings.tax.manage`. The body carries the `reason` (required).
+		 *     A class a product still carries cannot be removed: `409
+		 *     drug_schedule_class_in_use` and nothing changes; clear it from those products
+		 *     first. A removal moves the policy to a new version and is kept in the history.
+		 *     Returns `200` with the updated list.
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					classId: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['DeleteCompanyScheduleClassRequest'];
+				};
+			};
+			responses: {
+				/** @description The list after the removal */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				/** @description `drug_schedule_class_in_use`: a product still carries the class */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		options?: never;
+		head?: never;
+		/**
+		 * Rename a drug schedule class
+		 * @description Requires `company_settings.tax.manage`. A product stores the class `id`, so a
+		 *     rename never touches a product. `reason` is required. A rename to the current
+		 *     label leaves the policy version where it is. Returns `200` with the updated list.
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					classId: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['PatchCompanyScheduleClassRequest'];
+				};
+			};
+			responses: {
+				/** @description The list after the rename */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
 					};
 				};
 				400: components['responses']['TenantScopeInvalid'];
@@ -14540,7 +14426,7 @@ export interface components {
 			 *     (RFC 9457 extension). Present only on `401 refresh_rejected`: `session_expired`
 			 *     (the session reached its absolute lifetime or sat idle past `Refresh.SlidingTTL`) or
 			 *     `tenant_suspended` (the person's company is suspended) or `tenant_not_active` (it is
-			 *     pending or marked for deletion). Absent everywhere else.
+			 *     pending). Absent everywhere else.
 			 */
 			reason?: string;
 			/**
@@ -14559,6 +14445,8 @@ export interface components {
 		 */
 		CompanyCommercePolicy: {
 			expiry: {
+				/** @description Where the business day flips (minutes east of UTC): MARKET data, not a company setting. A patch naming it is refused (`unknown_setting`). The legal "past the printed expiry" limit is judged on this day. */
+				readonly business_day_utc_offset_minutes: number;
 				/** @description Months before the printed expiry month a batch stops being sellable. 0 is the legal limit, 1 stops at the start of the printed month. Default 1. */
 				stop_months_before: number;
 				/** @description Days before the last sellable day at which expiry alerts fire; stored descending. Default [180, 90, 30]. */
@@ -14633,10 +14521,12 @@ export interface components {
 			};
 			drug_schedule: {
 				/**
-				 * @description Whether the product form records a drug schedule. Default optional.
+				 * @description Whether the product form records a drug schedule. Default optional. Turning it off is refused (`errors["drug_schedule.mode"]: [schedule_in_use]`) while any product carries a class.
 				 * @enum {string}
 				 */
 				mode: 'off' | 'optional' | 'required';
+				/** @description The classes a product may carry. Read-only here: it changes through /company/drug-schedule-classes (`managed_elsewhere` on the settings PATCH). */
+				classes: components['schemas']['CompanyScheduleClassDto'][];
 			};
 		};
 		/** @description One patchable setting and how to render its control. */
@@ -14695,7 +14585,8 @@ export interface components {
 			reason: string;
 			/** Format: uuid */
 			actor_membership_id?: string;
-			impersonator_operator_id?: string;
+			/** @description True when LeadKart support made the change in an impersonation session. The operator person id is not shown to tenant readers. */
+			changed_by_support?: boolean;
 			/** Format: date-time */
 			changed_at: string;
 		};
@@ -14703,6 +14594,38 @@ export interface components {
 			items: components['schemas']['CompanySettingsHistoryEntry'][];
 			has_more: boolean;
 			next_cursor?: string;
+		};
+		CompanyScheduleClassDto: {
+			/**
+			 * Format: uuid
+			 * @description What a product stores; stable across renames.
+			 */
+			id: string;
+			label: string;
+		};
+		CompanyScheduleClassesDto: {
+			/** Format: int64 */
+			policy_version: number;
+			/** @enum {string} */
+			mode?: 'off' | 'optional' | 'required';
+			items: components['schemas']['CompanyScheduleClassDto'][];
+			class?: components['schemas']['CompanyScheduleClassDto'];
+		};
+		/**
+		 * @description Refusals: `errors.label` (`required`, `too_long`, `invalid_characters`,
+		 *     `duplicate`, `too_many`), `errors.reason` (`required`, `too_long`,
+		 *     `invalid_characters`).
+		 */
+		CreateCompanyScheduleClassRequest: {
+			label: string;
+			reason: string;
+		};
+		PatchCompanyScheduleClassRequest: {
+			label: string;
+			reason: string;
+		};
+		DeleteCompanyScheduleClassRequest: {
+			reason: string;
 		};
 		CompanyGstRateDto: {
 			/** Format: uuid */
@@ -14926,16 +14849,13 @@ export interface components {
 			legal_name: string;
 			display_name: string;
 			/** @enum {string} */
-			status: 'pending' | 'active' | 'suspended' | 'pending_deletion' | 'deleted';
+			status: 'pending' | 'active' | 'suspended';
 			/** Format: date-time */
 			created_at: string;
 			/** Format: date-time */
 			activated_at?: string;
 			/** Format: date-time */
 			suspended_at?: string;
-			/** Format: date-time */
-			deletion_scheduled_at?: string;
-			deletion_reason?: string;
 			gst_number?: string;
 			pan_number?: string;
 			drug_licence_number?: string;
@@ -15026,9 +14946,6 @@ export interface components {
 			currency: string;
 		};
 		SuspendTenantRequest: {
-			reason: string;
-		};
-		MarkTenantForDeletionRequest: {
 			reason: string;
 		};
 		UserDto: {
@@ -15219,15 +15136,12 @@ export interface components {
 			first_name: string;
 			last_name: string;
 			is_active: boolean;
-			is_anonymised: boolean;
 			is_globally_suspended: boolean;
 			global_suspension_reason?: string;
 			/** Format: date-time */
 			globally_suspended_at?: string;
 			/** Format: date-time */
 			created_at: string;
-			/** Format: date-time */
-			anonymised_at?: string;
 		};
 		ListAllTenantsResponse: {
 			tenants: components['schemas']['TenantDto'][];
@@ -15244,15 +15158,6 @@ export interface components {
 			memberships: components['schemas']['UserDto'][];
 		};
 		GlobalSuspendPersonRequest: {
-			reason: string;
-		};
-		/**
-		 * @description The operator's free-text justification for an irreversible erasure. It is kept on the audit/outbox
-		 *     event (`identity.person_anonymised.v1`, field `reason`) and never logged. It must describe the
-		 *     request (a ticket number, the data-subject request), not contain the erased person's data.
-		 */
-		AnonymiseRequest: {
-			/** @description Not blank after trimming (same bound as a global suspension). */
 			reason: string;
 		};
 		UpdatePersonProfileRequest: {
@@ -15345,8 +15250,13 @@ export interface components {
 			/** Format: uuid */
 			id: string;
 			action: string;
-			/** Format: uuid */
+			/**
+			 * Format: uuid
+			 * @description The person who issued the command. ABSENT on the tenant feed when LeadKart support acted in an impersonation session (see `changed_by_support`): the tenant never sees the operator person id.
+			 */
 			actor_id?: string;
+			/** @description True when LeadKart support acted for the company in an impersonation session. */
+			changed_by_support?: boolean;
 			/** Format: uuid */
 			tenant_id?: string;
 			/** Format: uuid */
@@ -15356,6 +15266,7 @@ export interface components {
 			/** Format: int64 */
 			duration_ms: number;
 			succeeded: boolean;
+			/** @description Present only when succeeded is false: a stable code (handler_failed, non_retryable, handler_panic, timeout, canceled), never the raw error text. The detail is in the server log. */
 			failure_reason?: string;
 			/** @description jsonb payload from the original command. Free-form per action. */
 			payload?: Record<string, never>;
@@ -15748,25 +15659,58 @@ export interface components {
 			expiry_alert_threshold_days: number;
 			/**
 			 * Format: int64
-			 * @description Units on hand, added up over the product's live batches that are NOT expired (expiry date after today, UTC). Units in an expired batch are not counted: they cannot be sold.
+			 * @description Every live unit of the product, expired and quarantined included. The five stock fields sum: `stock_on_hand = stock_reserved + stock_available + stock_unsellable + stock_quarantined`.
 			 */
 			stock_on_hand: number;
 			/**
 			 * Format: int64
-			 * @description Of `stock_on_hand`, the units held for confirmed orders (same batches).
+			 * @description Units held for confirmed orders.
 			 */
 			stock_reserved: number;
 			/**
 			 * Format: int64
-			 * @description `stock_on_hand` minus `stock_reserved`: what can still be sold.
+			 * @description The free units (not reserved, not quarantined) of batches still SELLABLE today under the company expiry rule (`expiry.stop_months_before`; the business day follows the market offset, which is not a company setting). What can be sold.
 			 */
 			stock_available: number;
 			/**
+			 * Format: int64
+			 * @description Free units of batches past the company sellable cut-off that are not quarantined yet. Never sold; they should be set apart (`quarantine` movement).
+			 */
+			stock_unsellable: number;
+			/**
+			 * Format: int64
+			 * @description Units set apart as "Not for sale" (Drugs Rules, Rule 65(17)). Part of `stock_on_hand`, never available.
+			 */
+			stock_quarantined: number;
+			/**
+			 * Format: uuid
+			 * @description The entry of the company GST list the product uses. Absent for a product that predates the list.
+			 */
+			gst_rate_id?: string;
+			/** @description The current label of that entry; absent when the entry is gone. */
+			gst_rate_label?: string;
+			/**
+			 * Format: int64
+			 * @description The rate offered on a quotation line (0: none).
+			 */
+			default_sale_rate_paise: number;
+			generic_name?: string;
+			composition?: string;
+			storage_condition?: string;
+			/**
+			 * Format: uuid
+			 * @description The id of the class (company own list) the product carries; absent when none.
+			 */
+			drug_schedule?: string;
+			/** @description The current label of that class; absent when the class is gone. */
+			drug_schedule_label?: string;
+			/**
 			 * Format: date-time
-			 * @description The soonest expiry date among the unexpired batches that hold stock (midnight UTC, the shape of `BatchDto.expiry_date`). Absent when the product has no unexpired stock.
+			 * @description The soonest expiry (the last day of the printed month, midnight UTC) among the SELLABLE batches that hold stock. Absent when none does.
 			 */
 			earliest_expiry?: string;
 		};
+		/** @description Refusals name their field: `errors.gst_rate_id` (`required`, `not_in_list`, `inactive`), `errors.drug_schedule` (`required`, `not_in_list`, `schedule_off`). Nothing is written on a refusal. The company lists are read from the Inventory replica of the policy, which follows a change by event, so a rate added a moment ago may be `not_in_list` until it arrives. */
 		CreateProductRequest: {
 			sku: string;
 			name: string;
@@ -15774,10 +15718,29 @@ export interface components {
 			pack_size: string;
 			/** @description ASCII digits only, exactly 4, 6 or 8 of them; a leading zero is allowed (0402 is a real code). Send it trimmed (the server also trims surrounding whitespace before it checks). Anything else is 422 validation_failed. The READ shape (`ProductDto.hsn_code`) still allows 4..10 digits for rows stored before this rule. */
 			hsn_code: string;
-			/** @description Optional. Absent: the category default is used (as before). An explicit 0 is stored as 0 (a nil-rated product); it is NOT replaced by the default. */
-			gst_rate_bps?: number;
+			/**
+			 * Format: uuid
+			 * @description REQUIRED. The entry of the company GST rate list (`GET /company/gst-rates`) the product uses; the product takes that entry rate (a nil-rated entry is 0%). There is no default rate and no category fallback.
+			 */
+			gst_rate_id: string;
 			manufacturer?: string;
-			/** @description Optional. Absent or blank: `General`. Trimmed; at most 64 characters. It selects the default GST rate when `gst_rate_bps` is absent (a category that is not in `GET /inventory/product-categories` has no default, so the rate is then 0: send a category from that list, or send the rate). 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
+			/** @description Optional free text. */
+			generic_name?: string;
+			/** @description Optional free text. */
+			composition?: string;
+			/** @description Optional free text. */
+			storage_condition?: string;
+			/**
+			 * Format: int64
+			 * @description Optional. The rate offered on a quotation line, in paise (Rs 100 crore cap). 0 or absent: none.
+			 */
+			default_sale_rate_paise?: number;
+			/**
+			 * Format: uuid
+			 * @description Optional. The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`); nothing in the API is tied to a particular class. Nullable at every `drug_schedule.mode` except where the company chose `required` (then it is needed: `errors.drug_schedule: [required]`). Under mode `off` a class is refused (`schedule_off`). A class that is not in the list is `not_in_list`.
+			 */
+			drug_schedule?: string;
+			/** @description Optional. Absent or blank: `General`. Trimmed; at most 64 characters. */
 			product_category?: string;
 			/**
 			 * @description Optional. Units below which the product is low on stock; 0 (the default) switches the low-stock alert off. 422 `validation_failed`, `errors.reorder_level`: `too_small` (below 0), `too_large` (above 2147483647).
@@ -15797,10 +15760,27 @@ export interface components {
 		/** @description Partial-update payload — only fields present in the JSON body are applied (omitted fields retain prior value). JSON null is treated as omission; field clearing is not supported. Deliberately NOT RFC 7396 merge-patch semantics. */
 		UpdateProductRequest: {
 			name?: string;
-			gst_rate_bps?: number;
+			/**
+			 * Format: uuid
+			 * @description Moves the product to another entry of the company GST list (the entry must be active; keeping the current one is always allowed). Blank is `required`.
+			 */
+			gst_rate_id?: string;
 			is_active?: boolean;
 			manufacturer?: string;
-			/** @description A blank value stores `General`. Changing the category never changes `gst_rate_bps`. 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
+			/** @description Optional free text. */
+			generic_name?: string;
+			/** @description Optional free text. */
+			composition?: string;
+			/** @description Optional free text. */
+			storage_condition?: string;
+			/**
+			 * Format: int64
+			 * @description Optional. The rate offered on a quotation line, in paise (Rs 100 crore cap). 0 or absent: none.
+			 */
+			default_sale_rate_paise?: number;
+			/** @description The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`). A blank string clears it. Clearing is refused only where the company chose mode `required` (`errors.drug_schedule: [required]`); a class is refused under mode `off` (`schedule_off`) and when not in the list (`not_in_list`). */
+			drug_schedule?: string;
+			/** @description A blank value stores `General`. Changing the category never changes the GST rate. 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
 			product_category?: string;
 			/** @description 0 switches the low-stock alert off. 422 `validation_failed`, `errors.reorder_level`: `too_small`, `too_large`. */
 			reorder_level?: number;
@@ -15809,8 +15789,6 @@ export interface components {
 		};
 		ProductCategoryDto: {
 			category: string;
-			/** @description GST rate in basis points (1200 = 12%) a new product in this category takes when the create request sends no `gst_rate_bps`. */
-			default_gst_rate_bps: number;
 		};
 		ListProductCategoriesResponse: {
 			items: components['schemas']['ProductCategoryDto'][];
@@ -15830,7 +15808,12 @@ export interface components {
 			batch_number: string;
 			/** Format: date-time */
 			manufacture_date: string;
-			/** Format: date-time */
+			/** @description The month printed on the label, `2027-03`. */
+			expiry_month: string;
+			/**
+			 * Format: date-time
+			 * @description The LAST DAY of the printed month (midnight UTC): a batch is valid through it (Drugs Rules, Rule 96). The database refuses any other date.
+			 */
 			expiry_date: string;
 			manufacturer_name: string;
 			manufacturing_licence_number: string;
@@ -15850,6 +15833,30 @@ export interface components {
 			quantity_reserved: number;
 			/**
 			 * Format: int64
+			 * @description Of `quantity_on_hand`, the units set apart as "Not for sale". Never available, reservable or shippable.
+			 */
+			quantity_quarantined: number;
+			/**
+			 * Format: int64
+			 * @description The free units (on hand minus reserved minus quarantined) while the batch is sellable today; 0 once it is past the cut-off.
+			 */
+			quantity_available: number;
+			/**
+			 * Format: int64
+			 * @description The free units once the batch is past the company cut-off (not quarantined yet); 0 while it is sellable.
+			 */
+			quantity_unsellable: number;
+			/** @description The company expiry rule applied to this batch today: today (the business day) is not after `last_sellable_day`. */
+			sellable: boolean;
+			/**
+			 * Format: date
+			 * @description The last day this batch may be sold: the last day of (printed month minus `expiry.stop_months_before` months).
+			 */
+			last_sellable_day: string;
+			/** @description The printed month is over. The legal limit, whatever the setting: such stock can only be quarantined, returned to the maker or written off. */
+			past_printed_expiry: boolean;
+			/**
+			 * Format: int64
 			 * @description Optimistic-concurrency token (Vernon IDDD ch.10)
 			 */
 			version: number;
@@ -15858,12 +15865,13 @@ export interface components {
 			/** Format: date-time */
 			updated_at: string;
 		};
+		/** @description Refusals: `errors.expiry_month` (`required`, `invalid_format`: not a `YYYY-MM` month), `errors.manufacture_date` (`in_future`: after the company business day). */
 		AddBatchRequest: {
 			batch_number: string;
 			/** Format: date-time */
 			manufacture_date: string;
-			/** Format: date-time */
-			expiry_date: string;
+			/** @description The month printed on the label, `2027-03`; the batch is valid through its last day. A full date is not accepted. */
+			expiry_month: string;
 			manufacturer_name: string;
 			manufacturing_licence_number: string;
 			/** Format: int64 */
@@ -15879,6 +15887,8 @@ export interface components {
 		AddBatchResponse: {
 			/** Format: uuid */
 			batch_id: string;
+			/** @description `past_sellable_cutoff`: opening stock was received into a batch already past the company cut-off (but not past its printed expiry); the units are on hand and counted as unsellable. Received stock past the PRINTED expiry is refused (409 `batch_expired`). */
+			warnings: 'past_sellable_cutoff'[];
 		};
 		FefoBatchesResponse: {
 			items: components['schemas']['BatchDto'][];
@@ -15898,7 +15908,16 @@ export interface components {
 			/** Format: uuid */
 			tenant_id: string;
 			/** @enum {string} */
-			type: 'inbound' | 'outbound' | 'adjustment' | 'reservation' | 'release';
+			type:
+				| 'inbound'
+				| 'outbound'
+				| 'adjustment'
+				| 'reservation'
+				| 'release'
+				| 'quarantine'
+				| 'release_quarantine'
+				| 'write_off'
+				| 'return_to_maker';
 			/**
 			 * Format: int64
 			 * @description Signed delta; Outbound is negative.
@@ -15916,10 +15935,17 @@ export interface components {
 		};
 		LogMovementRequest: {
 			/**
-			 * @description Request-only enum: the three types a caller may log. `reservation` and `release` belong to the order saga; they appear in the movement ledger READ shape (`MovementDto.type`) but are refused here with 422 invalid_movement_type, like any other value.
+			 * @description Request-only enum: the types a caller may log. `quarantine` sets free units apart as "Not for sale" (never available or shippable); `release_quarantine` returns them (refused once the printed expiry month is over); `write_off` and `return_to_maker` take quarantined units out of on hand (write-off: destroyed or disposed of; return to the maker: sent back to the manufacturer; both are state changes: the batch and every ledger row stay; 409 `insufficient_quarantined` when asked for more than is set apart; both are allowed past the printed expiry). `outbound` is refused once the batch is past its PRINTED expiry (409 `batch_expired`): expired stock is never shipped, whoever reserved it. `reservation` and `release` belong to the order saga; they appear in the movement ledger READ shape (`MovementDto.type`) but are refused here with 422 invalid_movement_type, like any other value.
 			 * @enum {string}
 			 */
-			type: 'inbound' | 'outbound' | 'adjustment';
+			type:
+				| 'inbound'
+				| 'outbound'
+				| 'adjustment'
+				| 'quarantine'
+				| 'release_quarantine'
+				| 'write_off'
+				| 'return_to_maker';
 			/**
 			 * Format: int64
 			 * @description Positive magnitude; direction implicit in type.
@@ -15933,6 +15959,9 @@ export interface components {
 			movement_id: string;
 			/** Format: int64 */
 			quantity_on_hand_after: number;
+			/** Format: int64 */
+			quantity_quarantined_after: number;
+			warnings: 'past_sellable_cutoff'[];
 		};
 		ListMovementsResponse: {
 			items: components['schemas']['MovementDto'][];
@@ -16339,7 +16368,7 @@ export interface components {
 		 *     `error: password_change_required` while the token carries `must_change_password`
 		 *     (see the API description; no `WWW-Authenticate`, do not refresh), and an
 		 *     impersonation token answers `403 impersonation_not_allowed` on the routes it may
-		 *     not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+		 *     not reach (platform plane, tenant lifecycle, search, self-service).
 		 */
 		Forbidden: {
 			headers: {
@@ -16485,7 +16514,7 @@ export interface components {
 			};
 		};
 		/**
-		 * @description The tenant selected by `X-Tenant-Id` is suspended or pending deletion, so it can be
+		 * @description The tenant selected by `X-Tenant-Id` is suspended, so it can be
 		 *     read and its lifecycle managed but not written otherwise (`tenant_not_active`).
 		 *     Routes that carry the tenant in the path (`/api/v1/tenants/{tenantId}/...`) are
 		 *     exempt: the path is authoritative there, with or without the header.
@@ -16618,7 +16647,7 @@ export interface components {
 		 *     Writes are read-only under a foreign header by default: a non-read
 		 *     request is 403 `tenant_scope_read_only` unless the route is one of the
 		 *     identity writes the operator scope tree uses (users, roles, role
-		 *     permissions, permission overrides, manager changes, anonymise) or a
+		 *     permissions, permission overrides, manager changes) or a
 		 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
 		 *     dispatch and inventory mutations are never accepted under a foreign
 		 *     header.
@@ -16627,22 +16656,22 @@ export interface components {
 		 *     attributed durably: its outbox and audit rows carry `act_operator_id`
 		 *     (the operator) with reason `tenant-via-header` (header) or
 		 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-		 *     neither (header-less lifecycle calls, hard delete, platform person
+		 *     neither (header-less lifecycle calls, platform person
 		 *     operations, platform-module writes) use reason `platform-route`.
 		 *
-		 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle,
-		 *     hard delete) a header equal to the path tenant selects nothing: no scope
+		 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+		 *     a header equal to the path tenant selects nothing: no scope
 		 *     authority is needed and no tenant is looked up, so the answer is the
 		 *     route's own permission gate whether or not the header is sent.
 		 *
 		 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
 		 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
 		 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-		 *     wins; also on `DELETE /api/v1/platform/tenants/{tenantId}`), 403
+		 *     wins), 403
 		 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
 		 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-		 *     (unknown or deleted tenant), 409 `tenant_not_active` (a write into a
-		 *     suspended or pending-deletion tenant on a non-path route; reads and
+		 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+		 *     suspended tenant on a non-path route; reads and
 		 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
 		 *     (routes that act on the caller's own tenant only: permission requests
 		 *     and the marketplace lead purchase).

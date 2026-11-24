@@ -88,6 +88,7 @@ export const AuditEventDto = z
 		id: z.string().uuid(),
 		action: z.string(),
 		actor_id: z.string().uuid().optional(),
+		changed_by_support: z.boolean().optional(),
 		tenant_id: z.string().uuid().optional(),
 		correlation_id: z.string().uuid().optional(),
 		occurred_at: z.string().datetime({ offset: true }),
@@ -149,12 +150,10 @@ export const TenantDto = z
 		slug: z.string(),
 		legal_name: z.string(),
 		display_name: z.string(),
-		status: z.enum(['pending', 'active', 'suspended', 'pending_deletion', 'deleted']),
+		status: z.enum(['pending', 'active', 'suspended']),
 		created_at: z.string().datetime({ offset: true }),
 		activated_at: z.string().datetime({ offset: true }).optional(),
 		suspended_at: z.string().datetime({ offset: true }).optional(),
-		deletion_scheduled_at: z.string().datetime({ offset: true }).optional(),
-		deletion_reason: z.string().optional(),
 		gst_number: z.string().optional(),
 		pan_number: z.string().optional(),
 		drug_licence_number: z.string().optional(),
@@ -221,7 +220,6 @@ export const UpdateTenantDisplayPreferencesRequest = z
 	})
 	.passthrough();
 export const SuspendTenantRequest = z.object({ reason: z.string().min(1) }).passthrough();
-export const MarkTenantForDeletionRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const GrantedOverrideDto = z
 	.object({ name: z.string(), expires_at: z.string().datetime({ offset: true }).optional() })
 	.passthrough();
@@ -299,7 +297,6 @@ export const ReplaceUserPermissionOverridesRequest = z
 	})
 	.passthrough();
 export const AssignUserManagerRequest = z.object({ manager_id: z.string().uuid() }).passthrough();
-export const AnonymiseRequest = z.object({ reason: z.string().min(1) }).passthrough();
 export const RoleDto = z
 	.object({
 		id: z.string().uuid(),
@@ -347,12 +344,10 @@ export const PersonDto = z
 		first_name: z.string(),
 		last_name: z.string(),
 		is_active: z.boolean(),
-		is_anonymised: z.boolean(),
 		is_globally_suspended: z.boolean(),
 		global_suspension_reason: z.string().optional(),
 		globally_suspended_at: z.string().datetime({ offset: true }).optional(),
-		created_at: z.string().datetime({ offset: true }),
-		anonymised_at: z.string().datetime({ offset: true }).optional()
+		created_at: z.string().datetime({ offset: true })
 	})
 	.passthrough();
 export const ListPersonMembershipsResponse = z
@@ -601,8 +596,13 @@ export const CreateProductRequest = z
 			.min(4)
 			.max(8)
 			.regex(/^([0-9]{4}|[0-9]{6}|[0-9]{8})$/),
-		gst_rate_bps: z.number().int().gte(0).lte(10000).optional(),
+		gst_rate_id: z.string().uuid(),
 		manufacturer: z.string().max(200).optional(),
+		generic_name: z.string().max(200).optional(),
+		composition: z.string().max(1000).optional(),
+		storage_condition: z.string().max(200).optional(),
+		default_sale_rate_paise: z.number().int().gte(0).optional(),
+		drug_schedule: z.string().uuid().optional(),
 		product_category: z.string().max(64).optional(),
 		reorder_level: z.number().int().gte(0).lte(2147483647).optional().default(0),
 		expiry_alert_threshold_days: z.number().int().gte(0).lte(36500).optional().default(90)
@@ -629,6 +629,16 @@ export const ProductDto = z
 		stock_on_hand: z.number().int().gte(0),
 		stock_reserved: z.number().int().gte(0),
 		stock_available: z.number().int().gte(0),
+		stock_unsellable: z.number().int().gte(0),
+		stock_quarantined: z.number().int().gte(0),
+		gst_rate_id: z.string().uuid().optional(),
+		gst_rate_label: z.string().optional(),
+		default_sale_rate_paise: z.number().int().gte(0),
+		generic_name: z.string().optional(),
+		composition: z.string().optional(),
+		storage_condition: z.string().optional(),
+		drug_schedule: z.string().uuid().optional(),
+		drug_schedule_label: z.string().optional(),
 		earliest_expiry: z.string().datetime({ offset: true }).optional()
 	})
 	.passthrough();
@@ -638,21 +648,21 @@ export const ListProductsResponse = z
 export const UpdateProductRequest = z
 	.object({
 		name: z.string().min(1).max(200),
-		gst_rate_bps: z.number().int().gte(0).lte(10000),
+		gst_rate_id: z.string().uuid(),
 		is_active: z.boolean(),
 		manufacturer: z.string().max(200),
+		generic_name: z.string().max(200),
+		composition: z.string().max(1000),
+		storage_condition: z.string().max(200),
+		default_sale_rate_paise: z.number().int().gte(0),
+		drug_schedule: z.string(),
 		product_category: z.string().max(64),
 		reorder_level: z.number().int().gte(0).lte(2147483647),
 		expiry_alert_threshold_days: z.number().int().gte(0).lte(36500)
 	})
 	.partial()
 	.passthrough();
-export const ProductCategoryDto = z
-	.object({
-		category: z.string().min(1).max(64),
-		default_gst_rate_bps: z.number().int().gte(0).lte(10000)
-	})
-	.passthrough();
+export const ProductCategoryDto = z.object({ category: z.string().min(1).max(64) }).passthrough();
 export const ListProductCategoriesResponse = z
 	.object({ items: z.array(ProductCategoryDto) })
 	.passthrough();
@@ -660,7 +670,7 @@ export const AddBatchRequest = z
 	.object({
 		batch_number: z.string().min(1).max(100),
 		manufacture_date: z.string().datetime({ offset: true }),
-		expiry_date: z.string().datetime({ offset: true }),
+		expiry_month: z.string().regex(/^[0-9]{4}-(0[1-9]|1[0-2])$/),
 		manufacturer_name: z.string().min(1).max(200),
 		manufacturing_licence_number: z.string().min(1).max(100),
 		mrp_paise: z.number().int().gte(0),
@@ -668,7 +678,9 @@ export const AddBatchRequest = z
 		initial_quantity: z.number().int().gte(0).optional()
 	})
 	.passthrough();
-export const AddBatchResponse = z.object({ batch_id: z.string().uuid() }).passthrough();
+export const AddBatchResponse = z
+	.object({ batch_id: z.string().uuid(), warnings: z.array(z.literal('past_sellable_cutoff')) })
+	.passthrough();
 export const BatchDto = z
 	.object({
 		id: z.string().uuid(),
@@ -676,6 +688,7 @@ export const BatchDto = z
 		tenant_id: z.string().uuid(),
 		batch_number: z.string().min(1).max(100),
 		manufacture_date: z.string().datetime({ offset: true }),
+		expiry_month: z.string().regex(/^[0-9]{4}-(0[1-9]|1[0-2])$/),
 		expiry_date: z.string().datetime({ offset: true }),
 		manufacturer_name: z.string().min(1).max(200),
 		manufacturing_licence_number: z.string().min(1).max(100),
@@ -683,6 +696,12 @@ export const BatchDto = z
 		purchase_price_paise: z.number().int().gte(0),
 		quantity_on_hand: z.number().int().gte(0),
 		quantity_reserved: z.number().int().gte(0),
+		quantity_quarantined: z.number().int().gte(0),
+		quantity_available: z.number().int().gte(0),
+		quantity_unsellable: z.number().int().gte(0),
+		sellable: z.boolean(),
+		last_sellable_day: z.string(),
+		past_printed_expiry: z.boolean(),
 		version: z.number().int(),
 		created_at: z.string().datetime({ offset: true }),
 		updated_at: z.string().datetime({ offset: true })
@@ -694,14 +713,27 @@ export const ListBatchesResponse = z
 export const FefoBatchesResponse = z.object({ items: z.array(BatchDto) }).passthrough();
 export const LogMovementRequest = z
 	.object({
-		type: z.enum(['inbound', 'outbound', 'adjustment']),
+		type: z.enum([
+			'inbound',
+			'outbound',
+			'adjustment',
+			'quarantine',
+			'release_quarantine',
+			'write_off',
+			'return_to_maker'
+		]),
 		quantity: z.number().int().gte(1),
 		reason: z.string().min(1).max(500),
 		source_reference: z.string().max(200).optional()
 	})
 	.passthrough();
 export const LogMovementResponse = z
-	.object({ movement_id: z.string().uuid(), quantity_on_hand_after: z.number().int().gte(0) })
+	.object({
+		movement_id: z.string().uuid(),
+		quantity_on_hand_after: z.number().int().gte(0),
+		quantity_quarantined_after: z.number().int().gte(0),
+		warnings: z.array(z.literal('past_sellable_cutoff'))
+	})
 	.passthrough();
 export const MovementDto = z
 	.object({
@@ -709,7 +741,17 @@ export const MovementDto = z
 		batch_id: z.string().uuid(),
 		product_id: z.string().uuid(),
 		tenant_id: z.string().uuid(),
-		type: z.enum(['inbound', 'outbound', 'adjustment', 'reservation', 'release']),
+		type: z.enum([
+			'inbound',
+			'outbound',
+			'adjustment',
+			'reservation',
+			'release',
+			'quarantine',
+			'release_quarantine',
+			'write_off',
+			'return_to_maker'
+		]),
 		quantity: z.number().int(),
 		quantity_on_hand_after: z.number().int().gte(0),
 		reason: z.string().min(1).max(500),
@@ -1103,10 +1145,14 @@ export const CompanyGstRateDto = z
 		active: z.boolean()
 	})
 	.passthrough();
+export const CompanyScheduleClassDto = z
+	.object({ id: z.string().uuid(), label: z.string().max(40) })
+	.passthrough();
 export const CompanyCommercePolicy = z
 	.object({
 		expiry: z
 			.object({
+				business_day_utc_offset_minutes: z.number().int().gte(-720).lte(840),
 				stop_months_before: z.number().int().gte(0).lte(24),
 				warning_days: z.array(z.number().int().gte(1).lte(730)).max(4)
 			})
@@ -1166,7 +1212,12 @@ export const CompanyCommercePolicy = z
 				overdue_grace_days: z.number().int().gte(0).lte(365)
 			})
 			.passthrough(),
-		drug_schedule: z.object({ mode: z.enum(['off', 'optional', 'required']) }).passthrough()
+		drug_schedule: z
+			.object({
+				mode: z.enum(['off', 'optional', 'required']),
+				classes: z.array(CompanyScheduleClassDto).max(30)
+			})
+			.passthrough()
 	})
 	.passthrough();
 export const CompanySettingOption = z
@@ -1206,7 +1257,7 @@ export const CompanySettingsHistoryEntry = z
 		changed_keys: z.array(z.string()),
 		reason: z.string(),
 		actor_membership_id: z.string().uuid().optional(),
-		impersonator_operator_id: z.string().optional(),
+		changed_by_support: z.boolean().optional(),
 		changed_at: z.string().datetime({ offset: true })
 	})
 	.passthrough();
@@ -1240,6 +1291,23 @@ export const PatchCompanyGstRateRequest = z
 		active: z.boolean().optional(),
 		reason: z.string().max(500)
 	})
+	.passthrough();
+export const CompanyScheduleClassesDto = z
+	.object({
+		policy_version: z.number().int(),
+		mode: z.enum(['off', 'optional', 'required']).optional(),
+		items: z.array(CompanyScheduleClassDto),
+		class: CompanyScheduleClassDto.optional()
+	})
+	.passthrough();
+export const CreateCompanyScheduleClassRequest = z
+	.object({ label: z.string().max(40), reason: z.string().max(500) })
+	.passthrough();
+export const PatchCompanyScheduleClassRequest = z
+	.object({ label: z.string().max(40), reason: z.string().max(500) })
+	.passthrough();
+export const DeleteCompanyScheduleClassRequest = z
+	.object({ reason: z.string().max(500) })
 	.passthrough();
 
 export const schemas = {
@@ -1276,7 +1344,6 @@ export const schemas = {
 	UpdateTenantSettingsRequest,
 	UpdateTenantDisplayPreferencesRequest,
 	SuspendTenantRequest,
-	MarkTenantForDeletionRequest,
 	GrantedOverrideDto,
 	UserPermissionOverridesDto,
 	UserDto,
@@ -1290,7 +1357,6 @@ export const schemas = {
 	AssignUserRoleRequest,
 	ReplaceUserPermissionOverridesRequest,
 	AssignUserManagerRequest,
-	AnonymiseRequest,
 	RoleDto,
 	ListRolesResponse,
 	CreateRoleRequest,
@@ -1400,6 +1466,7 @@ export const schemas = {
 	UnreadCountResponse,
 	MarkAllReadResponse,
 	CompanyGstRateDto,
+	CompanyScheduleClassDto,
 	CompanyCommercePolicy,
 	CompanySettingOption,
 	CompanySettingsDto,
@@ -1409,7 +1476,11 @@ export const schemas = {
 	ListCompanyGstRatesResponse,
 	CreateCompanyGstRateRequest,
 	CompanyGstRateChangedDto,
-	PatchCompanyGstRateRequest
+	PatchCompanyGstRateRequest,
+	CompanyScheduleClassesDto,
+	CreateCompanyScheduleClassRequest,
+	PatchCompanyScheduleClassRequest,
+	DeleteCompanyScheduleClassRequest
 };
 
 /** One operation in api/openapi.yaml. `path` uses `:param` segments; `response` is the main 2xx schema (z.void() for 204). */
@@ -1575,12 +1646,12 @@ suspended (an operator suspended it; reactivation restores sign-in). It is
 answered only after the password was verified, so a wrong password or an unknown
 email still answers &#x60;401 invalid_credentials&#x60; and the code tells a stranger
 nothing. &#x60;tenant_not_active&#x60;: the password was CORRECT but the company is
-neither active nor suspended nor deleted, that is &#x60;pending&#x60; or marked for
-deletion (&#x60;pending_deletion&#x60;); same rule (owner ruling 2026-11-21: only an active
-company&#x27;s members sign in; restoring the company or an operator&#x27;s activation
+neither active nor suspended, that is &#x60;pending&#x60;; same rule (owner ruling
+2026-11-21: only an active company&#x27;s members sign in; an operator&#x27;s activation
 brings them back). A company registered by an operator is created &#x60;active&#x60;, so
-its first admin signs in. A deleted company, and one with no usable membership,
-stay &#x60;401 invalid_credentials&#x60;.
+its first admin signs in. A company with no usable membership stays
+&#x60;401 invalid_credentials&#x60;. A company is never deleted: it is pending, active or
+suspended.
 `,
 				schema: ErrorResponse
 			},
@@ -1590,7 +1661,7 @@ stay &#x60;401 invalid_credentials&#x60;.
 failed login attempts within [person.LockoutWindow] per
 NIST 800-63B §5.2.2 + ADR 0053. Retry-After header carries
 integer seconds until unlock (RFC 7231 §7.1.3 delta-seconds).
-An email with no usable account (unknown, deactivated, anonymised, GLOBALLY
+An email with no usable account (unknown, deactivated, GLOBALLY
 SUSPENDED) locks on the same schedule and answers identically, so 423 does not
 reveal that an account exists (ADR 0068 D12). While locked, even the correct
 password answers 423.
@@ -1764,7 +1835,7 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/auth/refresh',
 		alias: 'postApiv1authrefresh',
 		description: `Rotates the refresh token and reissues the access token. Re-presenting a just-rotated token within the grace window (default 30 s, at most 120 s, &#x60;Refresh.GraceWindow&#x60;) returns the SAME successor (a deterministic derivation: no new token row is written), so two tabs or a retried request after a lost response do not end the session. That holds ONLY for the client that rotated the token (the client address the rate limiters use: behind the BFF its &#x60;X-Forwarded-For&#x60;; only a keyed hash of it is stored) and for at most 3 replays per token. A replay from another client, a 4th replay, a token whose consumer was not recorded, a replay outside the window, a token two or more generations old, or one whose successor has been used is token reuse: the whole family is revoked and the answer is &#x60;401 refresh_rejected&#x60;. A client whose address changes inside the window (a phone switching networks) between a lost response and its retry is therefore signed out. A revoked family never answers a replay, whatever the window says (logout, password change and reset revoke every family of the person). The answer to a replay is indistinguishable from the first answer, apart from the access token&#x27;s own issue time.
-A session ends &#x60;Refresh.AbsoluteTTL&#x60; (default 14 days, &#x60;LEADKART_REFRESH__ABSOLUTE_TTL&#x60;) after the login that opened it, however often it was refreshed: the first refresh after that answers &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; (sign in again) and the family is revoked (&#x60;absolute_ttl&#x60;). A session also ends when it sits IDLE: each refresh token lives &#x60;Refresh.SlidingTTL&#x60; (default 24 hours, &#x60;LEADKART_REFRESH__SLIDING_TTL&#x60;; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; and the family is revoked (&#x60;idle_timeout&#x60;). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: &#x60;401 refresh_rejected&#x60; with &#x60;reason: tenant_suspended&#x60; (the family is revoked as &#x60;tenant_suspended&#x60;; a reactivated company&#x27;s members sign in again, the old session does not return). A member of a company that is &#x60;pending&#x60; or marked for deletion is refused the same way with &#x60;reason: tenant_not_active&#x60; (the family is revoked as &#x60;tenant_not_active&#x60;; a restored company&#x27;s members sign in again). A deleted company&#x27;s members are refused without a reason. Suspending a company or marking it for deletion also revokes its members&#x27; families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
+A session ends &#x60;Refresh.AbsoluteTTL&#x60; (default 14 days, &#x60;LEADKART_REFRESH__ABSOLUTE_TTL&#x60;) after the login that opened it, however often it was refreshed: the first refresh after that answers &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; (sign in again) and the family is revoked (&#x60;absolute_ttl&#x60;). A session also ends when it sits IDLE: each refresh token lives &#x60;Refresh.SlidingTTL&#x60; (default 24 hours, &#x60;LEADKART_REFRESH__SLIDING_TTL&#x60;; a session unused for 24 hours ends) from its issue, never past the absolute deadline, and every rotation renews it (a grace replay does not). The first refresh after the token ran out answers the same &#x60;401 refresh_rejected&#x60; with &#x60;reason: session_expired&#x60; and the family is revoked (&#x60;idle_timeout&#x60;). A globally suspended person is refused (the family is revoked), and so is a member of a SUSPENDED company: &#x60;401 refresh_rejected&#x60; with &#x60;reason: tenant_suspended&#x60; (the family is revoked as &#x60;tenant_suspended&#x60;; a reactivated company&#x27;s members sign in again, the old session does not return). A member of a company that is &#x60;pending&#x60; is refused the same way with &#x60;reason: tenant_not_active&#x60; (the family is revoked as &#x60;tenant_not_active&#x60;; an activated company&#x27;s members sign in again). Suspending a company also revokes its members&#x27; families (outbox subscriber), but an access token already issued stays valid until its own expiry (600 s).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -1786,7 +1857,7 @@ A session ends &#x60;Refresh.AbsoluteTTL&#x60; (default 14 days, &#x60;LEADKART_
 				description: `Refresh rejected (consumed / expired / family revoked / reuse). For a session that
 ended by time (absolute lifetime or idle timeout) the body carries
 &#x60;reason: session_expired&#x60;; for a member of a suspended company
-&#x60;reason: tenant_suspended&#x60;; for a member of a pending or marked-for-deletion
+&#x60;reason: tenant_suspended&#x60;; for a member of a pending
 company &#x60;reason: tenant_not_active&#x60;.
 `,
 				schema: ErrorResponse
@@ -2173,9 +2244,13 @@ reaches Orders and Inventory by event. Returns &#x60;200&#x60; with the updated 
 A refusal names the setting: &#x60;422 validation_failed&#x60; with
 &#x60;errors{&quot;&lt;group&gt;.&lt;setting&gt;&quot;: [&lt;code&gt;]}&#x60; (codes: &#x60;out_of_range&#x60;, &#x60;invalid_type&#x60;,
 &#x60;not_an_option&#x60;, &#x60;required&#x60;, &#x60;duplicate&#x60;, &#x60;too_many&#x60;, &#x60;not_in_allowed&#x60;,
-&#x60;value_required&#x60;, &#x60;value_not_allowed&#x60;, &#x60;invalid_format&#x60;, &#x60;unknown_setting&#x60;,
-&#x60;managed_elsewhere&#x60;) or on &#x60;reason&#x60;, &#x60;expected_version&#x60;, &#x60;changes&#x60;; nothing is
-changed. Option sets and bounds: &#x60;GET&#x60; &#x60;options&#x60;.
+&#x60;value_required&#x60;, &#x60;value_not_allowed&#x60;, &#x60;invalid_format&#x60;, &#x60;in_future&#x60;,
+&#x60;unknown_setting&#x60;, &#x60;managed_elsewhere&#x60;) or on &#x60;reason&#x60; (&#x60;required&#x60;, &#x60;too_long&#x60;,
+&#x60;invalid_characters&#x60;), &#x60;expected_version&#x60;, &#x60;changes&#x60;; nothing is changed. Changing
+&#x60;payment.advance_mode&#x60; to &#x60;percent&#x60; or &#x60;fixed&#x60; needs &#x60;payment.advance_value&#x60; in the
+same patch (&#x60;value_required&#x60;); the invoice and credit-note prefixes must differ
+(&#x60;duplicate&#x60;). The body is read strictly: an unknown key, trailing data, or a group
+or setting named twice is &#x60;400 invalid_body&#x60;. Option sets and bounds: &#x60;GET&#x60; &#x60;options&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2297,6 +2372,308 @@ lookup and is identical for existing, unknown and suspended tenants, so it canno
 be used to probe which tenants exist.
 (Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'get',
+		path: '/api/v1/company/drug-schedule-classes',
+		alias: 'getApiv1companydrugScheduleClasses',
+		description: `Requires &#x60;company_settings.read&#x60; OR &#x60;inventory.catalog.read&#x60; OR
+&#x60;inventory.catalog.manage&#x60; (the picker a product form reads). The company&#x27;s own
+list of classes a product may carry, in label order. It starts from the
+defaults of the market the company is created in and is the company&#x27;s to add
+to, rename or remove: nothing in the API is tied to a particular class. &#x60;mode&#x60;
+is the current &#x60;drug_schedule.mode&#x60;; &#x60;policy_version&#x60; is the policy version the
+list was read at.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyScheduleClassesDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
+effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
+and the caller is neither a super user nor a platform operator holding
+&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
+the lifecycle routes) a header equal to the path tenant is not a scope request, so
+&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
+decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
+lookup and is identical for existing, unknown and suspended tenants, so it cannot
+be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/company/drug-schedule-classes',
+		alias: 'postApiv1companydrugScheduleClasses',
+		description: `Requires &#x60;company_settings.tax.manage&#x60; (Administrator tier or above). &#x60;reason&#x60; is
+required. The same &#x60;label&#x60; (any case) is &#x60;422&#x60; with &#x60;errors.label: [duplicate]&#x60;;
+a list at its cap of 30 is &#x60;errors.label: [too_many]&#x60;. Adding a class moves the
+policy to a new version. Returns &#x60;201&#x60; with the updated list, the new class in
+&#x60;class&#x60; and the new &#x60;policy_version&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: CreateCompanyScheduleClassRequest
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyScheduleClassesDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'patch',
+		path: '/api/v1/company/drug-schedule-classes/:classId',
+		alias: 'patchApiv1companydrugScheduleClassesClassId',
+		description: `Requires &#x60;company_settings.tax.manage&#x60;. A product stores the class &#x60;id&#x60;, so a
+rename never touches a product. &#x60;reason&#x60; is required. A rename to the current
+label leaves the policy version where it is. Returns &#x60;200&#x60; with the updated list.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: PatchCompanyScheduleClassRequest
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'classId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyScheduleClassesDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'delete',
+		path: '/api/v1/company/drug-schedule-classes/:classId',
+		alias: 'deleteApiv1companydrugScheduleClassesClassId',
+		description: `Requires &#x60;company_settings.tax.manage&#x60;. The body carries the &#x60;reason&#x60; (required).
+A class a product still carries cannot be removed: &#x60;409
+drug_schedule_class_in_use&#x60; and nothing changes; clear it from those products
+first. A removal moves the policy to a new version and is kept in the history.
+Returns &#x60;200&#x60; with the updated list.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: z.object({ reason: z.string().max(500) }).passthrough()
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'classId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyScheduleClassesDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;drug_schedule_class_in_use&#x60;: a product still carries the class`,
+				schema: ErrorResponse
+			},
+			{
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
 			},
 			{
@@ -3152,7 +3529,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
 Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
 exempt: the path is authoritative there, with or without the header.
@@ -3683,7 +4060,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
 Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
 exempt: the path is authoritative there, with or without the header.
@@ -3991,7 +4368,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `Invalid status transition`,
+				description: `&#x60;invalid_status_transition&#x60; — the note is not &#x60;pending&#x60;. A &#x60;pending&#x60; note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: &#x60;order_not_invoiced&#x60; — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); &#x60;order_not_dispatchable&#x60; — the order has an invoice but is not &#x60;invoiced&#x60; (cancelled, or already past dispatch; an invoice is never removed); &#x60;order_stock_not_held&#x60; — the order holds no stock to ship (goods never leave without a deduction); &#x60;order_stock_mismatch&#x60; — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered); &#x60;order_stock_expired&#x60; — a batch the order holds is past its printed expiry month on the company&#x27;s business day (the goods are still in the warehouse until this call). The note stays &#x60;pending&#x60; and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past &#x60;pending&#x60; is not judged again. A step that cannot answer is a 500, never a dispatch. The order is &#x60;invoiced&#x60; while its note is &#x60;pending&#x60; and &#x60;dispatched&#x60; after this call; stock falls here, not at the pack.`,
 				schema: ErrorResponse
 			},
 			{
@@ -4264,11 +4641,16 @@ Quantity is the POSITIVE magnitude — direction is implicit in
 Type (Outbound subtracts). Adjustment writes the positive
 magnitude in slice 1; future &#x60;direction&#x60; field for up/down.
 
-Rejections (409): insufficient_stock (Outbound &gt; on-hand),
-batch_expired (Inbound on expired batch), conflict (concurrent
+Rejections (409): insufficient_stock (an &#x60;outbound&#x60;, or an
+&#x60;adjustment&#x60; that takes units away, for more than the FREE units:
+on hand minus reserved minus quarantined), insufficient_quarantined
+(&#x60;release_quarantine&#x60;, &#x60;write_off&#x60; or &#x60;return_to_maker&#x60; for more than is
+set apart), batch_expired (&#x60;inbound&#x60;, &#x60;outbound&#x60; or &#x60;release_quarantine&#x60;
+on a batch past its printed expiry month), conflict (concurrent
 modification after retry cap).
 
-Only &#x60;inbound&#x60;, &#x60;outbound&#x60; and &#x60;adjustment&#x60; are accepted here.
+Accepted types: &#x60;inbound&#x60;, &#x60;outbound&#x60;, &#x60;adjustment&#x60;, &#x60;quarantine&#x60;,
+&#x60;release_quarantine&#x60;, &#x60;write_off&#x60; and &#x60;return_to_maker&#x60;.
 &#x60;reservation&#x60; and &#x60;release&#x60; belong to the order saga; asking for
 them (or any other type) is &#x60;422 invalid_movement_type&#x60;, nothing
 written.
@@ -4332,7 +4714,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 422,
-				description: `&#x60;invalid_movement_type&#x60; — type is not inbound, outbound or adjustment (&#x60;reservation&#x60; and &#x60;release&#x60; are not public); otherwise validation (&#x60;validation_failed&#x60;)`,
+				description: `&#x60;invalid_movement_type&#x60; — type is not one of inbound, outbound, adjustment, quarantine, release_quarantine, write_off, return_to_maker (&#x60;reservation&#x60; and &#x60;release&#x60; are not public); otherwise validation (&#x60;validation_failed&#x60;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -4378,7 +4760,19 @@ Append-only ledger ordered (occurred_at, id) DESC. Optional
 			{
 				name: 'type',
 				type: 'Query',
-				schema: z.enum(['inbound', 'outbound', 'adjustment', 'reservation', 'release']).optional()
+				schema: z
+					.enum([
+						'inbound',
+						'outbound',
+						'adjustment',
+						'reservation',
+						'release',
+						'quarantine',
+						'release_quarantine',
+						'write_off',
+						'return_to_maker'
+					])
+					.optional()
 			},
 			{
 				name: 'X-Tenant-Id',
@@ -4968,7 +5362,7 @@ is NOT created.
 				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.object({ batch_id: z.string().uuid() }).passthrough(),
+		response: AddBatchResponse,
 		errors: [
 			{
 				status: 400,
@@ -5027,8 +5421,9 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/inventory/products/:productId/batches',
 		alias: 'getApiv1inventoryproductsProductIdbatches',
 		description: `Requires &#x60;inventory.stock.read&#x60; OR &#x60;inventory.stock.manage&#x60;.
-Returns live batches ordered by expiry_date DESC. Expired batches
-excluded by default (pass &#x60;include_expired&#x3D;true&#x60; to include).
+Returns live batches ordered by expiry_date DESC. Batches past the
+company sellable cut-off (&#x60;sellable: false&#x60;) are excluded by default
+(pass &#x60;include_expired&#x3D;true&#x60; to include them).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -5885,7 +6280,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
 Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
 exempt: the path is authoritative there, with or without the header.
@@ -6124,7 +6519,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `Invalid state transition`,
+				description: `&#x60;invalid_state_transition&#x60; — the order is not &#x60;confirmed&#x60;. &#x60;order_stock_expired&#x60; — the order holds units on a batch past its printed expiry month (judged on the company&#x27;s business day): expired stock is never sold, so the order stays &#x60;confirmed&#x60;, nothing is published (no invoice, no consignment note) and it can be cancelled, which releases the hold.`,
 				schema: ErrorResponse
 			},
 			{
@@ -6456,7 +6851,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
 Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
 exempt: the path is authoritative there, with or without the header.
@@ -7310,13 +7705,18 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `Target tenant not found`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;tenant_not_active&#x60; — the target company is pending or suspended. A session writes with tenant-admin authority, so it is refused like an &#x60;X-Tenant-Id&#x60; write to such a company; read it, and reactivate it, through the tenant scope routes instead. Nothing is stored and no token is minted.`,
 				schema: ErrorResponse
 			},
 			{
@@ -7355,7 +7755,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -7410,7 +7810,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -7530,7 +7930,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -7659,7 +8059,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -7782,7 +8182,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -7834,98 +8234,13 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
 			{
 				status: 404,
 				description: `&#x60;person_not_found&#x60;`,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'post',
-		path: '/api/v1/platform/persons/:personId/anonymise',
-		alias: 'postApiv1platformpersonsPersonIdanonymise',
-		description: `Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-An operator cannot change their own Person: the caller&#x27;s own &#x60;personId&#x60; is refused with 403 &#x60;self_modification_forbidden&#x60; (super users exempt).
-
-Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'body',
-				type: 'Body',
-				schema: z.object({ reason: z.string().min(1) }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'personId',
-				type: 'Path',
-				schema: z.string().uuid()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
-the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
-TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
-&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
-ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
-&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
-contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
-below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
-(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
-assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
-deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
-Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
-member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
-tier or above (&#x60;grant_exceeds_authority&#x60;).
-(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
 			},
 			{
@@ -8064,7 +8379,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8126,7 +8441,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8195,7 +8510,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8257,7 +8572,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8292,94 +8607,8 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'delete',
-		path: '/api/v1/platform/tenants/:tenantId',
-		alias: 'deleteApiv1platformtenantsTenantId',
-		description: `Bypasses the marked-for-deletion lifecycle. Tenants holding an
-active SuperAdmin role refuse with 422
-(&#x60;platform_tenant_undeletable&#x60;).
-
-The transition to &#x60;deleted&#x60;, its &#x60;tenant_deleted&#x60; outbox event and the row delete
-run in ONE transaction. A tenant that still has dependent records (members, roles,
-...) is refused with 409 &#x60;tenant_has_dependents&#x60;: nothing is changed, the tenant
-keeps its status and no event is published. Remove or reassign the dependents first;
-there is no cascade.
-
-Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-The tenant comes from the path only: &#x60;X-Tenant-Id&#x60; is never applied here, and a
-value that differs from the path tenant is 400 &#x60;tenant_scope_conflict&#x60;. The
-operator is attributed on the outbox row (&#x60;act_operator_id&#x60;, reason &#x60;platform-route&#x60;).
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'tenantId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
-member (is_platform with the platform slug anchor, not an impersonation token) can
-see it, whether or not they hold scope authority; every other caller has the header
-ignored. The same 400 also covers an invalid list filter or cursor on routes that
-take them.
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Authenticated but missing the required permission. Every authenticated operation
-outside the forced-change allowlist can also answer &#x60;403&#x60; with
-&#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
-(see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
-impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `The tenant still has dependent records (&#x60;tenant_has_dependents&#x60;); nothing was changed`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
 			},
 			{
@@ -8434,7 +8663,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8500,7 +8729,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8563,7 +8792,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8633,7 +8862,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -8704,7 +8933,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -9628,7 +9857,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended or pending deletion, so it can be
+				description: `The tenant selected by &#x60;X-Tenant-Id&#x60; is suspended, so it can be
 read and its lifecycle managed but not written otherwise (&#x60;tenant_not_active&#x60;).
 Routes that carry the tenant in the path (&#x60;/api/v1/tenants/{tenantId}/...&#x60;) are
 exempt: the path is authoritative there, with or without the header.
@@ -10285,7 +10514,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -10355,7 +10584,7 @@ outside the forced-change allowlist can also answer &#x60;403&#x60; with
 &#x60;error: password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;
 (see the API description; no &#x60;WWW-Authenticate&#x60;, do not refresh), and an
 impersonation token answers &#x60;403 impersonation_not_allowed&#x60; on the routes it may
-not reach (platform plane, tenant lifecycle, search, anonymise, self-service).
+not reach (platform plane, tenant lifecycle, search, self-service).
 `,
 				schema: ErrorResponse
 			},
@@ -10472,9 +10701,7 @@ minute, burst 5, whichever address the requests come from).
 		alias: 'postApiv1tenantsTenantIdactivate',
 		description: `A company registered through &#x60;POST /api/v1/tenants&#x60; is created &#x60;active&#x60;, so activating
 it answers 204 and changes nothing (no event, &#x60;activated_at&#x60; is kept): idempotent, not
-an error. Activating a company in &#x60;pending_deletion&#x60; is 422 &#x60;tenant_invalid&#x60; (restore it instead) and a
-deleted one is 422 &#x60;tenant_invalid&#x60;.
-Requires &#x60;identity.tenants.activate&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
+an error.         Requires &#x60;identity.tenants.activate&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -10781,94 +11008,6 @@ minute, burst 5, whichever address the requests come from).
 		]
 	},
 	{
-		method: 'post',
-		path: '/api/v1/tenants/:tenantId/mark-for-deletion',
-		alias: 'postApiv1tenantsTenantIdmarkForDeletion',
-		description: `Schedules the tenant for hard-deletion after the retention window.
-Reason is mandatory (DPDP §12 + SOC2 CC4.1 audit requirement).
-Tenants holding an active SuperAdmin role refuse the transition
-with 422 (&#x60;platform_tenant_undeletable&#x60;).
-
-Requires &#x60;identity.tenants.delete&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-
-Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;tenant_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'body',
-				type: 'Body',
-				schema: z.object({ reason: z.string().min(1) }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'tenantId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
-(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
 		method: 'patch',
 		path: '/api/v1/tenants/:tenantId/profile',
 		alias: 'patchApiv1tenantsTenantIdprofile',
@@ -10883,82 +11022,6 @@ Text a person types that other people read is refused when it holds control char
 				type: 'Body',
 				schema: UpdateTenantProfileRequest
 			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'tenantId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
-effective tenant) or &#x60;tenant_scope_forbidden&#x60; (&#x60;X-Tenant-Id&#x60; names another tenant
-and the caller is neither a super user nor a platform operator holding
-&#x60;platform.tenants.view&#x60;). On path-tenant routes (&#x60;/api/v1/tenants/{tenantId}/...&#x60;,
-the lifecycle routes) a header equal to the path tenant is not a scope request, so
-&#x60;tenant_scope_forbidden&#x60; is never returned there: the route&#x27;s own permission
-decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
-lookup and is identical for existing, unknown and suspended tenants, so it cannot
-be used to probe which tenants exist.
-(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `Conflict with the current state of the resource (see the &#x60;error&#x60; code)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'post',
-		path: '/api/v1/tenants/:tenantId/restore',
-		alias: 'postApiv1tenantsTenantIdrestore',
-		description: `Requires &#x60;identity.tenants.delete&#x60; (there is no dedicated restore permission) held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-`,
-		requestFormat: 'json',
-		parameters: [
 			{
 				name: 'X-Command-Id',
 				type: 'Header',
@@ -11492,99 +11555,6 @@ be used to probe which tenants exist.
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'post',
-		path: '/api/v1/users/:userId/anonymise',
-		alias: 'postApiv1usersUserIdanonymise',
-		description: `Cross-tenant blast radius — one Person can hold many Memberships;
-the cascade is gated on Platform tier per multi-tenancy.md
-&quot;SuperUser god-mode&quot; + &#x60;identity.users.anonymise&#x60; permission.
-
-Requires &#x60;identity.users.anonymise&#x60; held by a platform-tenant operator; platform-tenant membership alone is refused with 403 &#x60;forbidden&#x60;.
-
-Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;person_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'body',
-				type: 'Body',
-				schema: z.object({ reason: z.string().min(1) }).passthrough()
-			},
-			{
-				name: 'X-Command-Id',
-				type: 'Header',
-				schema: z.string().min(36).max(36).uuid().optional()
-			},
-			{
-				name: 'userId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `Malformed request (invalid body, bad param shape)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
-the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
-TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
-&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
-ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
-caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
-&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
-contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
-below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
-(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
-assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
-deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
-Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
-member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
-tier or above (&#x60;grant_exceeds_authority&#x60;).
-(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `&#x60;last_owner_protected&#x60; — the person is the only active owner of a tenant; nothing was changed. &#x60;person_memberships_changing&#x60; — the person&#x27;s memberships kept changing while the change was checked (a reactivation raced it); nothing was changed, retry`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
 			},
 			{
@@ -12297,7 +12267,7 @@ minute, burst 5, whichever address the requests come from).
 		alias: 'getApiv1userssearch',
 		description: `The picker behind lead reassignment. Requires &#x60;crm.leads.assign&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068), and searches the caller&#x27;s effective tenant only.
 
-Returns ACTIVE members whose display name (first name, a space, last name) contains &#x60;q&#x60;, case-insensitively, best first (by name), at most &#x60;limit&#x60;. A hit carries &#x60;membership_id&#x60;, &#x60;display_name&#x60; and &#x60;designation&#x60; only: no email, no phone, no person id. A deactivated, anonymised or globally suspended person is never offered. &#x60;q&#x60; is trimmed and measured in characters: under 2 is 400 &#x60;search_query_too_short&#x60;, over 100 is 400 &#x60;search_query_too_long&#x60;. An empty match is 200 with &#x60;members: []&#x60;, which a client shows as &quot;no match&quot; and keeps apart from a failed call.
+Returns ACTIVE members whose display name (first name, a space, last name) contains &#x60;q&#x60;, case-insensitively, best first (by name), at most &#x60;limit&#x60;. A hit carries &#x60;membership_id&#x60;, &#x60;display_name&#x60; and &#x60;designation&#x60; only: no email, no phone, no person id. A deactivated or globally suspended person is never offered. &#x60;q&#x60; is trimmed and measured in characters: under 2 is 400 &#x60;search_query_too_short&#x60;, over 100 is 400 &#x60;search_query_too_long&#x60;. An empty match is 200 with &#x60;members: []&#x60;, which a client shows as &quot;no match&quot; and keeps apart from a failed call.
 `,
 		requestFormat: 'json',
 		parameters: [

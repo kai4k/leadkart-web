@@ -163,14 +163,14 @@ describe('update-request schemas', () => {
 });
 
 describe('tenantSchema status (Go domain values)', () => {
-	it.each(['pending', 'active', 'suspended', 'pending_deletion', 'deleted'])(
-		'accepts %s',
+	it.each(['pending', 'active', 'suspended'])('accepts %s', (status) => {
+		expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(true);
+	});
+
+	it.each(['marked_for_deletion', 'hard_deleted', 'pending_deletion', 'deleted'])(
+		'rejects the retired value %s',
 		(status) => {
-			expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(true);
+			expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(false);
 		}
 	);
-
-	it.each(['marked_for_deletion', 'hard_deleted'])('rejects the retired value %s', (status) => {
-		expect(tenantSchema.safeParse({ ...FULL_TENANT, status }).success).toBe(false);
-	});
 });

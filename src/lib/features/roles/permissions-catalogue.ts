@@ -104,11 +104,6 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 		description: 'Lift a tenant suspension (platform operators)',
 		group: 'identity'
 	},
-	{
-		name: 'identity.tenants.delete',
-		description: 'Mark for deletion, restore and hard-delete a tenant (platform operators)',
-		group: 'identity'
-	},
 
 	{ name: 'identity.users.view', description: 'List + view team members', group: 'identity' },
 	{ name: 'identity.users.create', description: 'Invite new members', group: 'identity' },
@@ -116,11 +111,6 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 	{ name: 'identity.users.deactivate', description: 'Suspend a member', group: 'identity' },
 	{ name: 'identity.users.reactivate', description: 'Lift a member suspension', group: 'identity' },
 	{ name: 'identity.users.unlock', description: 'Clear login lockouts', group: 'identity' },
-	{
-		name: 'identity.users.anonymise',
-		description: 'DPDP anonymisation (irreversible)',
-		group: 'identity'
-	},
 	{
 		name: 'identity.users.update_permissions',
 		description: 'Override role-default permissions per user',
@@ -262,9 +252,7 @@ export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
 	'platform.unverified_contacts.manage',
 	'platform.lead_credits.topup',
 	'identity.tenants.suspend',
-	'identity.tenants.activate',
-	'identity.tenants.delete',
-	'identity.users.anonymise'
+	'identity.tenants.activate'
 ]);
 
 /**

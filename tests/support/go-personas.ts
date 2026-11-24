@@ -44,9 +44,7 @@ export const PLATFORM_RESERVED: ReadonlySet<string> = new Set([
 	'platform.unverified_contacts.manage',
 	'platform.lead_credits.topup',
 	P.identityTenantsSuspend,
-	P.identityTenantsActivate,
-	P.identityTenantsDelete,
-	P.identityUsersAnonymise
+	P.identityTenantsActivate
 ]);
 
 /** Go `platformEquivalents`: an operator holding any of the right-hand names satisfies the left-hand one. */

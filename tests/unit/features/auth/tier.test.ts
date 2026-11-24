@@ -169,8 +169,6 @@ describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported
 			P.platformTenantsOwnership,
 			P.identityTenantsSuspend,
 			P.identityTenantsActivate,
-			P.identityTenantsDelete,
-			P.identityUsersAnonymise,
 			P.notificationsManage
 		])
 			expect(isBlockedInTenantContext(name), name).toBe(false);

@@ -27,7 +27,6 @@ function makePerson(overrides: Partial<PersonDto> = {}): PersonDto {
 		first_name: 'Raj',
 		last_name: 'Verma',
 		is_active: true,
-		is_anonymised: false,
 		is_globally_suspended: false,
 		global_suspension_reason: '',
 		created_at: '2026-01-01T00:00:00Z',

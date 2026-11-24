@@ -125,7 +125,7 @@ describe('unchangeablePermissions (Go refuses a changed name the caller does not
 		expect(refused['tenant.admin']).toBeUndefined();
 		expect(refused['crm.leads.assign']).toBe('not held');
 		expect(refused['platform.tenants.manage']).toBe('reserved');
-		expect(refused['identity.users.anonymise']).toBe('reserved');
+		expect(refused['identity.tenants.suspend']).toBe('reserved');
 	});
 
 	it('a caller who holds everything (a super user) is refused nothing', () => {

@@ -31,7 +31,6 @@ const PERSON_AAA = {
 	last_name: 'Anderson',
 	is_active: true,
 	is_globally_suspended: false,
-	is_anonymised: false,
 	global_suspension_reason: '',
 	created_at: '2026-01-01T00:00:00Z'
 };
