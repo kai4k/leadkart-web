@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from './helpers/test';
+import { expectCookiesGone } from './helpers/cookies';
 import {
 	fakeAccessToken,
 	fakeLoginResponse,
@@ -149,9 +150,7 @@ test.describe('session refresh', () => {
 		);
 		expect(logoutCalls).toHaveLength(1);
 		expect(JSON.parse(logoutCalls[0].body)).toEqual({ refresh_token: signedInRefresh });
-		const names = (await context.cookies()).map((c) => c.name);
-		expect(names).not.toContain('lk_refresh');
-		expect(names).not.toContain('lk_access');
+		await expectCookiesGone(context, ['lk_refresh', 'lk_access']);
 	});
 
 	test('a rejected refresh token ends the session', async ({ page, context }) => {
@@ -167,9 +166,7 @@ test.describe('session refresh', () => {
 		await page.goto('/dashboard');
 
 		await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard$/);
-		const names = (await context.cookies()).map((c) => c.name);
-		expect(names).not.toContain('lk_refresh');
-		expect(names).not.toContain('lk_csrf');
+		await expectCookiesGone(context, ['lk_refresh', 'lk_csrf']);
 	});
 
 	async function registerRefresh(): Promise<void> {
@@ -510,13 +507,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 			await expect(page).toHaveURL(/\/signin\?next=%2Fdashboard$/);
 			await expect(page.getByRole('status').filter({ hasText: sentence })).toBeVisible();
 			// the session is over in the browser, and the notice was taken
-			const names = (await context.cookies()).map((c) => c.name);
-			expect(names).not.toContain('lk_refresh');
-			expect(names).not.toContain('lk_access');
-			expect(names).not.toContain('lk_csrf');
-			await expect
-				.poll(async () => (await context.cookies()).map((c) => c.name))
-				.not.toContain('lk_signin_notice');
+			await expectCookiesGone(context, ['lk_refresh', 'lk_access', 'lk_csrf', 'lk_signin_notice']);
 
 			await page.reload();
 			await hydrated(page);
@@ -584,7 +575,7 @@ test.describe('a rejected refresh tells the sign-in page why', () => {
 		await page.waitForURL(/\/signin/);
 		await hydrated(page);
 
-		expect((await context.cookies()).map((c) => c.name)).not.toContain('lk_signin_notice');
+		await expectCookiesGone(context, ['lk_signin_notice']);
 		for (const sentence of [SESSION_ENDED, SUSPENDED, NOT_ACTIVE])
 			await expect(page.getByText(sentence)).toHaveCount(0);
 	});

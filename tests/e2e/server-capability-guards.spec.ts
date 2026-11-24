@@ -1,4 +1,5 @@
 import { expect, test } from './helpers/test';
+import { expectCookiesGone } from './helpers/cookies';
 import { signInAsTier } from './helpers/sign-in';
 import { clientNavigate } from './helpers/navigation';
 import { mintScopeCookie } from './helpers/scope-cookie';
@@ -91,7 +92,7 @@ test.describe('Operator scope is platform-only at the BFF', () => {
 		}, TEST_TENANT_SLUG);
 		expect(result.status).toBe(403);
 		expect(result.body.error).toBe('forbidden');
-		expect((await context.cookies()).some((c) => c.name === 'lk_op_tenant')).toBe(false);
+		await expectCookiesGone(context, ['lk_op_tenant']);
 		// Refused before the tenant lookup ever reached Go.
 		const lookupsAfter = (await listMockCalls()).filter((c) => c.path === '/api/v1/tenants').length;
 		expect(lookupsAfter).toBe(lookupsBefore);

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './helpers/test';
+import { expectCookiesGone } from './helpers/cookies';
 import { listMockCalls, resetMock, registerMocks } from './helpers/mock';
 import {
 	fakeAccessToken,
@@ -168,9 +169,13 @@ test.describe('Auth — must_change_password', () => {
 			})
 		).toBeVisible();
 		// the dead session is gone from the browser, the forced-change gate with it; the notice was taken
-		const names = (await context.cookies()).map((c) => c.name);
-		for (const gone of ['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_signin_notice'])
-			expect(names, gone).not.toContain(gone);
+		await expectCookiesGone(context, [
+			'lk_access',
+			'lk_refresh',
+			'lk_csrf',
+			'lk_mcp',
+			'lk_signin_notice'
+		]);
 		// one change call, and never a refresh with the dead token
 		const calls = await listMockCalls();
 		expect(calls.filter((c) => c.path === '/api/v1/auth/change-password')).toHaveLength(1);
@@ -336,9 +341,7 @@ test.describe('Auth: sign-in refusals that are not a wrong password', () => {
 			await expect(page.getByRole('textbox', { name: /email/i })).toHaveValue('member@example.com');
 			await page.waitForTimeout(1500);
 			expect(await loginCalls()).toHaveLength(1);
-			const names = (await context.cookies()).map((c) => c.name);
-			expect(names).not.toContain('lk_access');
-			expect(names).not.toContain('lk_refresh');
+			await expectCookiesGone(context, ['lk_access', 'lk_refresh']);
 		});
 	}
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './helpers/test';
+import { expectCookiesGone } from './helpers/cookies';
 import AxeBuilder from '@axe-core/playwright';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks, registerMock, listMockCalls } from './helpers/mock';
@@ -273,8 +274,7 @@ test.describe('Operator scope flow', () => {
 		await page.getByRole('button', { name: /exit context/i }).click();
 		await page.waitForURL(/\/operator\/tenants$/);
 
-		const cookies = await page.context().cookies();
-		expect(cookies.find((c) => c.name === 'lk_op_tenant')).toBeUndefined();
+		await expectCookiesGone(page.context(), ['lk_op_tenant']);
 		// The list the Exit lands on has its rows (the cache clear used to run after the navigation
 		// and leave this on a spinner).
 		await expect(page.getByText('Acme Pharma').first()).toBeVisible();
@@ -510,7 +510,7 @@ test.describe('Operator scope flow', () => {
 		await page.goto('/dashboard');
 		await expect(page).toHaveURL(/\/dashboard$/);
 		// Cleared server-side, so a failed client-side scope exit cannot loop on 409s.
-		expect((await context.cookies()).some((c) => c.name === 'lk_op_tenant')).toBe(false);
+		await expectCookiesGone(context, ['lk_op_tenant']);
 	});
 });
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
+import { expectCookiesGone } from './helpers/cookies';
 import { resetMock, registerMock, listMockCalls } from './helpers/mock';
 import { fakeSessionDto, fakeUserDto, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
 
@@ -62,9 +63,13 @@ test.describe('Account security — change password', () => {
 				hasText: 'Your password was changed. Sign in with your new password.'
 			})
 		).toBeVisible();
-		const names = (await context.cookies()).map((c) => c.name);
-		for (const gone of ['lk_access', 'lk_refresh', 'lk_csrf', 'lk_mcp', 'lk_signin_notice'])
-			expect(names, gone).not.toContain(gone);
+		await expectCookiesGone(context, [
+			'lk_access',
+			'lk_refresh',
+			'lk_csrf',
+			'lk_mcp',
+			'lk_signin_notice'
+		]);
 		const calls = await listMockCalls();
 		expect(calls.filter((c) => c.path === '/api/v1/auth/change-password')).toHaveLength(1);
 		expect(calls.filter((c) => c.path === '/api/v1/auth/refresh')).toHaveLength(0);
