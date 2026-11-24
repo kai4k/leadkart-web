@@ -57,9 +57,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    outputs:
+      playwright-image: ${{ steps.playwright.outputs.image }}
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
+      - name: Playwright image for the locked version
+        # Browser jobs run in this image, so a Playwright bump moves the browsers with it.
+        id: playwright
+        run: |
+          echo "image=mcr.microsoft.com/playwright:v$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")-noble" >> "$GITHUB_OUTPUT"
       - name: Security audit (high+ severity blocks)
         # Runs in the install job (not a separate one) because audit
         # is a 5-second check on a freshly resolved dep tree — pulling
@@ -91,20 +98,26 @@ jobs:
   # ─── E2E sharded across 4 runners (depends on build artifact) ───
   e2e:
     name: E2E
-    needs: build
+    needs: [install, build]
     uses: ./.github/workflows/_e2e.yml
+    with:
+      playwright-image: ${{ needs.install.outputs.playwright-image }}
 
   # ─── Visual regression (chromium, depends on build artifact) ───
   visual:
     name: Visual
-    needs: build
+    needs: [install, build]
     uses: ./.github/workflows/_visual.yml
+    with:
+      playwright-image: ${{ needs.install.outputs.playwright-image }}
 
   # ─── A11y deep (chromium, depends on build artifact) ──────────
   a11y:
     name: A11y
-    needs: build
+    needs: [install, build]
     uses: ./.github/workflows/_a11y.yml
+    with:
+      playwright-image: ${{ needs.install.outputs.playwright-image }}
 
   # ─── Sentinel: single check for branch protection ───
   #

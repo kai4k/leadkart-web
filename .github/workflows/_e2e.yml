@@ -15,12 +15,20 @@ name: _e2e
 
 on:
   workflow_call:
+    inputs:
+      playwright-image:
+        description: Official Playwright image for the locked version (browsers + system packages).
+        required: true
+        type: string
 
 jobs:
   e2e:
     name: E2E (shard ${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-24.04
     timeout-minutes: 12
+    container:
+      image: ${{ inputs.playwright-image }}
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -38,26 +46,6 @@ jobs:
         with:
           name: build-${{ github.sha }}
           path: build/
-
-      - name: Get Playwright version
-        id: pw-version
-        run: |
-          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright chromium
-        uses: actions/cache@v5
-        id: pw-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
-
-      - name: Install Playwright chromium (cache miss)
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system deps (cache hit)
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
 
       - name: E2E — shard ${{ matrix.shard }}/${{ matrix.total }}
         # Chromium-only matrix per chore/ci-cost-reduction (~70% of

@@ -25,12 +25,20 @@ name: _visual
 
 on:
   workflow_call:
+    inputs:
+      playwright-image:
+        description: Official Playwright image for the locked version (browsers + system packages).
+        required: true
+        type: string
 
 jobs:
   visual:
     name: Visual regression
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    container:
+      image: ${{ inputs.playwright-image }}
+      options: --user 1001
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
@@ -39,26 +47,6 @@ jobs:
         with:
           name: build-${{ github.sha }}
           path: build/
-
-      - name: Get Playwright version
-        id: pw-version
-        run: |
-          echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright chromium
-        uses: actions/cache@v5
-        id: pw-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}-chromium
-
-      - name: Install Playwright chromium (cache miss)
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system deps (cache hit)
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
 
       - name: Run visual regression suite
         run: npx playwright test --project=visual
