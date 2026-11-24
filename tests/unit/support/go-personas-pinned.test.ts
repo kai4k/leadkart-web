@@ -8,6 +8,8 @@
  *   internal/identity/app/seed/role_catalog.go          DefaultRoleCatalog   -> SEEDED
  *   internal/identity/domain/permission/implication.go  platformReserved     -> PLATFORM_RESERVED
  *                                                       platformEquivalents  -> PLATFORM_EQUIVALENTS
+ *                                                       IsPlatformManagedRole -> PLATFORM_MANAGED_ROLE
+ *   internal/identity/ports/authn/authorize.go          superUserHolds, tenantPlaneMayHold, IsPlatformOperator (clauses)
  *   internal/identity/domain/permission/permission.go   field path -> name   (to read the two above)
  *   internal/identity/domain/role/{role,system_roles}.go  levels and role names
  */
@@ -16,7 +18,12 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import SOURCE from '#lib/api/generated/SOURCE.json';
-import { PLATFORM_EQUIVALENTS, PLATFORM_RESERVED, SEEDED } from '../../support/go-personas.ts';
+import {
+	PLATFORM_EQUIVALENTS,
+	PLATFORM_MANAGED_ROLE,
+	PLATFORM_RESERVED,
+	SEEDED
+} from '../../support/go-personas.ts';
 
 const goDir = resolve(process.env.LEADKART_GO_DIR ?? '../leadkart-go');
 const haveGo = existsSync(join(goDir, '.git'));
@@ -172,5 +179,36 @@ describe.skipIf(!haveGo)('the persona builder equals Go at the pinned commit', (
 		const web = new Map(Object.entries(PLATFORM_EQUIVALENTS).map(([k, v]) => [k, sorted(v)]));
 		expect(sorted([...web.keys()])).toEqual(sorted([...go.keys()]));
 		for (const [key, value] of go) expect(web.get(key), key).toEqual(value);
+	});
+
+	it('IsPlatformManagedRole equals PLATFORM_MANAGED_ROLE', () => {
+		const src = stripComments(goFile('internal/identity/domain/permission/implication.go'));
+		const fn = /func IsPlatformManagedRole\(name string\) bool \{([\s\S]*?)\n\}/.exec(src);
+		expect(fn).not.toBeNull();
+		const used = [...fn![1]!.matchAll(/name == p\.([A-Za-z.]+)/g)].map((m) => {
+			const name = paths.get(m[1]!);
+			if (!name) throw new Error(`unknown permission path p.${m[1]}`);
+			return name;
+		});
+		expect(used.length).toBe(3);
+		expect(sorted(used)).toEqual(sorted(PLATFORM_MANAGED_ROLE));
+	});
+
+	it('the authorize.go clauses the persona rule models are still the ones Go has', () => {
+		const src = stripComments(goFile('internal/identity/ports/authn/authorize.go'));
+		const squash = (s: string) => s.replace(/\s+/g, ' ');
+		const text = squash(src);
+		// a company super user does not hold the role-management names (only the platform tenant's)
+		expect(text).toContain(
+			'return c.IsSuperUser && (!permission.IsPlatformManagedRole(required) || c.TenantSlug == PlatformTenantSlug)'
+		);
+		// only an impersonation session holds them through the tenant plane
+		expect(text).toMatch(
+			/func tenantPlaneMayHold\(c \*jwt\.Claims, required string\) bool \{ if permission\.IsPlatformManagedRole\(required\) \{ return c\.IsImpersonation\(\) \}/
+		);
+		// an impersonation token is not a platform operator
+		expect(text).toContain(
+			'return c != nil && c.IsPlatform && c.TenantSlug == PlatformTenantSlug && !c.IsImpersonation()'
+		);
 	});
 });

@@ -84,6 +84,8 @@ export interface Claims {
 	isSuperUser?: boolean;
 	/** Slug-anchored to the platform tenant. */
 	isPlatform?: boolean;
+	/** An impersonation session (Go `Claims.Act != nil`): a platform operator acting inside a company. It is not a platform operator itself, and it satisfies the role-management names through the company's own grants. */
+	isImpersonation?: boolean;
 }
 
 /**
@@ -91,31 +93,35 @@ export interface Claims {
  * deletes its own roles. No tenant-plane grant (explicit, implied by tenant.admin, a company super-admin role)
  * satisfies these three; only the platform.roles.manage equivalent of an operator does.
  */
-const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
+export const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
 	P.identityRolesCreate,
 	P.identityRolesUpdate,
 	P.identityRolesManage
 ]);
 
-/** Go `satisfiesIn` for the caller's own tenant. */
+/**
+ * Go `satisfiesIn` for the caller's own tenant, with `superUserHolds` and `tenantPlaneMayHold` (the pinned test
+ * compares the three role names and the clauses below to Go's source).
+ */
 function satisfies(c: Claims, required: string): boolean {
 	if (!ALL_PERMISSIONS.includes(required)) return false;
 	const platformManaged = PLATFORM_MANAGED_ROLE.has(required);
-	if (c.isSuperUser && (!platformManaged || c.isPlatform)) return true;
-	if (platformManaged) {
-		return (
-			c.isPlatform === true &&
-			(PLATFORM_EQUIVALENTS[required] ?? []).some((eq) => c.permissions.includes(eq))
-		);
-	}
+	const impersonating = c.isImpersonation === true;
+	// IsPlatformOperator: slug-anchored AND not an impersonation token.
+	const operator = c.isPlatform === true && !impersonating;
+	// superUserHolds
+	if (c.isSuperUser && (!platformManaged || c.isPlatform === true)) return true;
+	// tenantPlaneMayHold: the three role-management names are held only by an impersonation session (the
+	// admin-tier rank rule is not modelled here, as before).
+	const tenantPlane = platformManaged ? impersonating : true;
 	if (c.permissions.includes(required)) {
-		if (PLATFORM_RESERVED.has(required) && required !== TENANT_ADMIN) return c.isPlatform === true;
+		if (PLATFORM_RESERVED.has(required) && required !== TENANT_ADMIN) return operator;
+		if (tenantPlane) return true;
+	}
+	if (tenantPlane && c.permissions.includes(TENANT_ADMIN) && !PLATFORM_RESERVED.has(required))
 		return true;
-	}
-	if (c.permissions.includes(TENANT_ADMIN) && !PLATFORM_RESERVED.has(required)) return true;
-	if (c.isPlatform) {
+	if (operator)
 		return (PLATFORM_EQUIVALENTS[required] ?? []).some((eq) => c.permissions.includes(eq));
-	}
 	return false;
 }
 

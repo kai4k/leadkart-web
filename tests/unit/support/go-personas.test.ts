@@ -86,6 +86,22 @@ describe("go-personas: Go's effective_permissions rules", () => {
 		for (const n of names) expect(platformSuper).toContain(n);
 	});
 
+	it('an impersonation session holds the role-management names through the company grants, and is not a platform operator', () => {
+		const names = [P.identityRolesCreate, P.identityRolesUpdate, P.identityRolesManage];
+		const session = effectivePermissions({
+			permissions: ['tenant.admin'],
+			isImpersonation: true
+		});
+		for (const n of names) expect(session).toContain(n);
+		// a platform.* grant does not count for an impersonation token
+		const viaPlatform = effectivePermissions({
+			permissions: [P.platformRolesManage],
+			isPlatform: true,
+			isImpersonation: true
+		});
+		for (const n of names) expect(viaPlatform).not.toContain(n);
+	});
+
 	it('an unknown name is never satisfied', () => {
 		expect(effectivePermissions({ permissions: ['made.up.name'] })).toEqual([]);
 		expect(NO_PERMISSIONS.effective_permissions).toEqual([]);
