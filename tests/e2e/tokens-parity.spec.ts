@@ -1,6 +1,13 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './helpers/test';
 
+// The recorded values are Chromium's serialisations of computed colours (`color(srgb 0.99987 ...)`, `oklch(...)`): Firefox and
+// WebKit print the same colour with different digits, so a string comparison there fails without a real difference.
+test.skip(
+	({ browserName }) => browserName !== 'chromium',
+	"recorded values are Chromium's colour serialisation"
+);
+
 /**
  * The token layer was rebuilt without changing the light look: the same computed colours and
  * radius before and after. This pins what a few real elements render, then checks the new modes

@@ -3,6 +3,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from './helpers/test';
 
+// The recorded values are Chromium's serialisations of computed colours (`color(srgb 0.99987 ...)`, `oklch(...)`): Firefox and
+// WebKit print the same colour with different digits, so a string comparison there fails without a real difference.
+test.skip(
+	({ browserName }) => browserName !== 'chromium',
+	"recorded values are Chromium's colour serialisation"
+);
+
 /**
  * The computed value of every semantic token (and, until Task 16, every legacy `--color-*` alias), light mode,
  * default (LeadKart) colour, read from ONE probe element, against a recorded table
