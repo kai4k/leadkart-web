@@ -20,42 +20,21 @@
  * (Tailwind 4 default, Radix Colors v3 variant).
  * ───────────────────────────────────────────────────────────────────── */
 
-/* System font stack — real SF Pro on Apple devices, Segoe UI Variable
- * on Windows 11, Inter or system sans on Linux. Industry canon for
- * cross-platform native feel: Stripe Dashboard, GitHub, Tailwind UI,
- * Apple's own marketing site all use a variant of this stack. Zero
- * web-font load cost; weights come from each platform's native UI font.
- *
- * Poppins (legacy Blazor brand) + Inter (legacy CLAUDE.md spec) both
- * dropped 2026-05-16 — the project now reads as native on Apple
- * platforms first, native on Windows second. Monospace is the system
- * stack too (`ui-monospace`, SF Mono, Cascadia, Menlo, Consolas): the
- * `@fontsource-variable/jetbrains-mono` import was removed because
- * Tailwind inlines the package CSS and its font URLs were emitted as
- * absolute build-machine paths (the request aborted). */
+/* System font stack — Apple's system font first. `-apple-system` and `BlinkMacSystemFont` resolve to San Francisco on
+ * iOS and macOS (the OS picks the Text or Display optical size); then each other platform's own UI font: Segoe UI
+ * on Windows, Roboto on Android, the generic `system-ui` for anything else. Mono likewise: `ui-monospace` / SF Mono.
+ * San Francisco is licensed for Apple platforms only: it is NEVER bundled or downloaded (no @font-face, no
+ * @fontsource), only named, so a device without it falls through to its own system font. Zero web-font load cost. */
 
 @theme {
 	/* ═══ COLOUR — there are none here. The semantic tokens live in theme/semantic.css and are
 	 * bridged to Tailwind utilities by the `@theme inline` block at the bottom of this file. The
 	 * pre-Phase-2 colour names were deleted in Task 16 and `check-tokens` refuses them. */
 
-	/* ═══ TYPOGRAPHY — Poppins (LeadKart legacy from Blazor side)
-	 * + the system monospace stack for code/data.
-	 * Per ThemeBuilder.cs:67 the Blazor canon uses
-	 *   FontFamily = ["Poppins", "system-ui", "sans-serif"]
-	 * Keeping the same family on the Svelte side preserves brand
-	 * continuity for users + matches print/marketing assets. */
-	/* Apple-first system stack — `-apple-system` + `BlinkMacSystemFont`
-	 * trigger SF Pro Text / SF Pro Display automatically on iOS / macOS
-	 * (the OS picks the right variant based on size). Windows 11 falls
-	 * back to Segoe UI Variable; older Windows to Segoe UI; Android to
-	 * Roboto; Linux to whatever the GTK default is. system-ui is the
-	 * generic CSS keyword that resolves to each OS's UI font — kept as
-	 * a last-fallback so platforms without explicit names still get
-	 * something native. */
+	/* ═══ TYPOGRAPHY — the system stacks only (see the note above @theme). */
 	--font-sans:
 		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI Variable Text',
-		'Segoe UI', system-ui, 'Helvetica Neue', Arial, sans-serif;
+		'Segoe UI', Roboto, system-ui, 'Helvetica Neue', Arial, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 
 	/* Fluid type scale per Utopia.fyi — clamp(min, preferred, max).
