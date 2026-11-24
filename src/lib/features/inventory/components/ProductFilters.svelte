@@ -8,7 +8,6 @@
 		product_category?: string[];
 		product_type?: string[];
 		drug_schedule?: string[];
-		is_active?: string;
 		low_stock?: string;
 		expiring_within_days?: string;
 		[key: string]: UrlFilterValue;
@@ -49,15 +48,6 @@
 				label: 'Expiring within (days)',
 				type: 'text',
 				placeholder: 'e.g. 90'
-			},
-			{
-				key: 'is_active',
-				label: 'Status',
-				type: 'select',
-				options: [
-					{ value: 'true', label: 'Active' },
-					{ value: 'false', label: 'Inactive' }
-				]
 			}
 		];
 	}

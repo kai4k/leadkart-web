@@ -15,7 +15,7 @@
 		type ResourceListAction,
 		type BulkAction
 	} from '#lib/components/data/index.ts';
-	import { Icon, Plus, Package, UploadCloud, Pause, Check } from '#lib/icons/index.ts';
+	import { Icon, Plus, Package, UploadCloud, Pause } from '#lib/icons/index.ts';
 	import {
 		createBulkSelection,
 		createKeyboardListNav,
@@ -66,7 +66,6 @@
 		product_category: { type: 'string[]', label: 'Category' },
 		product_type: { type: 'string[]', label: 'Type' },
 		drug_schedule: { type: 'string[]', label: 'Schedule' },
-		is_active: { type: 'string', label: 'Status' },
 		low_stock: { type: 'string', label: 'Low stock' },
 		expiring_within_days: { type: 'string', label: 'Expiring within' }
 	});
@@ -84,12 +83,6 @@
 				id: 'expiring',
 				label: 'Expiring soon',
 				filters: { expiring_within_days: '90' }
-			},
-
-			{
-				id: 'inactive',
-				label: 'Inactive',
-				filters: { is_active: 'false' }
 			},
 
 			{
@@ -123,7 +116,6 @@
 				: undefined,
 			product_type: (f.product_type ?? []).length ? (f.product_type as string[]) : undefined,
 			drug_schedule: sched.length ? sched : undefined,
-			is_active: f.is_active === 'true' ? true : f.is_active === 'false' ? false : undefined,
 			low_stock: f.low_stock === 'true' ? true : undefined,
 			expiring_within_days: Number.isFinite(exp) ? exp : undefined,
 			sort: 'brand_name:asc' as ProductSort
@@ -144,16 +136,6 @@
 	const bulkMut = bulkProductActionMutation();
 
 	const bulkActions: BulkAction[] = [
-		{
-			id: 'activate',
-			label: 'Activate',
-			icon: Check as never,
-			onClick: () =>
-				bulkMut.mutate(
-					{ ids: Array.from(selection.selected), action: 'activate' },
-					{ onSuccess: () => selection.clear() }
-				)
-		},
 		{
 			id: 'deactivate',
 			label: 'Deactivate',

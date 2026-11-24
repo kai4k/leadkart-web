@@ -13,6 +13,7 @@
  *     with reason 'correction'.
  */
 import {
+	type InfiniteData,
 	createInfiniteQuery,
 	createMutation,
 	createQuery,
@@ -29,6 +30,7 @@ import type {
 	CreateBatchRequest,
 	CreateMovementRequest,
 	CreateProductRequest,
+	ListProductsResponse,
 	ProductDto,
 	UpdateProductRequest,
 	WriteOffBatchRequest
@@ -112,9 +114,25 @@ export function deleteProductMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
 		mutationFn: (id: string) => api.deactivateProduct(id),
+		// The response is the updated product (CLAUDE.md rule 11): the cache is written from it, with no refetch. A
+		// deleted product is gone from every list on screen.
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
-			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
+			qc.setQueriesData<InfiniteData<ListProductsResponse>>(
+				{ queryKey: inventoryKeys.productLists() },
+				(data) =>
+					data && {
+						...data,
+						pages: data.pages.map((page) => ({
+							...page,
+							items: page.items.filter((p) => p.id !== product.id),
+							total_count:
+								page.total_count != null && page.items.some((p) => p.id === product.id)
+									? page.total_count - 1
+									: page.total_count
+						}))
+					}
+			);
 			toast.success('Product deleted');
 		}
 	}));

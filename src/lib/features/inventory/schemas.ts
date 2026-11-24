@@ -260,7 +260,7 @@ export type ComputedPricesResponse = z.output<typeof computedPricesResponseSchem
 
 // ── Bulk ─────────────────────────────────────────────────────────────
 
-export const bulkProductActionSchema = z.enum(['activate', 'deactivate']);
+export const bulkProductActionSchema = z.enum(['deactivate']);
 export type BulkProductAction = z.output<typeof bulkProductActionSchema>;
 
 export const bulkProductActionRequestSchema = z

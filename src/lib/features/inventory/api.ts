@@ -62,7 +62,6 @@ export interface ListProductsParams {
 	product_category?: string[];
 	product_type?: string[];
 	drug_schedule?: DrugSchedule[];
-	is_active?: boolean;
 	low_stock?: boolean;
 	expiring_within_days?: number;
 	sort?: ProductSort;
@@ -76,7 +75,6 @@ function buildProductListQuery(params: ListProductsParams = {}): string {
 	for (const c of params.product_category ?? []) qs.append('product_category', c);
 	for (const t of params.product_type ?? []) qs.append('product_type', t);
 	for (const d of params.drug_schedule ?? []) qs.append('drug_schedule', d);
-	if (params.is_active != null) qs.set('status', params.is_active ? 'active' : 'inactive');
 	if (params.low_stock != null) qs.set('low_stock', String(params.low_stock));
 	if (params.expiring_within_days != null)
 		qs.set('expiring_within_days', String(params.expiring_within_days));
