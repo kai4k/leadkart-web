@@ -3,7 +3,7 @@
 	export const cardVariants = cva(
 		[
 			'group/card flex flex-col gap-4 overflow-hidden rounded-xl text-sm',
-			'ring-1 ring-border',
+			'ring-1 ring-border forced-colors:border forced-colors:border-[CanvasText]',
 			'has-data-[slot=card-footer]:pb-0',
 			'has-[>img:first-child]:pt-0',
 			'*:[img:first-child]:rounded-t-xl',
