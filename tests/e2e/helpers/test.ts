@@ -43,10 +43,11 @@ async function settle(context: BrowserContext): Promise<void> {
 }
 
 /**
- * `data-sveltekit-preload-data="hover"` (app.html) makes SvelteKit run a route's server load as
- * soon as the mouse is over a link. Playwright hovers every element it clicks, so a spec could
- * trigger loads for routes it never visits and never registered. Under test the attribute is
- * switched off on <body> before the app starts; navigation itself is unchanged.
+ * app.html sets `data-sveltekit-preload-data="tap"` (a route's server load runs on press) and
+ * `data-sveltekit-preload-code="hover"` (only the route's code is fetched on hover). Playwright hovers
+ * and presses every element it clicks, so a spec could trigger loads for routes it never visits and never
+ * registered. Under test preloading is switched off on <body> before the app starts; navigation itself is
+ * unchanged.
  */
 const DISABLE_HOVER_PRELOAD = () => {
 	const off = () => document.body?.setAttribute('data-sveltekit-preload-data', 'off');

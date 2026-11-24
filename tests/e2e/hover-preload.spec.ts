@@ -3,9 +3,10 @@ import { signInAsTier } from './helpers/sign-in';
 import { listMockCalls, resetMock } from './helpers/mock';
 
 /**
- * app.html sets `data-sveltekit-preload-data="hover"`; under test the helpers switch it off, so the
- * mouse moving over a link (every Playwright click does that) never runs a route's server load for a
- * page the spec did not visit. Without this, the load's Go calls would hit the mock unregistered.
+ * app.html preloads data on tap and code on hover; the tests switch preloading off (the helpers set
+ * `data-sveltekit-preload-data="off"` on <body>), so the mouse moving over a link (every Playwright
+ * click does that) never runs a route's server load for a page the spec did not visit. Without this,
+ * the load's Go calls would hit the mock unregistered.
  */
 test.describe('hover preload is off under test', () => {
 	test.beforeEach(async () => {
