@@ -48,10 +48,14 @@
 </div>
 
 <style>
-	/* The entrance animation and the padding are this card's own; the surface is the material. */
+	/* The entrance animation and the padding are this card's own; the surface is the material.
+	 * No fill mode: the last keyframe is the card's resting style, so once the entrance ends the animation lets go
+	 * of the card. With `forwards` a finished entrance kept holding transform and opacity: when the entrance was cut
+	 * short (the visual tests end every animation at once), Chrome could leave the card on an animated compositor
+	 * layer, which rounds the card's fractional position to other pixels than the settled card (a 1px shift). */
 	.lk-auth-card {
 		padding: clamp(1.5rem, 4vw, 2.5rem);
-		animation: lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+		animation: lk-auth-card-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	@keyframes lk-auth-card-enter {
