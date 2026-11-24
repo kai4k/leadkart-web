@@ -39,6 +39,7 @@ const CODES = [
 	'manager_not_eligible',
 	'role_in_use',
 	'role_name_taken',
+	'schedule_class_name_taken',
 	'role_system_default',
 	'role_parent_not_eligible',
 	'role_level_breaks_reporting',
@@ -61,6 +62,7 @@ const CODES = [
 	'permission_request_invalid',
 	// Inventory (inventory/ports/dto.go: ErrCodeInsufficientStock, ErrCodeBatchExpired, ErrCodeProductHasStock)
 	'already_exists',
+	'product_sku_taken_by_inactive',
 	'insufficient_stock',
 	'batch_expired',
 	'product_has_live_stock',

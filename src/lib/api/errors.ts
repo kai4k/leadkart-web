@@ -21,6 +21,9 @@ export interface ApiErrorBody {
 	type?: string;
 	status?: number;
 	errors?: Record<string, readonly string[] | undefined>;
+	/** 409 `role_in_use` only: how many members hold the role, and up to 5 of their display names. */
+	holders?: number;
+	holder_names?: readonly string[];
 }
 
 export const CORRELATION_ID_HEADER = 'x-correlation-id';
@@ -143,7 +146,7 @@ export class ApiError extends Error {
 			case 409:
 				if (code === SCOPE_INVALID_CODE) err = new ScopeInvalidError(text, traceId);
 				else if (code === SCOPE_CHANGED_CODE) err = new ScopeChangedError(text, traceId);
-				else err = new ConflictError(copy, traceId, text);
+				else err = new ConflictError(copy, traceId, text, holdersOf(body));
 				break;
 			case 429:
 				err = new RateLimitError(retryAfter, traceId);
@@ -329,13 +332,36 @@ export class ConflictError extends ApiError {
 	declare readonly status: 409;
 	/** Go's own text, for logs and support; never shown. `copy` is a code's allowlisted wording (the code table). */
 	readonly detail: string | undefined;
+	/** 409 `role_in_use`: every member that holds the role (active or not); undefined for any other conflict. */
+	readonly holders: number | undefined;
+	/** 409 `role_in_use`: display names of up to 5 holders. Empty for any other conflict. */
+	readonly holderNames: readonly string[];
 
-	constructor(copy?: string, traceId?: string, detail?: string) {
+	constructor(
+		copy?: string,
+		traceId?: string,
+		detail?: string,
+		holders?: { count?: number; names?: readonly string[] }
+	) {
 		super(409, traceId);
 		this.name = 'ConflictError';
 		this.detail = detail;
+		this.holders = holders?.count;
+		this.holderNames = holders?.names ?? [];
 		this.message = copy ?? CONFLICT_COPY;
 	}
+}
+
+/** The holder fields of a `role_in_use` body, typed; anything malformed is dropped. */
+function holdersOf(body: ApiErrorBody | null): { count?: number; names?: readonly string[] } {
+	const count =
+		typeof body?.holders === 'number' && Number.isInteger(body.holders) && body.holders >= 0
+			? body.holders
+			: undefined;
+	const names = Array.isArray(body?.holder_names)
+		? body.holder_names.filter((n): n is string => typeof n === 'string' && n.trim() !== '')
+		: undefined;
+	return { count, names };
 }
 
 /**

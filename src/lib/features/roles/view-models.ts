@@ -37,3 +37,19 @@ export function roleMemberCount(
 ): number {
 	return roster.filter((u) => u.status === 'active' && u.role_ids.includes(role.id)).length;
 }
+
+/**
+ * The line under a refused role delete (409 `role_in_use`): how many people hold the role and the first
+ * names Go sent (up to 5). `null` when Go sent no count, so the dialog says nothing it was not told.
+ */
+export function roleHoldersLine(
+	holders: number | undefined,
+	names: readonly string[]
+): string | null {
+	if (holders === undefined || holders <= 0) return null;
+	const count = holders === 1 ? '1 person holds' : `${holders} people hold`;
+	if (names.length === 0) return `${count} this role.`;
+	const more = holders - names.length;
+	const list = names.join(', ') + (more > 0 ? ` and ${more} more` : '');
+	return `${count} this role: ${list}.`;
+}

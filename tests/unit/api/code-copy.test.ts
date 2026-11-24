@@ -148,6 +148,23 @@ describe('the code table', () => {
 		}
 	);
 
+	// Go ADR 0073 addendum (c1db07e3): a deleted name frees up; a deleted product's SKU never does.
+	it.each([
+		['role_in_use', 409, 'People still hold this role. Remove it from them first.'],
+		['role_name_taken', 409, 'A role with this name already exists.'],
+		['schedule_class_name_taken', 409, 'A drug schedule class with this name already exists.'],
+		['product_sku_taken_by_inactive', 409, 'A deleted product used this SKU. Pick another.']
+	])('%s says what to do, to the client and to a server action alike', (code, status, copy) => {
+		expect(goCodeKey(code)).toBe(`errors.code.${code}`);
+		expect(goFailureKey(status, code)).toBe(`errors.code.${code}`);
+		expect(dig(en, `errors.code.${code}`)).toBe(copy);
+		const err = ApiError.fromResponse(new Response(null, { status }), {
+			error: code,
+			message: 'raw Go text'
+		});
+		expect(describeError(err)).toBe(copy);
+	});
+
 	it('the server helper and the client describer say the same thing for a code', () => {
 		for (const code of ['insufficient_rank', 'role_name_taken', 'grant_exceeds_authority']) {
 			const key = goFailureKey(403, code);

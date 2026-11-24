@@ -4,7 +4,8 @@ import {
 	roleKind,
 	roleKindKey,
 	rolePermissionSet,
-	roleMemberCount
+	roleMemberCount,
+	roleHoldersLine
 } from '#lib/features/roles/view-models.ts';
 import type { RoleDto } from '#lib/features/roles/types.ts';
 
@@ -109,5 +110,26 @@ describe('roleMemberCount', () => {
 
 	it('returns 0 for an empty roster', () => {
 		expect(roleMemberCount(base, [])).toBe(0);
+	});
+});
+
+describe('roleHoldersLine (409 role_in_use)', () => {
+	it('says nothing when Go sent no count', () => {
+		expect(roleHoldersLine(undefined, ['A'])).toBeNull();
+		expect(roleHoldersLine(0, [])).toBeNull();
+	});
+	it('one person', () => {
+		expect(roleHoldersLine(1, ['Asha'])).toBe('1 person holds this role: Asha.');
+	});
+	it('names without a rest', () => {
+		expect(roleHoldersLine(2, ['Asha', 'Ravi'])).toBe('2 people hold this role: Asha, Ravi.');
+	});
+	it('up to 5 names and the rest as a count', () => {
+		expect(roleHoldersLine(8, ['A', 'B', 'C', 'D', 'E'])).toBe(
+			'8 people hold this role: A, B, C, D, E and 3 more.'
+		);
+	});
+	it('a count without names', () => {
+		expect(roleHoldersLine(3, [])).toBe('3 people hold this role.');
 	});
 });

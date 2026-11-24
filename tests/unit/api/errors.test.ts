@@ -135,6 +135,23 @@ describe('ApiError.fromResponse — status mapping', () => {
 	it('maps 404 to NotFoundError', () => {
 		expect(ApiError.fromResponse(res(404), null)).toBeInstanceOf(NotFoundError);
 	});
+	it('a 409 role_in_use carries the holder count and names as typed fields, never parsed from text', () => {
+		const err = ApiError.fromResponse(res(409), {
+			error: 'role_in_use',
+			holders: 7,
+			holder_names: ['Asha', 'Ravi', '', 42 as unknown as string]
+		});
+		expect(err).toBeInstanceOf(ConflictError);
+		expect((err as ConflictError).holders).toBe(7);
+		expect((err as ConflictError).holderNames).toEqual(['Asha', 'Ravi']);
+	});
+
+	it('any other 409 has no holders', () => {
+		const err = ApiError.fromResponse(res(409), { error: 'slug_taken', holders: -3 });
+		expect((err as ConflictError).holders).toBeUndefined();
+		expect((err as ConflictError).holderNames).toEqual([]);
+	});
+
 	it('a Go 409 with any code stays a ConflictError', () => {
 		expect(ApiError.fromResponse(res(409), { error: 'slug_taken' })).toBeInstanceOf(ConflictError);
 	});

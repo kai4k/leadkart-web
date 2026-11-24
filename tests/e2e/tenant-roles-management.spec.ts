@@ -234,6 +234,39 @@ test.describe('Roles: a LeadKart operator inside a company', () => {
 		await expect(page.getByText('Delete', { exact: true })).toHaveCount(0);
 	});
 
+	test('Delete refused while people hold the role: says who still does', async ({ page }) => {
+		await enterAcmeRoles(page, [CUSTOM_ROLE]);
+		await registerMock({
+			method: 'POST',
+			path: `/api/v1/roles/${CUSTOM_ROLE.id}/deactivate`,
+			status: 409,
+			body: {
+				error: 'role_in_use',
+				holders: 7,
+				holder_names: ['Asha Rao', 'Ravi Shah', 'Meena Iyer', 'Kabir Das', 'Nina Paul'],
+				errors: { active_holders: ['6'] }
+			}
+		});
+
+		await page
+			.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
+			.first()
+			.click();
+		await page.getByText('Delete', { exact: true }).click();
+		const dialog = page.getByRole('alertdialog');
+		await dialog.getByRole('textbox').fill('Sales Lead');
+		await dialog.getByRole('button', { name: 'Delete role' }).click();
+
+		await expect(
+			dialog.getByText('People still hold this role. Remove it from them first.')
+		).toBeVisible();
+		await expect(
+			dialog.getByText(
+				'7 people hold this role: Asha Rao, Ravi Shah, Meena Iyer, Kabir Das, Nina Paul and 2 more.'
+			)
+		).toBeVisible();
+	});
+
 	test('create role: name shorter than 2 chars blocks submission', async ({ page }) => {
 		await enterAcmeRoles(page, []);
 
