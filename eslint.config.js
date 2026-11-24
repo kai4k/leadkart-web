@@ -48,23 +48,23 @@ const RESTRICTED_PATHS = [
 	},
 	{
 		name: 'remixicon',
-		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+		message: 'Only @lucide/svelte (via #lib/icons/index.ts) is permitted — CLAUDE.md rule 5.'
 	},
 	{
 		name: 'boxicons',
-		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+		message: 'Only @lucide/svelte (via #lib/icons/index.ts) is permitted — CLAUDE.md rule 5.'
 	},
 	{
 		name: 'line-awesome',
-		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+		message: 'Only @lucide/svelte (via #lib/icons/index.ts) is permitted — CLAUDE.md rule 5.'
 	},
 	{
 		name: 'react-icons',
-		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+		message: 'Only @lucide/svelte (via #lib/icons/index.ts) is permitted — CLAUDE.md rule 5.'
 	},
 	{
 		name: '@iconify/svelte',
-		message: 'Only @lucide/svelte (via $icons) is permitted — CLAUDE.md rule 5.'
+		message: 'Only @lucide/svelte (via #lib/icons/index.ts) is permitted — CLAUDE.md rule 5.'
 	},
 	{
 		name: 'moment',
@@ -80,9 +80,9 @@ const RESTRICTED_PATHS = [
 
 const RESTRICTED_PATTERNS = [
 	{
-		group: ['$features/*/*/*', '#lib/features/*/*/*'],
+		group: ['#lib/features/*/*/*'],
 		message:
-			'Deep imports into feature internals are forbidden — import from the feature barrel ($features/<name>) only.'
+			'Deep imports into feature internals are forbidden — import from the feature barrel (#lib/features/<name>/index.ts) only.'
 	}
 ];
 
@@ -449,7 +449,7 @@ export default ts.config(
 						{
 							name: '@lucide/svelte',
 							message:
-								"Import icons from '$icons' (the registry) instead. Add new icons to src/lib/icons/index.ts."
+								"Import icons from '#lib/icons/index.ts' (the registry) instead. Add new icons to src/lib/icons/index.ts."
 						}
 					],
 					patterns: RESTRICTED_PATTERNS
@@ -473,7 +473,7 @@ export default ts.config(
 			'no-restricted-syntax': 'off'
 		}
 	},
-	// ─── Components MUST NOT import from $api/client (rule 1) ───
+	// ─── Components MUST NOT import from #lib/api/client (rule 1) ───
 	{
 		files: [
 			'src/lib/components/**/*.{ts,svelte}',
@@ -489,15 +489,15 @@ export default ts.config(
 						...RESTRICTED_PATHS,
 						{
 							name: '@lucide/svelte',
-							message: "Import icons from '$icons' (the registry) instead."
+							message: "Import icons from '#lib/icons/index.ts' (the registry) instead."
 						}
 					],
 					patterns: [
 						...RESTRICTED_PATTERNS,
 						{
-							group: ['$api/client*', '#lib/api/client*'],
+							group: ['#lib/api/client*'],
 							message:
-								'Components must not import $api/client directly. Use a feature gateway in $features/<name>/api.ts (CLAUDE.md layering rule 1).'
+								'Components must not import #lib/api/client directly. Use a feature gateway in #lib/features/<name>/api.ts (CLAUDE.md layering rule 1).'
 						}
 					]
 				}
@@ -537,7 +537,7 @@ export default ts.config(
 				{
 					name: 'fetch',
 					message:
-						'Direct fetch() is forbidden outside $api/client + feature gateways + BFF route handlers. Go through a feature gateway (src/lib/features/<name>/api.ts) — CLAUDE.md rule 6.'
+						'Direct fetch() is forbidden outside #lib/api/client + feature gateways + BFF route handlers. Go through a feature gateway (src/lib/features/<name>/api.ts) — CLAUDE.md rule 6.'
 				}
 			]
 		}

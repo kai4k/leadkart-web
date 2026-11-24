@@ -10,7 +10,7 @@
  * Each entry is a relative path under src/lib/components/. The
  * check pairs file presence with a barrel export from the relevant
  * lib/components/<group>/index.ts — so consumers can `import { Foo }
- * from '$ui'` without reaching into the file path directly.
+ * from '#lib/components/ui/index.ts'` without reaching into the file path directly.
  *
  * When a new primitive lands, add its file path here so the gate
  * catches accidental deletions. When a primitive intentionally
@@ -104,7 +104,7 @@ const OPT_OUT = new Set([
 	'ui/Banner.svelte', // — Alert variant="warning" with `dismissible` covers system-level banner
 	'ui/HoverCard.svelte', // — no consumer site; Tooltip + Popover cover the hover-reveal cases
 	'ui/ContextMenu.svelte', // — no right-click menus on the v0.x roadmap
-	'ui/CommandPalette.svelte', // — primitive lives at $features/search/components/CommandPalette.svelte (route-aware)
+	'ui/CommandPalette.svelte', // — primitive lives at #lib/features/search/components/CommandPalette.svelte (route-aware)
 	'ui/tabs/Tabs.svelte', // — the primitive is ui/tabs/tabs.svelte (lowercase, regenerated)
 	'ui/ProgressBar.svelte', // — Progress.svelte covers this (bits-ui Progress)
 	'ui/ProgressCircle.svelte', // — Spinner covers indeterminate; ProgressCircle deferred

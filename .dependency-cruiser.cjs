@@ -76,7 +76,7 @@ module.exports = {
 			name: 'components-no-direct-api-client',
 			severity: 'error',
 			comment:
-				'Components (src/lib/components, src/lib/layouts, src/routes) must not import $api/client directly — route through a feature gateway.',
+				'Components (src/lib/components, src/lib/layouts, src/routes) must not import #lib/api/client directly — route through a feature gateway.',
 			from: {
 				path: '^src/(lib/(components|layouts)|routes)/'
 			},
@@ -182,9 +182,6 @@ module.exports = {
 			]
 		},
 		tsPreCompilationDeps: true,
-		// tsconfig.json extends the generated `$app/tsconfig` (svelte-kit sync), which
-		// depcruise cannot follow — the shared `$` aliases come in via depcruise.resolve.cjs.
-		webpackConfig: { fileName: 'depcruise.resolve.cjs' },
 		enhancedResolveOptions: {
 			exportsFields: ['exports'],
 			conditionNames: ['import', 'require', 'node', 'default', 'svelte'],

@@ -65,7 +65,7 @@ let body = raw.slice(0, endpointsStart).trim();
 
 // Export every `const Foo = z....` so feature modules can re-import the
 // schemas by name. The bottom-of-file `export const schemas = { ... }`
-// already exists; this lets `import { TenantDto } from '$api/generated/openapi-zod'`
+// already exists; this lets `import { TenantDto } from '#lib/api/generated/openapi-zod.ts'`
 // work alongside the bag-style `import { schemas }`.
 body = body.replace(/(^|\n)const ([A-Z][A-Za-z0-9]*) = /g, '$1export const $2 = ');
 

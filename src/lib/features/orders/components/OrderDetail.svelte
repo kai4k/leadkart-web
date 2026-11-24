@@ -76,7 +76,7 @@
 <!--
 	OrderDetail — composes header + lifecycle stepper + tabs (Items /
 	Revisions / Payments / Invoice / Credit Notes / Activity) using
-	$ui/tabs and the new feature components.
+	#lib/components/ui/tabs and the new feature components.
 -->
 
 <div class="stack stack-relaxed">

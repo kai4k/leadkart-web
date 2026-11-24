@@ -6,9 +6,9 @@
  *   - `ui/drawer` (a shim over `ui/sheet` under the old vaul-era names): use `FormSheet` / `Sheet`.
  *   - `ui/data-table` (the hand-rolled table): use `components/data/data-table` (`DataTable`).
  *
- * Fails on an import of `#lib/components/ui/drawer`, `$ui/drawer`, `Drawer` from `$ui` (or the ui barrel),
- * and `#lib/components/ui/data-table`, `$ui/data-table`, `DataTable` / `DataTableColumn` /
- * `DataTableProps` from `$ui`, in a file that is not listed in `allowlists/phase2-rebuild-pending.json`
+ * Fails on an import of `#lib/components/ui/drawer`, `#lib/components/ui/drawer/index.ts`, `Drawer` from the ui barrel (or the ui barrel),
+ * and `#lib/components/ui/data-table`, `#lib/components/ui/data-table/index.ts`, `DataTable` / `DataTableColumn` /
+ * `DataTableProps` from the ui barrel, in a file that is not listed in `allowlists/phase2-rebuild-pending.json`
  * under `drawer` / `legacyDataTable`. Every listed file has a `notes` entry naming the task that
  * removes it; a listed file that no longer imports the primitive (or no longer exists) FAILS, so an
  * entry cannot outlive its reason. Scanned: `src/**`; the two shims themselves and the `ui/` barrel
@@ -31,10 +31,10 @@ export const NOT_IMPORTERS = [
 	'src/lib/components/ui/index.ts'
 ];
 
-const DRAWER_SPECIFIER = /^(?:#lib\/components\/ui|\$ui)\/drawer(?:\/|$)/;
-const TABLE_SPECIFIER = /^(?:#lib\/components\/ui|\$ui)\/data-table(?:\/|$)/;
+const DRAWER_SPECIFIER = /^#lib\/components\/ui\/drawer(?:\/|$)/;
+const TABLE_SPECIFIER = /^#lib\/components\/ui\/data-table(?:\/|$)/;
 const UI_BARREL_IMPORT =
-	/(?:^|[\s;>])import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](?:\$ui|#lib\/components\/ui(?:\/index\.ts)?)['"]/g;
+	/(?:^|[\s;>])import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]#lib\/components\/ui(?:\/index\.ts)?['"]/g;
 const TABLE_NAMES = new Set(['DataTable', 'DataTableColumn', 'DataTableProps']);
 
 /** @returns {Array<{ line: number, list: 'drawer' | 'legacyDataTable', what: string }>} */
@@ -60,9 +60,10 @@ export function findLegacyImports(rel, src) {
 				.replace(/^type\s+/, '')
 				.split(/\s+as\s+/)[0]
 				.trim();
-			if (name === 'Drawer') found.push({ line, list: 'drawer', what: `${name} from $ui` });
+			if (name === 'Drawer')
+				found.push({ line, list: 'drawer', what: `${name} from the ui barrel` });
 			else if (TABLE_NAMES.has(name))
-				found.push({ line, list: 'legacyDataTable', what: `${name} from $ui` });
+				found.push({ line, list: 'legacyDataTable', what: `${name} from the ui barrel` });
 		}
 	}
 	return found;

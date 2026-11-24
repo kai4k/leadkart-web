@@ -1,5 +1,5 @@
 <!--
-	QuotationRevisionsTimeline — wraps $ui/timeline to render every
+	QuotationRevisionsTimeline — wraps ui/timeline to render every
 	QuotationRevisionDto in chronological order with the revision
 	number, total, optional notes, and `revised_at` timestamp.
 -->

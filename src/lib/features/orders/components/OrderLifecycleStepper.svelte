@@ -1,6 +1,6 @@
 <!--
 	OrderLifecycleStepper — renders the 10-state happy-path ladder
-	using <Stepper.Root> from $ui. Driven by `lifecycleStepsFor(order)`
+	using <Stepper.Root> from #lib/components/ui/stepper. Driven by `lifecycleStepsFor(order)`
 	which marks pre-current steps complete, the current step
 	highlighted, and (when the order is cancelled) the step where
 	cancellation happened with an `error` state.

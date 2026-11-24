@@ -415,8 +415,8 @@ export function findPrimaryMarks(rel, src) {
 //   - a `text-destructive` element whose ANCESTOR in the same file carries `bg-muted` / `bg-accent` (any
 //     variant) is on that fill, unless an element between them (or the element itself) sets a gated fill.
 // A file is a material surface when it uses a `material-*` utility, is a ui primitive of an overlay family,
-// imports an overlay primitive by name from the `$ui` barrel or the ui folders (Dialog, AlertDialog, Sheet, Drawer,
-// Popover, DropdownMenu or its `$ui` alias Dropdown, Select, Command, Combobox, Sidebar, Toaster, and the wrappers
+// imports an overlay primitive by name from the ui barrel or the ui folders (Dialog, AlertDialog, Sheet, Drawer,
+// Popover, DropdownMenu or its barrel alias Dropdown, Select, Command, Combobox, Sidebar, Toaster, and the wrappers
 // ConfirmDialog, FormSheet, FormDialog), imports an overlay FAMILY as a namespace
 // (`import * as Dialog from '#lib/components/ui/dialog/index.ts'`), or default-imports a wrapper file
 // (`ConfirmDialog.svelte`, `FormSheet.svelte`, `FormDialog.svelte`, `*Drawer.svelte`): one level of wrapping. The
@@ -426,7 +426,7 @@ export function findPrimaryMarks(rel, src) {
 export const MATERIAL_SURFACE_FILES = [
 	/^src\/lib\/components\/ui\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar|AuthCard)[\w./-]*$/
 ];
-/** Names of overlay primitives and of the wrappers built on them (`Dropdown` is the `$ui` alias of DropdownMenu). */
+/** Names of overlay primitives and of the wrappers built on them (`Dropdown` is the barrel alias of DropdownMenu). */
 const OVERLAY_IMPORTS =
 	/\b(?:Dialog|AlertDialog|Sheet|Drawer|Popover|DropdownMenu|Dropdown|Select|Command|Combobox|Sidebar|Toaster|ConfirmDialog|FormSheet|FormDialog)\b/;
 /** `import * as Dialog from '#lib/components/ui/dialog/index.ts'`: a namespace import of an overlay family. */
@@ -435,11 +435,11 @@ const OVERLAY_NAMESPACE =
 /** A default import of a wrapper that renders an overlay (one level of wrapping; the wrapper files are material surfaces themselves). */
 const OVERLAY_WRAPPER_FILE =
 	/import\s+(?:type\s+)?\w+\s+from\s*['"][^'"]*\/(?:ConfirmDialog|FormSheet|FormDialog|\w*Drawer)\.svelte['"]/;
-/** A named import of a wrapper that renders an overlay from a barrel (`{ ReasonConfirmDialog } from '#lib/components/feedback/index.ts'`, `{ FormSheet } from '$form'`). */
+/** A named import of a wrapper that renders an overlay from a barrel (`{ ReasonConfirmDialog } from '#lib/components/feedback/index.ts'`, `{ FormSheet } from '#lib/components/form/index.ts'`). */
 const OVERLAY_WRAPPER_NAMED =
 	/import\s*\{[^}]*\b(?:ReasonConfirmDialog|FormSheet|FormDialog)\b[^}]*\}\s*from\s*['"][^'"]+['"]/;
 const OVERLAY_FROM =
-	/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"](?:\$ui|#lib\/components\/ui\/index\.ts|#lib\/components\/ui(?:\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)[^'"]*)?)['"]/g;
+	/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*['"](?:#lib\/components\/ui\/index\.ts|#lib\/components\/ui(?:\/(?:dialog|alert-dialog|sheet|drawer|popover|dropdown-menu|select|command|combobox|sonner|sidebar)[^'"]*)?)['"]/g;
 const CONTROL_BG = new Set(['bg-muted', 'bg-accent']);
 const GATED_FILL = new Set(['bg-destructive-soft', 'bg-card', 'bg-background', 'bg-popover']);
 

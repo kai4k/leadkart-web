@@ -4,7 +4,6 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import { aliases } from './aliases.js';
 
 /**
  * Vite dev-server config.
@@ -40,7 +39,6 @@ export default defineConfig({
 		sveltekit({
 			preprocess: vitePreprocess(),
 			adapter: adapter({ out: 'build', precompress: true }),
-			alias: aliases,
 			// Strict CSP. Kit adds per-request nonces to its own inline scripts and
 			// the app.html theme-prime script. script-src is never loosened.
 			csp: {

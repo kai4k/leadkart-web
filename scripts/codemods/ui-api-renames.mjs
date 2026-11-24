@@ -7,7 +7,7 @@
  *                               fullWidth -> class="w-full"
  *   Badge                       appearance=* and size=* dropped; appearance="outline" -> variant="outline"
  *   Alert                       variant="danger" -> variant="destructive"
- *   `Pagination` imported from `$ui` -> `#lib/components/data/Pagination.svelte`
+ *   `Pagination` imported from the ui barrel -> `#lib/components/data/Pagination.svelte`
  *
  * Prints every file changed, then the dynamic spellings it could not map (`variant={x ? 'danger' : 'ghost'}`),
  * with file:line, for a hand edit. Idempotent.
@@ -126,7 +126,7 @@ export function renameSource(src) {
 		return t;
 	});
 
-	// `Pagination` from `$ui` -> the data composite
+	// `Pagination` from the ui barrel -> the data composite
 	out = out.replace(
 		/import\s*\{([^}]*)\}\s*from\s*'#lib\/components\/ui\/index\.ts';/g,
 		(m, names) => {

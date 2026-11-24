@@ -1,5 +1,5 @@
 /**
- * $ui — single import path for cross-feature primitives.
+ * #lib/components/ui/index.ts — single import path for cross-feature primitives.
  * Phase B rebuild on bits-ui + Svelte Bits (per CLAUDE.md doctrine).
  */
 export { Alert, type AlertVariant, type AlertVariants, alertVariants } from './alert';

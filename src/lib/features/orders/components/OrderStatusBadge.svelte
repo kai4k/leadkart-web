@@ -1,5 +1,5 @@
 <!--
-	OrderStatusBadge — thin wrapper composing $ui StatusPill with the
+	OrderStatusBadge — thin wrapper composing ui StatusPill with the
 	order status → variant + label mapping from view-models. Read-only
 	(never renders the inline picker) because lifecycle transitions go
 	through OrderActionButtons, not status picking.

@@ -74,7 +74,6 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
-import { aliases } from '../../aliases.js';
 
 const ROOT = resolve(import.meta.dirname, '../..')
 	.split('\\')
@@ -303,15 +302,9 @@ const short = (n: ts.Node | undefined): string =>
 
 /**
  * One program over `files` plus the in-memory `overlay` (absolute path -> source; the self-test's
- * synthetic offenders). Module resolution is the repository's own: package `imports` (`#lib/*`) and
- * the `$`-aliases of `aliases.js`.
+ * synthetic offenders). Module resolution is the repository's own: package `imports` (`#lib/*`).
  */
 export function createAnalysis(files: string[], overlay: Record<string, string> = {}): Analysis {
-	const paths: Record<string, string[]> = {};
-	for (const [alias, dir] of Object.entries(aliases)) {
-		paths[alias] = [`${dir}/index.ts`];
-		paths[`${alias}/*`] = [`${dir}/*`];
-	}
 	const options: ts.CompilerOptions = {
 		target: ts.ScriptTarget.ESNext,
 		module: ts.ModuleKind.ESNext,
@@ -321,8 +314,7 @@ export function createAnalysis(files: string[], overlay: Record<string, string> 
 		strict: true,
 		skipLibCheck: true,
 		types: ['node'],
-		baseUrl: ROOT,
-		paths
+		baseUrl: ROOT
 	};
 	const ov = new Map(Object.entries(overlay).map(([k, v]) => [norm(k), v]));
 	const host = ts.createCompilerHost(options, true);
