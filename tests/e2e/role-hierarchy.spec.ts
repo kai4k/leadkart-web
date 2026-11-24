@@ -65,7 +65,7 @@ test.describe('Role hierarchy editor', () => {
 		page
 	}) => {
 		await signInAsTier(page, {
-			tier: 'tenant-admin',
+			tier: 'platform-super',
 			permissions: [
 				'tenant.admin',
 				'identity.roles.view',
@@ -102,7 +102,7 @@ test.describe('Role hierarchy editor', () => {
 
 	test('save parent: PATCH succeeds → toast', async ({ page }) => {
 		await signInAsTier(page, {
-			tier: 'tenant-admin',
+			tier: 'platform-super',
 			permissions: [
 				'tenant.admin',
 				'identity.roles.view',
@@ -141,7 +141,7 @@ test.describe('Role hierarchy editor', () => {
 		page
 	}) => {
 		await signInAsTier(page, {
-			tier: 'tenant-admin',
+			tier: 'platform-super',
 			permissions: ['tenant.admin', 'identity.roles.view', 'identity.roles.update']
 		});
 		await registerMocks([

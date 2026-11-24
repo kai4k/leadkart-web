@@ -132,6 +132,10 @@
 		{/snippet}
 	</PageHeader>
 
+	{#if !may.create && !may.update && !may.delete}
+		<p class="caption text-muted-foreground">{$_('pages.roles.readOnly')}</p>
+	{/if}
+
 	<DataTable
 		{columns}
 		data={pagination.paged}

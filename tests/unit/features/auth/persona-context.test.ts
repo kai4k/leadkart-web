@@ -23,11 +23,13 @@ const IDENTITY_ACTIONS = [
 	'userReactivate',
 	'userOverrides',
 	'roleAssign',
-	'roleRevoke',
-	'roleCreate',
-	'roleUpdate',
-	'roleDelete'
+	'roleRevoke'
 ] as const;
+
+/** Go `IsPlatformManagedRole`: LeadKart platform authority only; no company member holds them. */
+const ROLE_WRITE_ACTIONS = ['roleCreate', 'roleUpdate', 'roleDelete'] as const;
+
+const EVERY_ACTION = [...IDENTITY_ACTIONS, ...ROLE_WRITE_ACTIONS];
 
 /** A platform operator who is ALSO the owner of the platform tenant and holds platform.users.view only. */
 const OPERATOR_AND_OWNER = persona({
@@ -51,11 +53,21 @@ describe('at home (own tenant): the identity.* names count', () => {
 	])('a tenant %s is offered every identity action', (_n, who) => {
 		for (const a of IDENTITY_ACTIONS) expect(canAny(who, ACTION[a], false), a).toBe(true);
 	});
+
+	it.each([
+		['owner', OWNER],
+		['administrator', NEW_TENANT_ADMIN]
+	])(
+		'a tenant %s is offered no create / edit / delete of a role (LeadKart platform only)',
+		(_n, who) => {
+			for (const a of ROLE_WRITE_ACTIONS) expect(canAny(who, ACTION[a], false), a).toBe(false);
+		}
+	);
 });
 
 describe('inside a tenant context', () => {
 	it('an operator who also owns the platform tenant is offered no write: Go would answer 403 to each', () => {
-		for (const a of IDENTITY_ACTIONS) {
+		for (const a of EVERY_ACTION) {
 			if (a === 'userView') continue; // a read: platform.users.view is the equivalent they hold
 			expect(canAny(OPERATOR_AND_OWNER, ACTION[a], true), a).toBe(false);
 		}
@@ -87,12 +99,12 @@ describe('inside a tenant context', () => {
 	});
 
 	it('the full platform operator keeps everything the platform names give', () => {
-		for (const a of IDENTITY_ACTIONS)
+		for (const a of EVERY_ACTION)
 			expect(canAny(OPERATOR_PLATFORM_ADMIN, ACTION[a], true), a).toBe(true);
 	});
 
 	it('a super user keeps every identity action', () => {
-		for (const a of IDENTITY_ACTIONS) expect(canAny(SUPER_USER, ACTION[a], true), a).toBe(true);
+		for (const a of EVERY_ACTION) expect(canAny(SUPER_USER, ACTION[a], true), a).toBe(true);
 	});
 
 	it('nobody is offered a permission-request submit (Go: tenant_scope_not_supported)', () => {

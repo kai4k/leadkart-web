@@ -3509,7 +3509,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Create a custom role
-		 * @description Requires `identity.roles.create` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 * @description Requires `identity.roles.create` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 		 *
 		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_invalid` with `errors{<field>: ["invalid_characters"]}` for `name`, and nothing is written.
 		 */
@@ -3604,7 +3604,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description Role name already taken in this tenant (`role_name_taken`) */
+				/** @description An ACTIVE role of this tenant already has this name (`role_name_taken`); a deleted (inactive) role frees its name (ADR 0073 addendum) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -3758,7 +3758,7 @@ export interface paths {
 		 *     active holder that is strictly junior to their (active) manager would no longer be, or a direct report that is
 		 *     strictly junior to a holder would no longer be. Lines that are already broken, and inactive managers or
 		 *     reports, do not block it.
-		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *     Requires `identity.roles.update` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 		 *
 		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_invalid` with `errors{<field>: ["invalid_characters"]}` for `name`, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 		 */
@@ -3894,8 +3894,8 @@ export interface paths {
 		put?: never;
 		/**
 		 * Make a role inactive
-		 * @description Requires `identity.roles.manage` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). A role is never deleted (ADR 0073): it goes inactive.
-		 *     The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before `role_in_use`). A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the count). A system-default role is 409 `role_system_default`.
+		 * @description Requires `identity.roles.manage` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). A role is never deleted (ADR 0073): it goes inactive.
+		 *     The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before `role_in_use`). A role still held by ANY member, active or inactive, is refused with 409 `role_in_use` (a role is deleted only once nobody holds it, owner ruling 2026-11-25): the body carries `holders` (every holder), `holder_names` (display names of up to 5 of them) and `errors.active_holders` (how many are active). A system-default role is 409 `role_system_default`.
 		 *     An inactive role confers nothing (no permission, no rank), takes no new holder (`role_inactive` on assign), cannot be edited or be a parent, and is hidden from the default list. The assignments of its INACTIVE holders are kept (nothing is deleted); a holder reactivated while the role is inactive receives nothing from it. Idempotent: an inactive role answers 200. Answers the updated role.
 		 */
 		post: {
@@ -3987,7 +3987,7 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
-				/** @description `role_in_use` (an active member holds the role) or `role_system_default` (system-default roles cannot be made inactive) */
+				/** @description `role_in_use` (any member, active or inactive, holds the role; `holders`, `holder_names`) or `role_system_default` (system-default roles cannot be made inactive) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -4016,7 +4016,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Make an inactive role active again
-		 * @description Requires `identity.roles.manage`. Reactivating gives the role's permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 `grant_exceeds_authority`). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role.
+		 * @description Requires `identity.roles.manage`. Reactivating gives the role's permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 `grant_exceeds_authority`). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role. If a newer ACTIVE role now has this role's name it cannot come back: 409 `role_name_taken` (nothing changes).
 		 */
 		post: {
 			parameters: {
@@ -4107,6 +4107,15 @@ export interface paths {
 				400: components['responses']['BadRequest'];
 				403: components['responses']['AuthorityForbidden'];
 				404: components['responses']['NotFound'];
+				/** @description `role_name_taken` - an active role already has this name (rename or deactivate that one first) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				429: components['responses']['TooManyRequests'];
 			};
 		};
@@ -4150,7 +4159,7 @@ export interface paths {
 		 *
 		 *     Optional `reason` (10-1024 chars) is recorded onto the new
 		 *     edge OR the cleared edge for audit.
-		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *     Requires `identity.roles.update` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 		 *
 		 *     Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 `role_hierarchy_invalid_reason` with `errors{<field>: ["invalid_characters"]}` for `reason`, and nothing is written.
 		 */
@@ -4292,7 +4301,7 @@ export interface paths {
 		 *     Permission names MUST match the closed
 		 *     `permission.IdentityPermissions` catalogue; unknown names surface
 		 *     as 422 (`permission_unknown`).
-		 *     Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 *     Requires `identity.roles.update` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
 		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
@@ -4421,7 +4430,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Grant a single permission to the role
-		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
+		 * @description Requires `identity.roles.update` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). Conferring a permission the caller does not hold is rejected with `grant_exceeds_authority`.
 		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
@@ -4549,7 +4558,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Revoke a single permission from the role
-		 * @description Requires `identity.roles.update` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 * @description Requires `identity.roles.update` (LeadKart PLATFORM authority only: NO company member satisfies it, not `tenant.admin`, not the Company Owner, not any explicit grant; it is satisfied by `platform.roles.manage` for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 		 *     Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 		 *     caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 		 *     themself (`insufficient_rank`, `self_modification_forbidden`); a rename acts on nobody. Every active holder's
@@ -6944,7 +6953,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description SKU already exists in this tenant */
+				/** @description `already_exists` - an ACTIVE product of this tenant has this SKU; `product_sku_taken_by_inactive` - a deactivated product used this SKU (a SKU never frees up: old invoices print it), so the web says: A deleted product used this SKU. Pick another. */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -14705,7 +14714,8 @@ export interface paths {
 		 * Make an inactive drug schedule class active again
 		 * @description Requires `company_settings.tax.manage`. The body carries the `reason` (required).
 		 *     Idempotent: an active class answers 200 and the policy version stays. Returns `200` with the
-		 *     list and the class in `class`.
+		 *     list and the class in `class`. A class name is unique among ACTIVE classes only: if an active
+		 *     class now has this label, the old one cannot come back (409 `schedule_class_name_taken`).
 		 */
 		post: {
 			parameters: {
@@ -14800,6 +14810,15 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
+				/** @description `schedule_class_name_taken` - an active class already has this label (rename or deactivate that one first) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
 				422: components['responses']['Unprocessable'];
 				429: components['responses']['TooManyRequests'];
 			};
@@ -14842,6 +14861,10 @@ export interface components {
 			error: string;
 			/** @description human-readable message (LeadKart legacy) */
 			message?: string;
+			/** @description Only on 409 `role_in_use`: how many members, active or inactive, still hold the role. */
+			holders?: number;
+			/** @description Only on 409 `role_in_use`: display names of up to 5 of the holders. */
+			holder_names?: string[];
 			/**
 			 * @description Refines `error` where a client must react differently to one failure of a code
 			 *     (RFC 9457 extension). Present only on `401 refresh_rejected`: `session_expired`

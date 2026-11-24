@@ -86,10 +86,28 @@ export interface Claims {
 	isPlatform?: boolean;
 }
 
+/**
+ * Go `IsPlatformManagedRole` (owner ruling 2026-11-25, ADR 0073 addendum): a company never creates, edits or
+ * deletes its own roles. No tenant-plane grant (explicit, implied by tenant.admin, a company super-admin role)
+ * satisfies these three; only the platform.roles.manage equivalent of an operator does.
+ */
+const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
+	P.identityRolesCreate,
+	P.identityRolesUpdate,
+	P.identityRolesManage
+]);
+
 /** Go `satisfiesIn` for the caller's own tenant. */
 function satisfies(c: Claims, required: string): boolean {
 	if (!ALL_PERMISSIONS.includes(required)) return false;
-	if (c.isSuperUser) return true;
+	const platformManaged = PLATFORM_MANAGED_ROLE.has(required);
+	if (c.isSuperUser && (!platformManaged || c.isPlatform)) return true;
+	if (platformManaged) {
+		return (
+			c.isPlatform === true &&
+			(PLATFORM_EQUIVALENTS[required] ?? []).some((eq) => c.permissions.includes(eq))
+		);
+	}
 	if (c.permissions.includes(required)) {
 		if (PLATFORM_RESERVED.has(required) && required !== TENANT_ADMIN) return c.isPlatform === true;
 		return true;

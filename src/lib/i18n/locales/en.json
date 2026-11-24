@@ -388,8 +388,10 @@
 			"person_memberships_changing": "This person's memberships are changing right now. Try again in a moment.",
 			"member_roles_inconsistent": "This member's roles need attention from support before they can be changed.",
 			"manager_not_eligible": "This person can't be set as the manager.",
-			"role_in_use": "This role is still assigned to active members.",
+			"role_in_use": "People still hold this role. Remove it from them first.",
 			"role_name_taken": "A role with this name already exists.",
+			"schedule_class_name_taken": "A drug schedule class with this name already exists.",
+			"product_sku_taken_by_inactive": "A deleted product used this SKU. Pick another.",
 			"role_system_default": "Built-in roles can't be changed or deleted.",
 			"role_parent_not_eligible": "The parent role must be more senior.",
 			"role_level_breaks_reporting": "That level would break a reporting line — a manager must stay above the people who report to them.",
@@ -620,6 +622,7 @@
 		"roles": {
 			"title": "Roles",
 			"count": "{count, plural, one {# role} other {# roles}}",
+			"readOnly": "Roles are set up by LeadKart. Contact support to add or change a role.",
 			"adminTierOnly": "Only the Administrator tier and above can hold this permission.",
 			"platformReserved": "Reserved for the platform team.",
 			"notHeld": "You can only change a permission you hold yourself."

@@ -300,8 +300,8 @@ describe('the create-role page and the create action are one rule', () => {
 	it('an operator with platform.roles.manage may open it inside a tenant context (Go allows POST /roles there)', () => {
 		expect(canSee(operatorRoles, NAV_ROUTES.roleNew, true)).toBe(true);
 	});
-	it('a tenant admin may open it at home, and its own-tenant identity.roles.create does not count inside a context', () => {
-		expect(canSee(NEW_TENANT_ADMIN, NAV_ROUTES.roleNew, false)).toBe(true);
+	it('no company admin may open it (roles are written by LeadKart only), at home or inside a context', () => {
+		expect(canSee(NEW_TENANT_ADMIN, NAV_ROUTES.roleNew, false)).toBe(false);
 		const operatorOwner = persona({
 			isPlatform: true,
 			roles: ['Company Owner'],

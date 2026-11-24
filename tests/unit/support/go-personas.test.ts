@@ -64,6 +64,28 @@ describe("go-personas: Go's effective_permissions rules", () => {
 		).toEqual([]);
 	});
 
+	it('role create / update / manage are platform authority: no tenant-plane grant, tenant.admin or company super user holds them', () => {
+		const names = [P.identityRolesCreate, P.identityRolesUpdate, P.identityRolesManage];
+		const company = effectivePermissions({
+			permissions: ['tenant.admin', ...names],
+			isSuperUser: true
+		});
+		for (const n of names) expect(company).not.toContain(n);
+		expect(company).toContain(P.identityRolesAssign);
+		expect(company).toContain(P.identityRolesRevoke);
+		const operator = effectivePermissions({
+			permissions: [P.platformRolesManage],
+			isPlatform: true
+		});
+		for (const n of names) expect(operator).toContain(n);
+		const platformSuper = effectivePermissions({
+			permissions: [],
+			isSuperUser: true,
+			isPlatform: true
+		});
+		for (const n of names) expect(platformSuper).toContain(n);
+	});
+
 	it('an unknown name is never satisfied', () => {
 		expect(effectivePermissions({ permissions: ['made.up.name'] })).toEqual([]);
 		expect(NO_PERMISSIONS.effective_permissions).toEqual([]);

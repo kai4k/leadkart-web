@@ -124,9 +124,9 @@ export const NAV_ROUTES = {
 		context: 'own',
 		access: anyOf(P.identityTenantsView)
 	},
-	// Go: POST /roles needs identity.roles.create (or platform.roles.manage for an operator under
-	// X-Tenant-Id), stricter than seeing the list: the one list is ACTION.roleCreate. The create form
-	// posts through the scope header, so it exists in either context.
+	// Go: POST /roles needs identity.roles.create, which no company member holds (LeadKart platform
+	// authority, ADR 0073 addendum), so only an operator with platform.roles.manage under X-Tenant-Id
+	// reaches it: the one list is ACTION.roleCreate. The create form posts through the scope header.
 	roleNew: {
 		href: '/settings/roles/new',
 		label: 'New role',

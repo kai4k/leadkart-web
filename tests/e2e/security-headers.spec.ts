@@ -71,8 +71,6 @@ const PERMS = [
 	'crm.orders.view',
 	'crm.inventory.view',
 	'identity.roles.view',
-	'identity.roles.update',
-	'identity.roles.manage',
 	'identity.users.view'
 ];
 
@@ -261,7 +259,8 @@ test.describe('security headers + CSP', () => {
 			.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
 			.first()
 			.click();
-		await expect(page.getByText('Delete', { exact: true })).toBeVisible();
+		// A company admin reads roles only (LeadKart writes them): the menu offers View.
+		await expect(page.getByText('View', { exact: true })).toBeVisible();
 		await assertClean('dropdown menu');
 	});
 

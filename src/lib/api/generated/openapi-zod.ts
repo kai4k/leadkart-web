@@ -28,6 +28,8 @@ export const ErrorResponse = z
 		detail: z.string().optional(),
 		error: z.string(),
 		message: z.string().optional(),
+		holders: z.number().int().gte(0).optional(),
+		holder_names: z.array(z.string()).max(5).optional(),
 		reason: z.string().optional(),
 		current_version: z.number().int().optional(),
 		errors: z.record(z.string(), z.array(z.string())).optional()
@@ -2713,7 +2715,8 @@ minute, burst 5, whichever address the requests come from).
 		alias: 'postApiv1companydrugScheduleClassesClassIdreactivate',
 		description: `Requires &#x60;company_settings.tax.manage&#x60;. The body carries the &#x60;reason&#x60; (required).
 Idempotent: an active class answers 200 and the policy version stays. Returns &#x60;200&#x60; with the
-list and the class in &#x60;class&#x60;.
+list and the class in &#x60;class&#x60;. A class name is unique among ACTIVE classes only: if an active
+class now has this label, the old one cannot come back (409 &#x60;schedule_class_name_taken&#x60;).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2765,6 +2768,11 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;schedule_class_name_taken&#x60; - an active class already has this label (rename or deactivate that one first)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5045,7 +5053,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `SKU already exists in this tenant`,
+				description: `&#x60;already_exists&#x60; - an ACTIVE product of this tenant has this SKU; &#x60;product_sku_taken_by_inactive&#x60; - a deactivated product used this SKU (a SKU never frees up: old invoices print it), so the web says: A deleted product used this SKU. Pick another.`,
 				schema: ErrorResponse
 			},
 			{
@@ -9189,7 +9197,7 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/roles',
 		alias: 'postApiv1roles',
-		description: `Requires &#x60;identity.roles.create&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+		description: `Requires &#x60;identity.roles.create&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 
 Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;name&#x60;, and nothing is written.
 `,
@@ -9246,7 +9254,7 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			},
 			{
 				status: 409,
-				description: `Role name already taken in this tenant (&#x60;role_name_taken&#x60;)`,
+				description: `An ACTIVE role of this tenant already has this name (&#x60;role_name_taken&#x60;); a deleted (inactive) role frees its name (ADR 0073 addendum)`,
 				schema: ErrorResponse
 			},
 			{
@@ -9349,7 +9357,7 @@ A re-level is refused with 422 &#x60;role_level_breaks_reporting&#x60; only when
 active holder that is strictly junior to their (active) manager would no longer be, or a direct report that is
 strictly junior to a holder would no longer be. Lines that are already broken, and inactive managers or
 reports, do not block it.
-Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+Requires &#x60;identity.roles.update&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 
 Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_invalid&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;name&#x60;, and nothing is written. A full-replace body that re-sends a stored value UNCHANGED is accepted (a value stored before the rule existed never blocks an untouched save); only a changed value is checked.
 `,
@@ -9443,8 +9451,8 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/deactivate',
 		alias: 'postApiv1rolesRoleIddeactivate',
-		description: `Requires &#x60;identity.roles.manage&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). A role is never deleted (ADR 0073): it goes inactive.
-The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before &#x60;role_in_use&#x60;). A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the count). A system-default role is 409 &#x60;role_system_default&#x60;.
+		description: `Requires &#x60;identity.roles.manage&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). A role is never deleted (ADR 0073): it goes inactive.
+The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before &#x60;role_in_use&#x60;). A role still held by ANY member, active or inactive, is refused with 409 &#x60;role_in_use&#x60; (a role is deleted only once nobody holds it, owner ruling 2026-11-25): the body carries &#x60;holders&#x60; (every holder), &#x60;holder_names&#x60; (display names of up to 5 of them) and &#x60;errors.active_holders&#x60; (how many are active). A system-default role is 409 &#x60;role_system_default&#x60;.
 An inactive role confers nothing (no permission, no rank), takes no new holder (&#x60;role_inactive&#x60; on assign), cannot be edited or be a parent, and is hidden from the default list. The assignments of its INACTIVE holders are kept (nothing is deleted); a holder reactivated while the role is inactive receives nothing from it. Idempotent: an inactive role answers 200. Answers the updated role.
 `,
 		requestFormat: 'json',
@@ -9500,7 +9508,7 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			},
 			{
 				status: 409,
-				description: `&#x60;role_in_use&#x60; (an active member holds the role) or &#x60;role_system_default&#x60; (system-default roles cannot be made inactive)`,
+				description: `&#x60;role_in_use&#x60; (any member, active or inactive, holds the role; &#x60;holders&#x60;, &#x60;holder_names&#x60;) or &#x60;role_system_default&#x60; (system-default roles cannot be made inactive)`,
 				schema: ErrorResponse
 			},
 			{
@@ -9541,7 +9549,7 @@ DB layer (composite FK + cycle trigger). Surfaces as 422
 
 Optional &#x60;reason&#x60; (10-1024 chars) is recorded onto the new
 edge OR the cleared edge for audit.
-Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+Requires &#x60;identity.roles.update&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 
 Text a person types that other people read is refused when it holds control characters (including CR, LF and TAB), Unicode direction overrides, or invisible or line-breaking characters (zero-width space, soft hyphen, word joiner and invisible operators, Hangul fillers, line and paragraph separators, annotation, object-replacement and tag characters, BOM; a zero-width joiner or non-joiner is accepted only INSIDE a word, between two letters or marks): 422 &#x60;role_hierarchy_invalid_reason&#x60; with &#x60;errors{&lt;field&gt;: [&quot;invalid_characters&quot;]}&#x60; for &#x60;reason&#x60;, and nothing is written.
 `,
@@ -9642,7 +9650,7 @@ permission added AND every permission removed.
 Permission names MUST match the closed
 &#x60;permission.IdentityPermissions&#x60; catalogue; unknown names surface
 as 422 (&#x60;permission_unknown&#x60;).
-Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+Requires &#x60;identity.roles.update&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
@@ -9734,7 +9742,7 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/permissions/grant',
 		alias: 'postApiv1rolesRoleIdpermissionsgrant',
-		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
+		description: `Requires &#x60;identity.roles.update&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum). Conferring a permission the caller does not hold is rejected with &#x60;grant_exceeds_authority&#x60;.
 Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
@@ -9826,7 +9834,7 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/permissions/revoke',
 		alias: 'postApiv1rolesRoleIdpermissionsrevoke',
-		description: `Requires &#x60;identity.roles.update&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+		description: `Requires &#x60;identity.roles.update&#x60; (LeadKart PLATFORM authority only: NO company member satisfies it, not &#x60;tenant.admin&#x60;, not the Company Owner, not any explicit grant; it is satisfied by &#x60;platform.roles.manage&#x60; for a platform operator acting on the company, and by an impersonation session; owner ruling 2026-11-25, ADR 0073 addendum).
 Changing what a role confers, re-levelling it or deleting it is acting on every ACTIVE member who holds it: the
 caller must strictly outrank each active holder (owners may act on owners) and must not hold the role
 themself (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); a rename acts on nobody. Every active holder&#x27;s
@@ -9918,7 +9926,7 @@ minute, burst 5, whichever address the requests come from).
 		method: 'post',
 		path: '/api/v1/roles/:roleId/reactivate',
 		alias: 'postApiv1rolesRoleIdreactivate',
-		description: `Requires &#x60;identity.roles.manage&#x60;. Reactivating gives the role&#x27;s permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 &#x60;grant_exceeds_authority&#x60;). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role.
+		description: `Requires &#x60;identity.roles.manage&#x60;. Reactivating gives the role&#x27;s permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 &#x60;grant_exceeds_authority&#x60;). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role. If a newer ACTIVE role now has this role&#x27;s name it cannot come back: 409 &#x60;role_name_taken&#x60; (nothing changes).
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -9969,6 +9977,11 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 404,
 				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 409,
+				description: `&#x60;role_name_taken&#x60; - an active role already has this name (rename or deactivate that one first)`,
 				schema: ErrorResponse
 			},
 			{

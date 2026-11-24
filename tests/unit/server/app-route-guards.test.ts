@@ -272,7 +272,8 @@ describe('guard matrix: explicit expectations (independent of nav.ts)', () => {
 	it('an owner outside any context sees no operator page', async () => {
 		const ids = await allowedIds(OWNER, false);
 		expect(ids.filter((id) => id.startsWith('/operator'))).toEqual([]);
-		expect(ids).toContain('/settings/roles/new');
+		// Roles are written by LeadKart only (ADR 0073 addendum): no company owner reaches the create page.
+		expect(ids).not.toContain('/settings/roles/new');
 	});
 
 	it('an owner has no tenant context to act in: own-tenant pages close in it', async () => {

@@ -195,6 +195,9 @@
 					>This role is protected by the system. Properties and permissions can't be edited.</Alert
 				>
 			{/if}
+			{#if !protectedRole && !may.update}
+				<p class="caption text-muted-foreground">{$_('pages.roles.readOnly')}</p>
+			{/if}
 			{#if error}<Alert variant="destructive">{error}</Alert>{/if}
 			<!-- The live region is in the page before its content, so the confirmation is announced (a region inserted together with its text often is not). -->
 			<div role="status">
