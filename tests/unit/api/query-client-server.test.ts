@@ -9,7 +9,7 @@ vi.mock('svelte', async (importOriginal) => ({
 	onDestroy: (fn: () => void) => destroyCallbacks.push(fn)
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: vi.fn() } }));
 
 import { renderQueryClient } from '#lib/api/query-client.ts';

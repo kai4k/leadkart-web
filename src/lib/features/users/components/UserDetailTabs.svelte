@@ -1,10 +1,17 @@
 <script lang="ts">
-	import { Badge, Button, Card, DescriptionList, EmptyState, Tabs } from '$ui';
-	import { Edit, Icon, Lock, Shield, UserPlus, Users } from '$icons';
-	import type { UserDto } from '$features/users/types';
-	import type { RoleDto } from '$features/roles/types';
+	import {
+		Badge,
+		Button,
+		Card,
+		DescriptionList,
+		EmptyState,
+		Tabs
+	} from '#lib/components/ui/index.ts';
+	import { Edit, Icon, Lock, Shield, UserPlus, Users } from '#lib/icons/index.ts';
+	import type { UserDto } from '#lib/features/users/types.ts';
+	import type { RoleDto } from '#lib/features/roles/types.ts';
 	import { managerLabel, userRoleBadges } from '../view-models';
-	import { displayName, userStatus } from '$features/auth';
+	import { displayName, userStatus } from '#lib/features/auth/index.ts';
 	import { IdentityCell } from '#lib/components/data/index.ts';
 	import { removeManagerMutation } from '../queries';
 	import { formatDate } from '#lib/utils/format.ts';

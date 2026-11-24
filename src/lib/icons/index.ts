@@ -2,7 +2,7 @@
  * Icon registry — re-exports from @lucide/svelte under canonical names
  * + an Icon wrapper that consumes the icon-size design tokens.
  *
- * Industry canon: components consume from `#lib/icons` (or `$icons`),
+ * Industry canon: components consume from `#lib/icons` (or `#lib/icons/index.ts`),
  * not directly from `@lucide/svelte`. Keeps the icon library swappable
  * (move to phosphor / heroicons / custom set without ripping every
  * import) + lets us standardise size via the IconSize token.

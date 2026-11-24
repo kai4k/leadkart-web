@@ -5,10 +5,18 @@
 	 * toast of each type, table rows (hover vs selected), a list with a highlighted item, tabs.
 	 * Static demo content, no API calls.
 	 */
-	import { Button, Command, Dialog, DropdownMenu, Sheet, Tabs, toast } from '$ui';
+	import {
+		Button,
+		Command,
+		Dialog,
+		DropdownMenu,
+		Sheet,
+		Tabs,
+		toast
+	} from '#lib/components/ui/index.ts';
 	import * as Table from '#lib/components/ui/table/index.ts';
 	import { z } from 'zod';
-	import { DatePicker, FormSheet, TextField } from '$form';
+	import { DatePicker, FormSheet, TextField } from '#lib/components/form/index.ts';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
 
 	let sheetOpen = $state(false);

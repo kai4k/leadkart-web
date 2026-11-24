@@ -9,13 +9,13 @@
 	 */
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { Command, Moon, Search, Settings, Sun, Icon } from '$icons';
-	import { BrandMark, Button, Sidebar } from '$ui';
-	import { getPreferences } from '$features/preferences';
+	import { Command, Moon, Search, Settings, Sun, Icon } from '#lib/icons/index.ts';
+	import { BrandMark, Button, Sidebar } from '#lib/components/ui/index.ts';
+	import { getPreferences } from '#lib/features/preferences/index.ts';
 	import UserMenu from './UserMenu.svelte';
 	import { quickModeTarget } from './mode-toggle.ts';
-	import { CommandPalette } from '$features/search';
-	import { session } from '$features/auth';
+	import { CommandPalette } from '#lib/features/search/index.ts';
+	import { session } from '#lib/features/auth/index.ts';
 
 	let { onOpenCustomizer }: { onOpenCustomizer?: () => void } = $props();
 

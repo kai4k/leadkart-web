@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Card } from '$ui';
-	import type { ProductDto } from '$features/inventory/schemas';
-	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
+	import { Card } from '#lib/components/ui/index.ts';
+	import type { ProductDto } from '#lib/features/inventory/schemas.ts';
+	import { computePriceWithGst, formatPrice } from '#lib/features/inventory/view-models.ts';
 
 	type Props = { product: ProductDto };
 	let { product }: Props = $props();

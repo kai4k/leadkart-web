@@ -19,8 +19,8 @@
  * mapping): the entering POST is exempt from the fingerprint check on the server,
  * the exiting DELETE is not.
  */
-import { api } from '$api/client';
-import { exitOperatorScope, scopeChangeSchema } from '$api/operator-scope';
+import { api } from '#lib/api/client.ts';
+import { exitOperatorScope, scopeChangeSchema } from '#lib/api/operator-scope.ts';
 
 export interface EnterScopeRequest {
 	slug: string;
@@ -40,7 +40,7 @@ export async function enterScope(req: EnterScopeRequest): Promise<string> {
 
 /**
  * Exit tenant scope. Clears the `lk_op_tenant` cookie via DELETE (the one
- * shared implementation in `$api/operator-scope`). Throws on non-2xx;
+ * shared implementation in `#lib/api/operator-scope.ts`). Throws on non-2xx;
  * callers typically treat any failure as "stay in scope, surface a toast".
  */
 export function exitScope(): Promise<string> {

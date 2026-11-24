@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import { ACTION, session } from '$features/auth';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	/**
 	 * Leads list page — composes the canonical `<ResourceListPage>` shell
 	 * with a Kanban (default) / Table (alt) view switcher driven by the
@@ -16,9 +16,9 @@
 	import type { ResolvedPathname } from '$app/types';
 	import { SvelteURL } from 'svelte/reactivity';
 	import { ResourceListPage, filterAccept, type BulkAction } from '#lib/components/data/index.ts';
-	import { Tabs } from '$ui';
+	import { Tabs } from '#lib/components/ui/index.ts';
 	import BulkUploadDrawerShared from '#lib/components/data/BulkUploadDrawer.svelte';
-	import { Upload } from '$icons';
+	import { Upload } from '#lib/icons/index.ts';
 	import {
 		createUrlFilters,
 		createBulkSelection,
@@ -27,21 +27,21 @@
 		filtersScopeKey,
 		type SavedView
 	} from '#lib/hooks/index.ts';
-	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '$features/leads/filter-config';
+	import { LEAD_FILTER_FIELDS, type LeadUrlFilters } from '#lib/features/leads/filter-config.ts';
 	import {
 		leadsInfiniteQuery,
 		bulkLeadActionMutation,
 		bulkUploadCommitMutation,
 		bulkUploadPreviewMutation
-	} from '$features/leads/queries';
-	import { LeadsKanban, LeadsTable, EditLeadDrawer } from '$features/leads';
-	import { STAGE_META, TEMPERATURE_META } from '$features/leads/view-models';
+	} from '#lib/features/leads/queries.ts';
+	import { LeadsKanban, LeadsTable, EditLeadDrawer } from '#lib/features/leads/index.ts';
+	import { STAGE_META, TEMPERATURE_META } from '#lib/features/leads/view-models.ts';
 	import type {
 		CrmLeadDto,
 		LeadStage,
 		LeadTemperature,
 		ListLeadsParams
-	} from '$features/leads/schemas';
+	} from '#lib/features/leads/schemas.ts';
 
 	// ── URL filters ──────────────────────────────────────────────────
 	// a value that is no option of its field (a hand-edited link) is read as absent

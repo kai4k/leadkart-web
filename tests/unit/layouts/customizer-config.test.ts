@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import en from '#lib/i18n/locales/en.json';
-import { DEFAULT_PREFERENCES, PREFERENCE_VALUES, type Preferences } from '$features/preferences';
-import { CUSTOMIZER_GROUPS, visibleGroups } from '$layouts/customizer-config.ts';
+import {
+	DEFAULT_PREFERENCES,
+	PREFERENCE_VALUES,
+	type Preferences
+} from '#lib/features/preferences/index.ts';
+import { CUSTOMIZER_GROUPS, visibleGroups } from '#lib/layouts/customizer-config.ts';
 
 const dig = (key: string): unknown =>
 	key

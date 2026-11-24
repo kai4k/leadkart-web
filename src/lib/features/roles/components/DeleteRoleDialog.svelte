@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
-	import { deleteRoleMutation } from '$features/roles/queries';
-	import type { RoleDto } from '$features/roles/types';
+	import { deleteRoleMutation } from '#lib/features/roles/queries.ts';
+	import type { RoleDto } from '#lib/features/roles/types.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = { open: boolean; role: RoleDto | null; onOpenChange: (open: boolean) => void };

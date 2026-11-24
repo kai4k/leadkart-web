@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import { toDateOnly } from '#lib/utils/date-only.ts';
-	import { Drawer, Button, Alert } from '$ui';
-	import { TextField, NumberInput } from '$form';
+	import { Drawer, Button, Alert } from '#lib/components/ui/index.ts';
+	import { TextField, NumberInput } from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
-	import { addBatchMutation } from '$features/inventory/queries';
-	import { createBatchRequestSchema, type CreateBatchRequest } from '$features/inventory/schemas';
-	import { Icon, X } from '$icons';
+	import { addBatchMutation } from '#lib/features/inventory/queries.ts';
+	import {
+		createBatchRequestSchema,
+		type CreateBatchRequest
+	} from '#lib/features/inventory/schemas.ts';
+	import { Icon, X } from '#lib/icons/index.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	/**

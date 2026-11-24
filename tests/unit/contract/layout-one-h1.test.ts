@@ -50,7 +50,7 @@ describe('the fence itself', () => {
 		expect(unwrappedHeaderLayouts(new Map([['a', bare]]))).toEqual(['a']);
 	});
 	it('fails a layout that imports PageHeader without wrapping (indirect use)', () => {
-		const imported = `<script>import PageHeader from '$layouts/PageHeader.svelte';</script>{@render children()}`;
+		const imported = `<script>import PageHeader from '#lib/layouts/PageHeader.svelte';</script>{@render children()}`;
 		expect(unwrappedHeaderLayouts(new Map([['a', imported]]))).toEqual(['a']);
 	});
 	it('fails a layout with its own <h1>', () => {

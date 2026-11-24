@@ -46,12 +46,12 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 	)
 );
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
-vi.mock('$ui', async (importOriginal) => ({
+vi.mock('#lib/components/ui/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	toast: toastMock
 }));
 // The auth barrel also exports form components that need SvelteKit's form runtime.
-vi.mock('$features/auth', async () => {
+vi.mock('#lib/features/auth/index.ts', async () => {
 	const { displayName, initials } = await import('#lib/utils/person-name.ts');
 	const { ACTION } = await import('#lib/features/auth/permissions.ts');
 	const { userStatus } = await import('#lib/features/auth/view-models.ts');

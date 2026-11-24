@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { Alert, Badge, Button, Card, Skeleton } from '$ui';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import { Alert, Badge, Button, Card, Skeleton } from '#lib/components/ui/index.ts';
 	import { IdChip } from '#lib/components/data/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { Select } from '#lib/components/form/index.ts';
@@ -21,9 +21,9 @@
 		unchangeablePermissions,
 		ADMIN_TIER_ONLY,
 		PLATFORM_RESERVED
-	} from '$features/roles';
-	import { describeError } from '$api/errors';
-	import { session } from '$features/auth';
+	} from '#lib/features/roles/index.ts';
+	import { describeError } from '#lib/api/errors.ts';
+	import { session } from '#lib/features/auth/index.ts';
 	import { isBelowAdminTier } from '#lib/features/auth/permissions.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 

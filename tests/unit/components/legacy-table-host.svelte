@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DataTable } from '$ui';
+	import { DataTable } from '#lib/components/ui/index.ts';
 	import type { BulkSelection } from '#lib/hooks/index.ts';
 	import type { createLegacyTableControl, HostRow } from './legacy-table-control.svelte.ts';
 

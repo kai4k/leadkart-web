@@ -8,7 +8,7 @@
  * fetch itself is the tenant gateway's `loadTenant`, shared with the operator scope layout.
  */
 import { error } from '@sveltejs/kit';
-import { loadTenant, ownTenantId } from '$features/tenant/server';
+import { loadTenant, ownTenantId } from '#lib/features/tenant/server.ts';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies, parent }) => {

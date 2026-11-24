@@ -1,11 +1,11 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { resolve } from '$app/paths';
-	import { CopyButton } from '$ui';
+	import { CopyButton } from '#lib/components/ui/index.ts';
 	import OrderActionButtons from './OrderActionButtons.svelte';
 	import OrderLifecycleStepper from './OrderLifecycleStepper.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
-	import type { OrderDto } from '$features/orders/schemas';
+	import type { OrderDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		order: OrderDto;

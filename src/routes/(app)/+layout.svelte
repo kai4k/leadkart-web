@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { QueryClientProvider } from '@tanstack/svelte-query';
 	import { onMount } from 'svelte';
-	import AppShell from '$layouts/AppShell.svelte';
-	import NavProgressBar from '$layouts/NavProgressBar.svelte';
-	import PwaStatusBar from '$layouts/PwaStatusBar.svelte';
-	import ReloadNotice from '$layouts/ReloadNotice.svelte';
+	import AppShell from '#lib/layouts/AppShell.svelte';
+	import NavProgressBar from '#lib/layouts/NavProgressBar.svelte';
+	import PwaStatusBar from '#lib/layouts/PwaStatusBar.svelte';
+	import ReloadNotice from '#lib/layouts/ReloadNotice.svelte';
 	import { page } from '$app/state';
-	import { ImpersonationBanner } from '$features/operator/impersonation';
+	import { ImpersonationBanner } from '#lib/features/operator/impersonation/index.ts';
 	import { renderQueryClient } from '#lib/api/query-client.ts';
 	import { refreshCapabilities } from '#lib/api/capabilities-refresh.ts';
 	import { createCommittedContext, listenForScopeChanges } from '#lib/api/operator-scope.ts';

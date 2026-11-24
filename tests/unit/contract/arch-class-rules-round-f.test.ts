@@ -16,7 +16,7 @@ const marks = (src: string) =>
 const onControl = (src: string, rel = F) =>
 	(findTextOnControl(rel, src) as Array<{ name: string }>).map((f) => f.name);
 const mat = (body: string) =>
-	`<script>import { Dialog } from '$ui';</script>\n<Dialog.Content>${body}</Dialog.Content>`;
+	`<script>import { Dialog } from '#lib/components/ui/index.ts';</script>\n<Dialog.Content>${body}</Dialog.Content>`;
 
 describe('m5: marks written as arbitrary values and Tailwind 4 utilities', () => {
 	it.each([
@@ -115,11 +115,11 @@ describe('m6: the file scope follows what a file renders', () => {
 	const cases: Array<[string, string]> = [
 		[
 			'the $ui alias Dropdown',
-			`<script>import { Dropdown } from '$ui';</script>\n<div class="bg-accent text-destructive">x</div>`
+			`<script>import { Dropdown } from '#lib/components/ui/index.ts';</script>\n<div class="bg-accent text-destructive">x</div>`
 		],
 		[
 			'a ConfirmDialog consumer',
-			`<script>import { ConfirmDialog } from '$ui';</script>\n<div class="bg-accent text-destructive">x</div>`
+			`<script>import { ConfirmDialog } from '#lib/components/ui/index.ts';</script>\n<div class="bg-accent text-destructive">x</div>`
 		],
 		[
 			'a namespace import of an overlay family',

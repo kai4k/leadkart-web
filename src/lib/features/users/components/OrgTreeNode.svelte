@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Badge } from '$ui';
+	import { Badge } from '#lib/components/ui/index.ts';
 	import { IdentityCell } from '#lib/components/data/index.ts';
-	import { displayName, userStatus } from '$features/auth';
+	import { displayName, userStatus } from '#lib/features/auth/index.ts';
 	import { resolve } from '$app/paths';
 	import type { OrgNode } from '../view-models-hierarchy';
 	import OrgTreeNode from './OrgTreeNode.svelte';

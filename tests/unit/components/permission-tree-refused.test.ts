@@ -6,7 +6,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 // The info tooltips need a Tooltip.Provider the test does not mount.
-vi.mock('$ui', async (importOriginal) => {
+vi.mock('#lib/components/ui/index.ts', async (importOriginal) => {
 	const stub = (await import('../stubs/Empty.svelte')).default;
 	return {
 		...(await importOriginal<Record<string, unknown>>()),

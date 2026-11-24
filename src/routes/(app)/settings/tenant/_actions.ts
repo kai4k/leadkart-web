@@ -26,7 +26,7 @@ import {
 	TENANT_SECTIONS,
 	type TenantSection,
 	type TenantSectionBodies
-} from '$features/tenant/server';
+} from '#lib/features/tenant/server.ts';
 
 const text = (fd: FormData, key: string): string => (fd.get(key) ?? '').toString();
 const toBool = (fd: FormData, key: string): boolean => text(fd, key) === 'on';

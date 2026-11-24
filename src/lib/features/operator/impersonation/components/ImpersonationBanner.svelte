@@ -2,14 +2,14 @@
 	import { onDestroy, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { _ } from 'svelte-i18n';
-	import { Button } from '$ui';
-	import { Eye, LogOut, Icon } from '$icons';
-	import ContextBanner from '$layouts/ContextBanner.svelte';
+	import { Button } from '#lib/components/ui/index.ts';
+	import { Eye, LogOut, Icon } from '#lib/icons/index.ts';
+	import ContextBanner from '#lib/layouts/ContextBanner.svelte';
 	import { impersonation } from '../stores/impersonation.svelte';
-	import { P, session } from '$features/auth';
+	import { P, session } from '#lib/features/auth/index.ts';
 	import { formatDateTime } from '#lib/utils/format.ts';
 	import { resetPending } from '#lib/api/hard-reset.ts';
-	import EntityName from '$layouts/EntityName.svelte';
+	import EntityName from '#lib/layouts/EntityName.svelte';
 
 	// Reconcile impersonation state once the session's capabilities are there. The call is untracked: reconcile() reads
 	// the store's own state, and an effect that tracked it would run again on every settle (a request loop).

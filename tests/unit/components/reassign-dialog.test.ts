@@ -9,7 +9,7 @@ const h = vi.hoisted(() => ({
 	state: { isError: false, isFetching: false, data: undefined as unknown },
 	asked: [] as string[]
 }));
-vi.mock('$features/users', () => ({
+vi.mock('#lib/features/users/index.ts', () => ({
 	memberSearchOptions: (m: unknown[]) => m,
 	memberSearchReady: (q: string) => [...q.trim()].length >= 2,
 	membershipSearchQuery: (getQuery: () => string) => ({

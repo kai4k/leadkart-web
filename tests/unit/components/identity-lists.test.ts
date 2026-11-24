@@ -20,7 +20,7 @@ vi.mock('$app/navigation', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	goto: vi.fn(() => Promise.resolve())
 }));
-vi.mock('$features/permission-requests/queries', () => ({
+vi.mock('#lib/features/permission-requests/queries.ts', () => ({
 	permissionRequestsInfiniteQuery: (getRole: () => string) => ({
 		get items() {
 			h.asked.push(getRole());
@@ -38,7 +38,7 @@ vi.mock('$features/permission-requests/queries', () => ({
 		loadMore: vi.fn()
 	})
 }));
-vi.mock('$features/roles/queries', () => ({
+vi.mock('#lib/features/roles/queries.ts', () => ({
 	rolesListQuery: () => ({
 		get data() {
 			return { roles: h.roles };
@@ -48,7 +48,7 @@ vi.mock('$features/roles/queries', () => ({
 		error: null
 	})
 }));
-vi.mock('$features/auth', async () => {
+vi.mock('#lib/features/auth/index.ts', async () => {
 	const { ACTION } = await import('#lib/features/auth/permissions.ts');
 	return { ACTION, session: { canAny: () => true, can: () => true } };
 });

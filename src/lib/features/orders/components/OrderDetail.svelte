@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Alert, Card, Skeleton, Tabs } from '$ui';
-	import { Icon, ChevronLeft } from '$icons';
+	import { Alert, Card, Skeleton, Tabs } from '#lib/components/ui/index.ts';
+	import { Icon, ChevronLeft } from '#lib/icons/index.ts';
 	import { useUrlTab } from '#lib/hooks/index.ts';
 	import {
 		orderCreditNotesQuery,
@@ -8,8 +8,8 @@
 		orderInvoiceQuery,
 		orderPaymentsQuery,
 		orderRevisionsQuery
-	} from '$features/orders/queries';
-	import { longDate } from '$features/orders/view-models';
+	} from '#lib/features/orders/queries.ts';
+	import { longDate } from '#lib/features/orders/view-models.ts';
 	import OrderDetailHeader from './OrderDetailHeader.svelte';
 	import OrderItemsTable from './OrderItemsTable.svelte';
 	import QuotationRevisionsTimeline from './QuotationRevisionsTimeline.svelte';

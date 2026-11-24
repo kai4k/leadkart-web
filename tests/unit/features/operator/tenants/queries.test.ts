@@ -8,7 +8,9 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 		() => h.qc
 	)
 );
-vi.mock('$ui', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }));
+vi.mock('#lib/components/ui/index.ts', () => ({
+	toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() }
+}));
 const gw = vi.hoisted(() => ({
 	registerTenant: vi.fn(),
 	suspendTenant: vi.fn(),

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Copy, Check, Icon } from '$icons';
+	import { Copy, Check, Icon } from '#lib/icons/index.ts';
 	import { Button } from './button';
 
 	type Props = {

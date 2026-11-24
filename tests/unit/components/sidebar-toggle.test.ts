@@ -7,17 +7,19 @@
 import { flushSync, mount, tick, unmount } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installMatchMedia } from '../helpers/match-media.ts';
-import { createSidebarSizing } from '$layouts/sidebar-sizing.ts';
+import { createSidebarSizing } from '#lib/layouts/sidebar-sizing.ts';
 import {
 	createPreferences,
 	noopStorage,
 	type Preferences,
 	type PreferencesStore
-} from '$features/preferences';
+} from '#lib/features/preferences/index.ts';
 import ShortcutHost from '../stubs/ShortcutHost.svelte';
 
 vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/dashboard') } }));
-vi.mock('$features/auth', () => ({ session: { capabilities: null, inTenantContext: false } }));
+vi.mock('#lib/features/auth/index.ts', () => ({
+	session: { capabilities: null, inTenantContext: false }
+}));
 
 const store = (p: Partial<Preferences>): PreferencesStore =>
 	createPreferences({ ...p } as Preferences, noopStorage, () => null);

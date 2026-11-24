@@ -8,8 +8,8 @@
 		type FilterBarField,
 		type BulkAction
 	} from '#lib/components/data/index.ts';
-	import { DataTable, EmptyState, type DataTableColumn } from '$ui';
-	import { Plus, ShoppingCart, Trash2, X } from '$icons';
+	import { DataTable, EmptyState, type DataTableColumn } from '#lib/components/ui/index.ts';
+	import { Plus, ShoppingCart, Trash2, X } from '#lib/icons/index.ts';
 	import type { Component } from 'svelte';
 	import {
 		createBulkSelection,
@@ -17,17 +17,17 @@
 		createUrlFilters,
 		filtersScopeKey
 	} from '#lib/hooks/index.ts';
-	import { ordersInfiniteQuery, bulkOrderActionMutation } from '$features/orders/queries';
+	import { ordersInfiniteQuery, bulkOrderActionMutation } from '#lib/features/orders/queries.ts';
 	import {
 		formatMoney,
 		lineItemsLabel,
 		shortDate,
 		statusBadge
-	} from '$features/orders/view-models';
+	} from '#lib/features/orders/view-models.ts';
 	import { orderFilterFields, type OrderListFilters } from './OrderFilters.svelte';
 	import OrderStatusBadge from './OrderStatusBadge.svelte';
-	import type { OrderDto } from '$features/orders/schemas';
-	import { getListErrorMessage } from '$api/error-messages';
+	import type { OrderDto } from '#lib/features/orders/schemas.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 	import { stoppedEarly } from '#lib/api/pagination.ts';
 
 	// ── URL state ────────────────────────────────────────────────────

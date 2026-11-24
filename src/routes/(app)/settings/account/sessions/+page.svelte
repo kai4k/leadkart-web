@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Skeleton } from '$ui';
+	import { Skeleton } from '#lib/components/ui/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { SessionsList } from '$features/auth';
-	import { mySessionsQuery } from '$features/auth/queries';
+	import { SessionsList } from '#lib/features/auth/index.ts';
+	import { mySessionsQuery } from '#lib/features/auth/queries.ts';
 
 	const sessionsQuery = mySessionsQuery();
 </script>

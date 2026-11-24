@@ -127,16 +127,21 @@ export function renameSource(src) {
 	});
 
 	// `Pagination` from `$ui` -> the data composite
-	out = out.replace(/import\s*\{([^}]*)\}\s*from\s*'\$ui';/g, (m, names) => {
-		const list = names
-			.split(',')
-			.map((x) => x.trim())
-			.filter(Boolean);
-		if (!list.includes('Pagination')) return m;
-		const rest = list.filter((x) => x !== 'Pagination');
-		const keep = rest.length ? `import { ${rest.join(', ')} } from '$ui';\n` : '';
-		return `${keep}import Pagination from '#lib/components/data/Pagination.svelte';`;
-	});
+	out = out.replace(
+		/import\s*\{([^}]*)\}\s*from\s*'#lib\/components\/ui\/index\.ts';/g,
+		(m, names) => {
+			const list = names
+				.split(',')
+				.map((x) => x.trim())
+				.filter(Boolean);
+			if (!list.includes('Pagination')) return m;
+			const rest = list.filter((x) => x !== 'Pagination');
+			const keep = rest.length
+				? `import { ${rest.join(', ')} } from '#lib/components/ui/index.ts';\n`
+				: '';
+			return `${keep}import Pagination from '#lib/components/data/Pagination.svelte';`;
+		}
+	);
 
 	return { out, unmapped };
 }

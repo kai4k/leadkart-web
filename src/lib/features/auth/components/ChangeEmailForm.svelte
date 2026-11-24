@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Alert } from '$ui';
-	import { ActionForm, TextField, type ActionFormResult } from '$form';
+	import { Alert } from '#lib/components/ui/index.ts';
+	import { ActionForm, TextField, type ActionFormResult } from '#lib/components/form/index.ts';
 	import { session } from '../stores/session.svelte.ts';
 
 	/**

@@ -2,11 +2,11 @@
 	import { z } from 'zod';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { FormSheet, Select } from '#lib/components/form/index.ts';
-	import { assignManagerMutation, removeManagerMutation } from '$features/users/queries';
-	import type { RoleDto, UserDto } from '$features/users/types';
-	import { eligibleManagers } from '$features/users/view-models';
-	import { displayName } from '$features/auth';
-	import { ValidationError } from '$api/errors';
+	import { assignManagerMutation, removeManagerMutation } from '#lib/features/users/queries.ts';
+	import type { RoleDto, UserDto } from '#lib/features/users/types.ts';
+	import { eligibleManagers } from '#lib/features/users/view-models.ts';
+	import { displayName } from '#lib/features/auth/index.ts';
+	import { ValidationError } from '#lib/api/errors.ts';
 
 	type Props = {
 		userList: UserDto[];

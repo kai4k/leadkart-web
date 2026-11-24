@@ -1,8 +1,12 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { session } from '$features/auth';
-	import { ActionForm, type ActionFormResult, type ActionFormSlot } from '$form';
+	import { session } from '#lib/features/auth/index.ts';
+	import {
+		ActionForm,
+		type ActionFormResult,
+		type ActionFormSlot
+	} from '#lib/components/form/index.ts';
 	import { TENANT_SECTION_PERMISSION, type TenantSectionId } from '#lib/config/tenant-sections.ts';
 
 	/**

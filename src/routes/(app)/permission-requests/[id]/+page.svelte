@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { PermissionRequestDetail } from '$features/permission-requests';
+	import { PermissionRequestDetail } from '#lib/features/permission-requests/index.ts';
 
 	const id = $derived(page.params.id ?? '');
 </script>

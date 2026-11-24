@@ -12,8 +12,8 @@ import {
 	createPreferences,
 	type PreferencesStore,
 	type Preferences
-} from '$features/preferences';
-import { createSidebarSizing } from '$layouts/sidebar-sizing.ts';
+} from '#lib/features/preferences/index.ts';
+import { createSidebarSizing } from '#lib/layouts/sidebar-sizing.ts';
 import CustomizerHost from '../stubs/CustomizerHost.svelte';
 
 let target: HTMLElement;

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { BulkUploadDrawer } from '#lib/components/data/index.ts';
-	import { bulkUploadPreview, bulkUploadCommit } from '$features/inventory/api';
+	import { bulkUploadPreview, bulkUploadCommit } from '#lib/features/inventory/api.ts';
 	import { useQueryClient } from '@tanstack/svelte-query';
-	import { inventoryKeys } from '$features/inventory/queries';
-	import type { BulkUploadPreview, BulkUploadResult } from '$features/inventory/schemas';
+	import { inventoryKeys } from '#lib/features/inventory/queries.ts';
+	import type { BulkUploadPreview, BulkUploadResult } from '#lib/features/inventory/schemas.ts';
 
 	/**
 	 * Product bulk upload — three-step (upload → preview → commit) drawer.

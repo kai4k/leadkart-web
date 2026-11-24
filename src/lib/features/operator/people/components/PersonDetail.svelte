@@ -2,12 +2,12 @@
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '$ui';
+	import { Alert, Badge, Button, Card, CopyButton, Skeleton } from '#lib/components/ui/index.ts';
 	import { IdChip, IdentityCell, type DataTableColumn } from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import { enterScopeMutation } from '$features/operator/scope';
+	import { enterScopeMutation } from '#lib/features/operator/scope/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { ArrowRight, Pause, Play, Icon } from '$icons';
+	import { ArrowRight, Pause, Play, Icon } from '#lib/icons/index.ts';
 	import { tenantsListQuery } from '../../tenants';
 	import {
 		personDetailQuery,
@@ -21,7 +21,7 @@
 		canGloballySuspend,
 		canLiftSuspension
 	} from '../view-models';
-	import { P, session, userStatus, type UserDto } from '$features/auth';
+	import { P, session, userStatus, type UserDto } from '#lib/features/auth/index.ts';
 	import type { PersonDto } from '../types';
 	import GlobalSuspendDialog from './GlobalSuspendDialog.svelte';
 	import { formatDate } from '#lib/utils/format.ts';

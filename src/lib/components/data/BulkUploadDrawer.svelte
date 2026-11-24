@@ -31,9 +31,16 @@
 	generics="TPreview extends BulkUploadPreviewShape, TResult extends BulkUploadResultShape"
 >
 	import { _ } from 'svelte-i18n';
-	import { Drawer, Button, Alert, Badge, Stepper, type StepperState } from '$ui';
-	import { Icon, Upload, CheckCircle2, X, Trash2 } from '$icons';
-	import { describeError } from '$api/errors';
+	import {
+		Drawer,
+		Button,
+		Alert,
+		Badge,
+		Stepper,
+		type StepperState
+	} from '#lib/components/ui/index.ts';
+	import { Icon, Upload, CheckCircle2, X, Trash2 } from '#lib/icons/index.ts';
+	import { describeError } from '#lib/api/errors.ts';
 
 	/**
 	 * BulkUploadDrawer — generic three-step (upload → preview → commit)

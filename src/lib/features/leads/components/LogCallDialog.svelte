@@ -8,8 +8,8 @@
 	 * the server creates a Reminder when callback_at is present so we
 	 * invalidate both queries on success.
 	 */
-	import { Dialog, Button, Alert } from '$ui';
-	import { Select, NumberInput } from '$form';
+	import { Dialog, Button, Alert } from '#lib/components/ui/index.ts';
+	import { Select, NumberInput } from '#lib/components/form/index.ts';
 	import { logCallSchema, type CallOutcome } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { logCallMutation } from '../queries';

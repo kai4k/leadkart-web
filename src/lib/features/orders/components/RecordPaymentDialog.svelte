@@ -6,16 +6,22 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { untrack } from 'svelte';
-	import { Alert, Button, Dialog } from '$ui';
-	import { NumberInput, RadioGroup, RadioItem, Select, TextField } from '$form';
+	import { Alert, Button, Dialog } from '#lib/components/ui/index.ts';
+	import {
+		NumberInput,
+		RadioGroup,
+		RadioItem,
+		Select,
+		TextField
+	} from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/index.ts';
 	import {
 		recordPaymentRequestSchema,
 		type PaymentKind,
 		type OrderDto
-	} from '$features/orders/schemas';
-	import { recordPaymentMutation } from '$features/orders/queries';
-	import { outstandingBalance } from '$features/orders/view-models';
+	} from '#lib/features/orders/schemas.ts';
+	import { recordPaymentMutation } from '#lib/features/orders/queries.ts';
+	import { outstandingBalance } from '#lib/features/orders/view-models.ts';
 
 	type Props = {
 		order: OrderDto;

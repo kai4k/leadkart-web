@@ -54,11 +54,11 @@ describe('ui-api-renames codemod', () => {
 		);
 	});
 	it('moves Pagination off $ui', () => {
-		const { out } = run(`import { Button, Pagination } from '$ui';`);
+		const { out } = run(`import { Button, Pagination } from '#lib/components/ui/index.ts';`);
 		expect(out).toBe(
-			`import { Button } from '$ui';\nimport Pagination from '#lib/components/data/Pagination.svelte';`
+			`import { Button } from '#lib/components/ui/index.ts';\nimport Pagination from '#lib/components/data/Pagination.svelte';`
 		);
-		expect(run(`import { Pagination } from '$ui';`).out).toBe(
+		expect(run(`import { Pagination } from '#lib/components/ui/index.ts';`).out).toBe(
 			`import Pagination from '#lib/components/data/Pagination.svelte';`
 		);
 	});

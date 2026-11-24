@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Card } from '$ui';
-	import { TenantStatutoryForm } from '$features/tenant';
+	import { Card } from '#lib/components/ui/index.ts';
+	import { TenantStatutoryForm } from '#lib/features/tenant/index.ts';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

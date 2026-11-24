@@ -7,7 +7,7 @@
  */
 import { untrack, type Snippet } from 'svelte';
 import type { z } from 'zod';
-import type { DescribeErrorOptions } from '$api/errors';
+import type { DescribeErrorOptions } from '#lib/api/errors.ts';
 import { useForm, type Form } from '#lib/hooks/use-form.svelte.ts';
 import { guardsSilent, useLeaveGuard } from '#lib/hooks/use-leave-guard.svelte.ts';
 

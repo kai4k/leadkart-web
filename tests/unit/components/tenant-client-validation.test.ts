@@ -25,7 +25,7 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: () => {}
 }));
 vi.mock('$app/state', () => ({ page: { data: { scopeContext: 'fp' }, form: null } }));
-vi.mock('$features/auth', async (importOriginal) => ({
+vi.mock('#lib/features/auth/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	session: { can: () => true }
 }));

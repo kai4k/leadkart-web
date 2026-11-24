@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Button, Card } from '$ui';
+	import { Button, Card } from '#lib/components/ui/index.ts';
 	import { NumberInput, TextField } from '#lib/components/form/index.ts';
-	import { ValidationError } from '$api/errors';
+	import { ValidationError } from '#lib/api/errors.ts';
 	import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 	import { clientProblems, serverProblems } from '#lib/hooks/unshown-banner.ts';
 	import type { updateRoleMutation } from '../queries.ts';

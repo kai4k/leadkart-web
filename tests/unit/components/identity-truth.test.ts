@@ -41,7 +41,7 @@ vi.mock('$app/state', () => ({
 		}
 	}
 }));
-vi.mock('$features/auth/queries', () => ({
+vi.mock('#lib/features/auth/queries.ts', () => ({
 	mySessionsQuery: () => ({
 		data: [
 			{ family_id: 'f1', device_label: 'Chrome', last_used_at: null, created_at: null },

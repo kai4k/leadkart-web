@@ -5,11 +5,11 @@
 -->
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Alert, Button, Dialog } from '$ui';
-	import { TextField } from '$form';
+	import { Alert, Button, Dialog } from '#lib/components/ui/index.ts';
+	import { TextField } from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/index.ts';
-	import { dispatchRequestSchema } from '$features/orders/schemas';
-	import { dispatchOrderMutation } from '$features/orders/queries';
+	import { dispatchRequestSchema } from '#lib/features/orders/schemas.ts';
+	import { dispatchOrderMutation } from '#lib/features/orders/queries.ts';
 
 	type Props = {
 		orderId: string;

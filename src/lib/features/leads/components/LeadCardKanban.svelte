@@ -9,7 +9,7 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, StatusPill } from '$ui';
+	import { Badge, StatusPill } from '#lib/components/ui/index.ts';
 	import type { CrmLeadDto } from '../schemas';
 	import {
 		BUSINESS_TYPE_LABEL,

@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { PersonDetail, personDetailQuery, personDisplayName } from '$features/operator/people';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import {
+		PersonDetail,
+		personDetailQuery,
+		personDisplayName
+	} from '#lib/features/operator/people/index.ts';
 
 	let { data } = $props();
 

@@ -2,12 +2,12 @@
 	/**
 	 * CallLogTimeline — vertical event stream of CallLogDto items.
 	 *
-	 * Composes `<Timeline.Root>` / `<Timeline.Item>` from `$ui/timeline`.
+	 * Composes `<Timeline.Root>` / `<Timeline.Item>` from `#lib/components/ui/timeline/index.ts`.
 	 * Each item's icon accent comes from the outcome → accent map in
 	 * view-models so we don't render two different visual hierarchies.
 	 */
-	import { Timeline, Skeleton, EmptyState } from '$ui';
-	import { Icon, Inbox, Phone } from '$icons';
+	import { Timeline, Skeleton, EmptyState } from '#lib/components/ui/index.ts';
+	import { Icon, Inbox, Phone } from '#lib/icons/index.ts';
 	import type { CallLogDto } from '../schemas';
 	import { CALL_OUTCOME_ACCENT, CALL_OUTCOME_LABEL } from '../view-models';
 	import { relativeTime } from '#lib/utils/format.ts';

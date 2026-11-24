@@ -6,7 +6,7 @@
 	 * the card surface with the foreground, the others `muted-foreground` on the page (both gated).
 	 */
 	import { page } from '$app/state';
-	import { Icon } from '$icons';
+	import { Icon } from '#lib/icons/index.ts';
 	import { isNavActive } from '#lib/config/nav.ts';
 	import { cn } from '#lib/utils/cn.ts';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ACTION, session } from '$features/auth';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	/**
 	 * LeadsKanban — kanban view of leads grouped by stage.
 	 *
@@ -8,8 +8,8 @@
 	 * (new → contacted → interested → negotiation → converted → lost)
 	 * each render an accent-coloured column.
 	 */
-	import { Kanban, Skeleton, EmptyState } from '$ui';
-	import { Icon, Inbox } from '$icons';
+	import { Kanban, Skeleton, EmptyState } from '#lib/components/ui/index.ts';
+	import { Icon, Inbox } from '#lib/icons/index.ts';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';
 	import { groupByStage } from '../view-models';
 	import { changeStageMutation, changeTemperatureMutation } from '../queries';

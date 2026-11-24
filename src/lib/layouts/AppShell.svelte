@@ -21,8 +21,8 @@
 	import PageContainer from './PageContainer.svelte';
 	import Footer from './Footer.svelte';
 	import { createSidebarSizing } from './sidebar-sizing.ts';
-	import { Sidebar as SidebarBlock } from '$ui';
-	import { getPreferences } from '$features/preferences';
+	import { Sidebar as SidebarBlock } from '#lib/components/ui/index.ts';
+	import { getPreferences } from '#lib/features/preferences/index.ts';
 	import { createIsMobile } from '#lib/hooks/is-mobile.svelte.ts';
 
 	let { children, banner }: { children: Snippet; banner?: Snippet } = $props();

@@ -15,7 +15,7 @@ vi.mock('$app/navigation', () => ({
 	}),
 	invalidate: vi.fn()
 }));
-vi.mock('$features/auth', async (importOriginal) => ({
+vi.mock('#lib/features/auth/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	session: {
 		principal: { email: 'asha@acme.test' },
@@ -26,7 +26,7 @@ vi.mock('$features/auth', async (importOriginal) => ({
 		logout: vi.fn()
 	}
 }));
-vi.mock('$features/search/queries', () => ({
+vi.mock('#lib/features/search/queries.ts', () => ({
 	omniSearchQuery: () => ({
 		data: {
 			persons: [{ id: 'p1', first_name: 'Ravi', last_name: 'Kumar', email: 'ravi@acme.test' }],
@@ -39,10 +39,10 @@ const scope = vi.hoisted(() => ({
 	enter: undefined as unknown as () => void,
 	exit: undefined as unknown as () => void
 }));
-vi.mock('$features/operator', () => ({
+vi.mock('#lib/features/operator/index.ts', () => ({
 	enterScopeMutation: () => ({ mutate: () => scope.enter() })
 }));
-vi.mock('$features/operator/scope', () => ({
+vi.mock('#lib/features/operator/scope/index.ts', () => ({
 	exitScopeMutation: () => ({ mutate: () => scope.exit(), isPending: false })
 }));
 vi.mock('$app/state', () => ({
@@ -221,7 +221,7 @@ describe('signing out from the user menu (M-5)', () => {
 		await settle();
 	}
 	const logout = async () =>
-		(await import('$features/auth')).session.logout as ReturnType<typeof vi.fn>;
+		(await import('#lib/features/auth/index.ts')).session.logout as ReturnType<typeof vi.fn>;
 
 	it('dirty form: asks once BEFORE the request; declining changes nothing', async () => {
 		dirty = true;

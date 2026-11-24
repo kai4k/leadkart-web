@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Dialog, Button, Alert } from '$ui';
+	import { Dialog, Button, Alert } from '#lib/components/ui/index.ts';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
-	import { writeOffBatchMutation } from '$features/inventory/queries';
-	import { writeOffBatchRequestSchema, type BatchDto } from '$features/inventory/schemas';
+	import { writeOffBatchMutation } from '#lib/features/inventory/queries.ts';
+	import { writeOffBatchRequestSchema, type BatchDto } from '#lib/features/inventory/schemas.ts';
 
 	type Props = {
 		open: boolean;

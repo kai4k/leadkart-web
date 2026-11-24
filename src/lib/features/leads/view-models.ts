@@ -17,7 +17,11 @@ import type {
 	ReminderKind,
 	ReminderStatus
 } from './schemas';
-import type { StatusPillOption, KanbanColumnAccent, TimelineItemAccent } from '$ui';
+import type {
+	StatusPillOption,
+	KanbanColumnAccent,
+	TimelineItemAccent
+} from '#lib/components/ui/index.ts';
 
 // ── Stage ───────────────────────────────────────────────────────────
 

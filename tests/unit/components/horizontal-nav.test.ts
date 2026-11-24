@@ -25,9 +25,9 @@ const sessionState = vi.hoisted(() => ({
 	capabilities: null as unknown,
 	inTenantContext: false
 }));
-vi.mock('$features/auth', () => ({ session: sessionState }));
+vi.mock('#lib/features/auth/index.ts', () => ({ session: sessionState }));
 
-import HorizontalNav from '$layouts/HorizontalNav.svelte';
+import HorizontalNav from '#lib/layouts/HorizontalNav.svelte';
 
 let target: HTMLElement;
 let component: ReturnType<typeof mount> | undefined;

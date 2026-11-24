@@ -14,7 +14,7 @@
 	 */
 	import { onMount } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { Alert, Button, toast } from '$ui';
+	import { Alert, Button, toast } from '#lib/components/ui/index.ts';
 	import { hardReset, replaceLocation, takeReloadReason } from '#lib/api/hard-reset.ts';
 	import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 

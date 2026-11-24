@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
-	import { TenantActionPanel, SuspendDialog, type TenantDto } from '$features/operator/tenants';
+	import {
+		TenantActionPanel,
+		SuspendDialog,
+		type TenantDto
+	} from '#lib/features/operator/tenants/index.ts';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

@@ -20,7 +20,7 @@
  *   //              error={form.errors.field1}
  *   // On submit:   form.submit(e, async (values) => mutation.mutate(values))
  */
-import { describeError, ValidationError, type DescribeErrorOptions } from '$api/errors';
+import { describeError, ValidationError, type DescribeErrorOptions } from '#lib/api/errors.ts';
 import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
 import { clientProblems, serverProblems } from '#lib/hooks/unshown-banner.ts';

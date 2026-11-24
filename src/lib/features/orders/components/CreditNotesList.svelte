@@ -4,8 +4,8 @@
 	invoice via the `CreditNoteIssued` outbox event.
 -->
 <script lang="ts">
-	import { formatMoney, longDate } from '$features/orders/view-models';
-	import type { CreditNoteDto } from '$features/orders/schemas';
+	import { formatMoney, longDate } from '#lib/features/orders/view-models.ts';
+	import type { CreditNoteDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		creditNotes: ReadonlyArray<CreditNoteDto>;

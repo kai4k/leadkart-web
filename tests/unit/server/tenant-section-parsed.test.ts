@@ -4,7 +4,7 @@ import { caps } from '../../support/go-personas.ts';
 
 const patchTenant = vi.hoisted(() => vi.fn());
 const loadCapabilities = vi.hoisted(() => vi.fn());
-vi.mock('$features/tenant/server', async (importOriginal) => ({
+vi.mock('#lib/features/tenant/server.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	patchTenant,
 	ownTenantId: () => 't-1'

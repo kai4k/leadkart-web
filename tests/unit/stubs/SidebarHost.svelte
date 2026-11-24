@@ -1,14 +1,14 @@
 <script lang="ts">
 	/** The sidebar inside the controlled provider, exactly as AppShell mounts it. */
-	import { Sidebar as Block } from '$ui';
-	import Sidebar from '$layouts/Sidebar.svelte';
-	import { createSidebarSizing } from '$layouts/sidebar-sizing.ts';
+	import { Sidebar as Block } from '#lib/components/ui/index.ts';
+	import Sidebar from '#lib/layouts/Sidebar.svelte';
+	import { createSidebarSizing } from '#lib/layouts/sidebar-sizing.ts';
 	import {
 		createPreferences,
 		noopStorage,
 		setPreferences,
 		type Preferences
-	} from '$features/preferences';
+	} from '#lib/features/preferences/index.ts';
 
 	let { prefs, onNavigate }: { prefs: Partial<Preferences>; onNavigate?: () => void } = $props();
 

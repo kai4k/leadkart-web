@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { createDialogState } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
-	import { Badge, Button, Card, DescriptionList } from '$ui';
+	import { Badge, Button, Card, DescriptionList } from '#lib/components/ui/index.ts';
 	import { IdChip } from '#lib/components/data/index.ts';
-	import { Eye, Icon } from '$icons';
-	import { ImpersonateModal } from '$features/operator/impersonation';
-	import { tenantStatus } from '$features/tenant';
-	import { P, session } from '$features/auth';
+	import { Eye, Icon } from '#lib/icons/index.ts';
+	import { ImpersonateModal } from '#lib/features/operator/impersonation/index.ts';
+	import { tenantStatus } from '#lib/features/tenant/index.ts';
+	import { P, session } from '#lib/features/auth/index.ts';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Alert } from '$ui';
-	import { usersListTruncatedQuery } from '$features/users/queries';
-	import type { UserStatusFilter } from '$features/users/api';
+	import { Alert } from '#lib/components/ui/index.ts';
+	import { usersListTruncatedQuery } from '#lib/features/users/queries.ts';
+	import type { UserStatusFilter } from '#lib/features/users/api.ts';
 
 	/**
 	 * Warning shown wherever the full members list feeds a view (team list, hierarchy, role

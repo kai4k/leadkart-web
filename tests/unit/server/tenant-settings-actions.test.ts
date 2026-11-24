@@ -17,7 +17,7 @@ vi.mock('#lib/server/scope.ts', () => ({
 	readOperatorScope: () => ({ state: 'none' }),
 	scopeFingerprint: (r: { state: string }) => r.state
 }));
-vi.mock('$api/jwt', () => ({ decodeJwtPrincipal: () => ({ tenantId: 't-1' }) }));
+vi.mock('#lib/api/jwt.ts', () => ({ decodeJwtPrincipal: () => ({ tenantId: 't-1' }) }));
 vi.mock('#lib/server/cookies.ts', () => ({
 	ACCESS_COOKIE: () => 'lk_access',
 	sessionRenewalPending: () => false
@@ -300,7 +300,7 @@ describe('a number field is digits only, or nothing is saved', () => {
 
 describe('the section permission table covers exactly the gateway sections', () => {
 	it('has the keys of TENANT_SECTIONS', async () => {
-		const { TENANT_SECTIONS } = await import('$features/tenant/server');
+		const { TENANT_SECTIONS } = await import('#lib/features/tenant/server.ts');
 		expect(Object.keys(TENANT_SECTION_PERMISSION).sort()).toEqual(
 			Object.keys(TENANT_SECTIONS).sort()
 		);

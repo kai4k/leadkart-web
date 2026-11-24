@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button, Badge, Alert } from '$ui';
+	import { Button, Badge, Alert } from '#lib/components/ui/index.ts';
 	import * as Sheet from '#lib/components/ui/sheet/index.ts';
-	import { Icon, Plus, X } from '$icons';
-	import { assignRoleMutation, revokeRoleMutation } from '$features/users/queries';
-	import type { UserDto, RoleDto } from '$features/users/types';
-	import { canRevokeRole } from '$features/users/view-models';
-	import { displayName } from '$features/auth';
-	import { describeError } from '$api/errors';
+	import { Icon, Plus, X } from '#lib/icons/index.ts';
+	import { assignRoleMutation, revokeRoleMutation } from '#lib/features/users/queries.ts';
+	import type { UserDto, RoleDto } from '#lib/features/users/types.ts';
+	import { canRevokeRole } from '#lib/features/users/view-models.ts';
+	import { displayName } from '#lib/features/auth/index.ts';
+	import { describeError } from '#lib/api/errors.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { createMemberPermissions } from '../member-permissions.svelte.ts';
 

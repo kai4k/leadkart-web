@@ -5,7 +5,7 @@ const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const apiDelete = vi.hoisted(() => vi.fn(() => Promise.resolve({ scope_context: 'fp-none' })));
 
 vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
-vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/api/client.ts', () => ({ api: { deleteJson: apiDelete } }));
 
 import { NetworkError, ScopeInvalidError, TimeoutError } from '#lib/api/errors.ts';

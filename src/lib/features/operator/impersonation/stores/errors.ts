@@ -1,7 +1,7 @@
 /** What the impersonation store tells a form: errors with user-facing copy from the catalogue. */
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
-import { ApiError } from '$api/errors';
+import { ApiError } from '#lib/api/errors.ts';
 
 /** The UI's rendering of `already` for a form: an error whose message is the one line. */
 export class AlreadyImpersonatingError extends ApiError {

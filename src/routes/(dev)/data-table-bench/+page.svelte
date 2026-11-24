@@ -15,7 +15,7 @@
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { IdentityCell, type DataTableColumn } from '#lib/components/data/index.ts';
 	import { createBulkSelection, createKeyboardListNav } from '#lib/hooks/index.ts';
-	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
+	import { getPreferences, PREFERENCE_VALUES } from '#lib/features/preferences/index.ts';
 
 	type Row = {
 		id: string;

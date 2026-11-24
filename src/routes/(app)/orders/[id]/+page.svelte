@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { OrderDetail } from '$features/orders';
+	import { OrderDetail } from '#lib/features/orders/index.ts';
 
 	const id = $derived(page.params.id ?? '');
 </script>

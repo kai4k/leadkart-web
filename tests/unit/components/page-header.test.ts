@@ -14,7 +14,7 @@ vi.mock('$app/state', () => ({
 	}
 }));
 
-import PageHeader from '$layouts/PageHeader.svelte';
+import PageHeader from '#lib/layouts/PageHeader.svelte';
 
 let target: HTMLElement;
 let component: ReturnType<typeof mount> | undefined;

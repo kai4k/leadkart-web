@@ -11,7 +11,7 @@
 	 * `foreground on {warning,destructive}-soft`); the tone colours only the icon.
 	 */
 	import type { Snippet } from 'svelte';
-	import { Icon } from '$icons';
+	import { Icon } from '#lib/icons/index.ts';
 	import { createResetPendingReader } from './reset-pending.svelte.ts';
 	import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 	import { cn } from '#lib/utils/cn.ts';

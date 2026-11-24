@@ -14,7 +14,7 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { BrandMark } from '$ui';
+	import { BrandMark } from '#lib/components/ui/index.ts';
 	import AuthBackdrop from './AuthBackdrop.svelte';
 	import AuthBrandPanel from './AuthBrandPanel.svelte';
 

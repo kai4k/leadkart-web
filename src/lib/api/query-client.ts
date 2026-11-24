@@ -37,7 +37,7 @@ import { QueryClient, QueryCache, MutationCache, type Mutation } from '@tanstack
 import { onDestroy } from 'svelte';
 import { browser } from '$app/env';
 import { goto } from '$app/navigation';
-import { toast } from '$ui';
+import { toast } from '#lib/components/ui/index.ts';
 import { describeError, NetworkError, ServerError, AuthError, TimeoutError } from './errors';
 import { exitOperatorScope, scopeChangedElsewhere } from './operator-scope';
 import { navigateHard } from './hard-reset';

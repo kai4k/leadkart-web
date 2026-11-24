@@ -5,7 +5,7 @@
  * pointer drag, ARIA slider semantics).
  *
  * Usage:
- *   import { Slider } from '$ui';
+ *   import { Slider } from '#lib/components/ui/index.ts';
  *   <Slider bind:value min={0} max={100} step={5} aria-label="Volume" />
  */
 export { default as Slider } from './Slider.svelte';

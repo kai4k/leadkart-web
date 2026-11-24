@@ -2,9 +2,9 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { ReasonConfirmDialog } from '#lib/components/feedback/index.ts';
-	import { deactivateUserMutation } from '$features/users/queries';
-	import type { UserDto } from '$features/users/types';
-	import { displayName } from '$features/auth';
+	import { deactivateUserMutation } from '#lib/features/users/queries.ts';
+	import type { UserDto } from '#lib/features/users/types.ts';
+	import { displayName } from '#lib/features/auth/index.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {

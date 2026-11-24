@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Select, type ActionFormResult, type SelectOption } from '$form';
+	import { Select, type ActionFormResult, type SelectOption } from '#lib/components/form/index.ts';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 

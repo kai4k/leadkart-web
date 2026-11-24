@@ -18,7 +18,7 @@
 	 * above it. The brand mark is the one decoration.
 	 */
 	import { _ } from 'svelte-i18n';
-	import { Alert, BrandMark, Button, Card } from '$ui';
+	import { Alert, BrandMark, Button, Card } from '#lib/components/ui/index.ts';
 
 	type Props = {
 		status: number;

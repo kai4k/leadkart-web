@@ -4,8 +4,8 @@
 	 * system, product ranges (chips), dosage forms (chips), order value
 	 * band, buy timeline.
 	 */
-	import { Card, Badge } from '$ui';
-	import { Icon, Package } from '$icons';
+	import { Card, Badge } from '#lib/components/ui/index.ts';
+	import { Icon, Package } from '#lib/icons/index.ts';
 	import type { CrmLeadDto } from '../schemas';
 	import {
 		BUSINESS_TYPE_LABEL,

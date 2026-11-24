@@ -1,7 +1,7 @@
 /**
  * Composition primitives for data-heavy pages.
  *
- * These primitives compose the `$ui` namespace's atoms (Button,
+ * These primitives compose the `#lib/components/ui/index.ts` namespace's atoms (Button,
  * Drawer, Dialog, etc.) with the hooks under `#lib/hooks/index.ts` so that
  * each feature's list page reduces to ~200 lines of declarative
  * config rather than 800 lines of hand-rolled wiring.

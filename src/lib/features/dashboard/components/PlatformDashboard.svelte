@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import {
 		Activity,
 		Ban,
@@ -11,10 +11,10 @@
 		UserCog,
 		Users
 	} from '#lib/icons/index.ts';
-	import { Alert, Badge, StatCard, type StatCardAccent } from '$ui';
-	import { P, session } from '$features/auth';
-	import { describeError } from '$api/errors';
-	import { platformStatsQuery } from '$features/operator';
+	import { Alert, Badge, StatCard, type StatCardAccent } from '#lib/components/ui/index.ts';
+	import { P, session } from '#lib/features/auth/index.ts';
+	import { describeError } from '#lib/api/errors.ts';
+	import { platformStatsQuery } from '#lib/features/operator/index.ts';
 
 	/**
 	 * Platform-tier dashboard.

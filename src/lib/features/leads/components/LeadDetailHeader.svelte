@@ -1,6 +1,6 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { ACTION, session } from '$features/auth';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	/**
 	 * LeadDetailHeader — top-of-page identity strip for a single lead.
 	 *
@@ -10,8 +10,8 @@
 	 * optimistic PATCH mutation. Edit / Reassign buttons emit events to
 	 * the parent which owns the drawers/dialogs.
 	 */
-	import { Button, StatusPill } from '$ui';
-	import { Icon, Edit, Users, UserCheck } from '$icons';
+	import { Button, StatusPill } from '#lib/components/ui/index.ts';
+	import { Icon, Edit, Users, UserCheck } from '#lib/icons/index.ts';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';
 	import { STAGE_OPTIONS, TEMPERATURE_OPTIONS, locationLabel } from '../view-models';
 	import { changeStageMutation, changeTemperatureMutation } from '../queries';

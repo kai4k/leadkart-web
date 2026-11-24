@@ -12,7 +12,7 @@
 	 * `aria-current="page"` marks the active entry in both shapes.
 	 */
 	import { _ } from 'svelte-i18n';
-	import { DropdownMenu, Sidebar } from '$ui';
+	import { DropdownMenu, Sidebar } from '#lib/components/ui/index.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { VisibleNavItem } from '#lib/config/nav.ts';
 

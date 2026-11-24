@@ -3,7 +3,7 @@ import {
 	BFF_MAX_UPSTREAM_HOPS,
 	DEFAULT_READ_TIMEOUT_MS,
 	DEFAULT_UPSTREAM_TIMEOUT_MS
-} from '$api/timeouts';
+} from '#lib/api/timeouts.ts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
 
 export type ImpersonationStatus = 'idle' | 'loading' | 'active' | 'mutating' | 'error';

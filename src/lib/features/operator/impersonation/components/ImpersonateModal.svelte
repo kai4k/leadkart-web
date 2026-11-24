@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { z } from 'zod';
-	import { Alert } from '$ui';
+	import { Alert } from '#lib/components/ui/index.ts';
 	import { auditReasonField } from '#lib/api/request-schema.ts';
 	import { FormDialog, NumberInput, TextareaField } from '#lib/components/form/index.ts';
 	import { _ } from 'svelte-i18n';

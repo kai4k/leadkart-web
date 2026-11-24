@@ -1,4 +1,4 @@
-import { ACTION, session } from '$features/auth';
+import { ACTION, session } from '#lib/features/auth/index.ts';
 
 /**
  * What the caller may do to roles, by the permission each Go route needs (`ACTION` in

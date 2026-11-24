@@ -5,9 +5,9 @@
 	through OrderActionButtons, not status picking.
 -->
 <script lang="ts">
-	import { StatusPill, type StatusPillOption } from '$ui';
-	import { orderStatusSchema, type OrderStatus } from '$features/orders/schemas';
-	import { statusBadge } from '$features/orders/view-models';
+	import { StatusPill, type StatusPillOption } from '#lib/components/ui/index.ts';
+	import { orderStatusSchema, type OrderStatus } from '#lib/features/orders/schemas.ts';
+	import { statusBadge } from '#lib/features/orders/view-models.ts';
 	import type { BadgeVariant } from '#lib/components/ui/badge/index.ts';
 
 	type Props = {

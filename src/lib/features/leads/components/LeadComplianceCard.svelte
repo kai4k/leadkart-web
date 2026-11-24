@@ -3,8 +3,8 @@
 	 * LeadComplianceCard — drug licence, GSTIN, PAN compliance summary.
 	 * Pure presentation; the parent's data query owns the loading state.
 	 */
-	import { Card, Badge } from '$ui';
-	import { Icon, Check, X, ShieldCheck } from '$icons';
+	import { Card, Badge } from '#lib/components/ui/index.ts';
+	import { Icon, Check, X, ShieldCheck } from '#lib/icons/index.ts';
 	import type { CrmLeadDto } from '../schemas';
 
 	type Props = { lead: CrmLeadDto };

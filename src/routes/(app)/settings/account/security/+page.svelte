@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Card } from '$ui';
-	import { ChangePasswordForm, ChangeEmailForm } from '$features/auth';
+	import { Card } from '#lib/components/ui/index.ts';
+	import { ChangePasswordForm, ChangeEmailForm } from '#lib/features/auth/index.ts';
 	import type { ActionData } from './$types';
 
 	/**

@@ -139,9 +139,7 @@ describe('check-raw-elements: the allowlist holds only rebuild-pending areas (Ta
 		'src/lib/components/data/BulkUploadDrawer.svelte'
 	];
 	it('accepts every pending area in each list', () => {
-		expect(
-			checkAllowlistAreas({ rawElements: ok, drawer: ok, legacyDataTable: ok, notes: {} })
-		).toEqual([]);
+		expect(checkAllowlistAreas({ rawElements: ok, drawer: ok, legacyDataTable: ok })).toEqual([]);
 	});
 	it.each([
 		'src/lib/features/settings/components/A.svelte',
@@ -228,11 +226,14 @@ describe('check-legacy-imports', () => {
 	const svelte = (script: string) => `<script lang="ts">\n${script}\n</script>`;
 	it.each([
 		["import * as Drawer from '#lib/components/ui/drawer/index.ts';", 'drawer'],
-		["import { DrawerContent } from '$ui/drawer';", 'drawer'],
-		["import { Drawer, Button } from '$ui';", 'drawer'],
+		["import { DrawerContent } from '#lib/components/ui/drawer/index.ts';", 'drawer'],
+		["import { Drawer, Button } from '#lib/components/ui/index.ts';", 'drawer'],
 		["import { Button, Drawer as D } from '#lib/components/ui/index.ts';", 'drawer'],
-		["import { DataTable } from '$ui';", 'legacyDataTable'],
-		["import { type DataTableColumn, Badge } from '$ui';", 'legacyDataTable'],
+		["import { DataTable } from '#lib/components/ui/index.ts';", 'legacyDataTable'],
+		[
+			"import { type DataTableColumn, Badge } from '#lib/components/ui/index.ts';",
+			'legacyDataTable'
+		],
 		["import DataTable from '#lib/components/ui/data-table/DataTable.svelte';", 'legacyDataTable'],
 		[
 			"import type { DataTableColumn } from '#lib/components/ui/data-table/index.ts';",
@@ -247,9 +248,9 @@ describe('check-legacy-imports', () => {
 	it('does not flag other imports, the new data-table, or text in a comment or string', () => {
 		const ok = svelte(
 			[
-				"import { Button, Sheet, Dialog } from '$ui';",
+				"import { Button, Sheet, Dialog } from '#lib/components/ui/index.ts';",
 				"import { DataTable } from '#lib/components/data/data-table/index.ts';",
-				"// import { Drawer } from '$ui';",
+				"// import { Drawer } from '#lib/components/ui/index.ts';",
 				'const s = "import { Drawer } from \'$ui\'";'
 			].join('\n')
 		);
@@ -257,7 +258,7 @@ describe('check-legacy-imports', () => {
 	});
 
 	it('the shims and the barrel are definitions, not importers', () => {
-		const src = "import { Drawer } from '$ui';";
+		const src = "import { Drawer } from '#lib/components/ui/index.ts';";
 		expect(findLegacyImports('src/lib/components/ui/drawer/drawer.svelte', src)).toEqual([]);
 		expect(findLegacyImports('src/lib/components/ui/data-table/DataTable.svelte', src)).toEqual([]);
 		expect(findLegacyImports('src/lib/components/ui/index.ts', src)).toEqual([]);
@@ -265,10 +266,13 @@ describe('check-legacy-imports', () => {
 	});
 
 	it('an allowlisted importer passes; a new one, a stale one and a missing one fail', () => {
-		const importer = svelte("import { Drawer } from '$ui';");
+		const importer = svelte("import { Drawer } from '#lib/components/ui/index.ts';");
 		const files = new Map([
 			[FEATURE, importer],
-			['src/lib/features/x/components/Clean.svelte', svelte("import { Button } from '$ui';")]
+			[
+				'src/lib/features/x/components/Clean.svelte',
+				svelte("import { Button } from '#lib/components/ui/index.ts';")
+			]
 		]);
 		const base = { drawer: [FEATURE], legacyDataTable: [] as string[] };
 		expect(checkLegacyImports(base, files)).toEqual({ violations: [], stale: [] });
@@ -384,8 +388,9 @@ describe('the rebuild-pending allowlist only shrinks', () => {
 
 	it('a listed file that gains a legacy import fails', () => {
 		const path = 'src/lib/features/x/B.svelte';
-		const one = "import { Drawer } from '$ui';";
-		const two = "import { Drawer } from '$ui';\nimport D from '$ui/drawer';";
+		const one = "import { Drawer } from '#lib/components/ui/index.ts';";
+		const two =
+			"import { Drawer } from '#lib/components/ui/index.ts';\nimport D from '#lib/components/ui/drawer/index.ts';";
 		const allow = {
 			drawer: [path],
 			legacyDataTable: [],

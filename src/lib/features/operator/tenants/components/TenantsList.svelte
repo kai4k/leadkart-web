@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Badge, Button, EmptyState, Spinner } from '$ui';
-	import { Building2, Eye, Pause, Play, Plus, Shield, Icon } from '$icons';
+	import { Badge, Button, EmptyState, Spinner } from '#lib/components/ui/index.ts';
+	import { Building2, Eye, Pause, Play, Plus, Shield, Icon } from '#lib/icons/index.ts';
 	import {
 		ResourceListPage,
 		RowActionsMenu,
@@ -12,9 +12,9 @@
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { activateTenantMutation, tenantsListQuery } from '../queries';
 	import { canActivate, canSuspend } from '../view-models';
-	import { tenantStatus } from '$features/tenant';
-	import { P, session } from '$features/auth';
-	import { enterScopeMutation } from '$features/operator/scope';
+	import { tenantStatus } from '#lib/features/tenant/index.ts';
+	import { P, session } from '#lib/features/auth/index.ts';
+	import { enterScopeMutation } from '#lib/features/operator/scope/index.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';

@@ -9,7 +9,7 @@ describe('check-no-client-capability-guards', () => {
 	});
 
 	it('flags `can` imported under an alias', () => {
-		const src = `import { can as mayDo } from '$features/auth';\nif (!mayDo(caps, 'x')) goto('/');`;
+		const src = `import { can as mayDo } from '#lib/features/auth/index.ts';\nif (!mayDo(caps, 'x')) goto('/');`;
 		expect(findViolations(src)).toEqual([2]);
 	});
 

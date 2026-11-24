@@ -1,8 +1,8 @@
 <script lang="ts">
 	/** The sidebar provider wired to the preferences exactly as AppShell does it. */
-	import { Sidebar as Block } from '$ui';
-	import { createSidebarSizing } from '$layouts/sidebar-sizing.ts';
-	import type { PreferencesStore } from '$features/preferences';
+	import { Sidebar as Block } from '#lib/components/ui/index.ts';
+	import { createSidebarSizing } from '#lib/layouts/sidebar-sizing.ts';
+	import type { PreferencesStore } from '#lib/features/preferences/index.ts';
 
 	let { prefs, enabled = true }: { prefs: PreferencesStore; enabled?: boolean } = $props();
 	// svelte-ignore state_referenced_locally

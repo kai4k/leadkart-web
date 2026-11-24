@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { Icon } from '$icons';
+	import { Icon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {

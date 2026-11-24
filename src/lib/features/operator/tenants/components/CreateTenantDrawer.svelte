@@ -4,7 +4,7 @@
 	import { SLUG_MAX } from '#lib/api/request-schema.ts';
 	import { _ } from 'svelte-i18n';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Alert, Button, Card, CopyButton } from '$ui';
+	import { Alert, Button, Card, CopyButton } from '#lib/components/ui/index.ts';
 	import { FormSheet, TextField, PasswordField } from '#lib/components/form/index.ts';
 	import { registerTenantMutation } from '../queries';
 	import { registerTenantRequestSchema } from '../schemas';

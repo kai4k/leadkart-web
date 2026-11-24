@@ -6,7 +6,7 @@
  * between steps colour-fill on completion.
  *
  * Usage:
- *   import * as Stepper from '$ui/stepper';
+ *   import * as Stepper from '#lib/components/ui/stepper/index.ts';
  *
  *   <Stepper.Root aria-label="Bulk upload">
  *     <Stepper.Step index={1} label="Upload" state="complete" />

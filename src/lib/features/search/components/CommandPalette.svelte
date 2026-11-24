@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Button, Command } from '$ui';
+	import { Button, Command } from '#lib/components/ui/index.ts';
 	import { resolve } from '$app/paths';
-	import { Building2, User, Icon } from '$icons';
-	import { omniSearchQuery } from '$features/search/queries';
-	import { enterScopeMutation } from '$features/operator';
-	import { P, session } from '$features/auth';
+	import { Building2, User, Icon } from '#lib/icons/index.ts';
+	import { omniSearchQuery } from '#lib/features/search/queries.ts';
+	import { enterScopeMutation } from '#lib/features/operator/index.ts';
+	import { P, session } from '#lib/features/auth/index.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import { visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
-	import type { SearchPersonHit, SearchTenantHit } from '$features/search/schemas';
+	import type { SearchPersonHit, SearchTenantHit } from '#lib/features/search/schemas.ts';
 
 	/**
 	 * CommandPalette — Cmd/Ctrl+K palette (Linear / Vercel canon) for every

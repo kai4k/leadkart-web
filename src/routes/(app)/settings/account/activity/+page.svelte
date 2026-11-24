@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { myActivityQuery } from '#lib/features/audit/queries.ts';
-	import { ActivityTimeline } from '$features/audit';
+	import { ActivityTimeline } from '#lib/features/audit/index.ts';
 </script>
 
 <svelte:head><title>My Activity · LeadKart</title></svelte:head>

@@ -77,7 +77,7 @@
 <script lang="ts" generics="T">
 	import { Skeleton } from '../skeleton';
 	import EmptyState from '../EmptyState.svelte';
-	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '$icons';
+	import { ChevronUp, ChevronDown, ChevronsUpDown, Icon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 	import { Alert } from '../alert';
 

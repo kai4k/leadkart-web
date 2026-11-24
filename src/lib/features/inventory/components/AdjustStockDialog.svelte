@@ -1,20 +1,20 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Dialog, Button, Alert } from '$ui';
-	import { NumberInput, RadioGroup, RadioItem } from '$form';
+	import { Dialog, Button, Alert } from '#lib/components/ui/index.ts';
+	import { NumberInput, RadioGroup, RadioItem } from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
-	import { adjustStockMutation } from '$features/inventory/queries';
+	import { adjustStockMutation } from '#lib/features/inventory/queries.ts';
 	import {
 		createMovementRequestSchema,
 		type BatchDto,
 		type CreateMovementRequest,
 		type StockMovementReason
-	} from '$features/inventory/schemas';
+	} from '#lib/features/inventory/schemas.ts';
 	import {
 		MANUAL_ADJUSTMENT_REASONS,
 		previewNewBalance,
 		willGoNegative
-	} from '$features/inventory/view-models';
+	} from '#lib/features/inventory/view-models.ts';
 
 	/**
 	 * AdjustStockDialog — manual correction scoped to a specific batch.

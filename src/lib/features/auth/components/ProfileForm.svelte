@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { ActionForm, TextField, type ActionFormResult } from '#lib/components/form/index.ts';
-	import { DescriptionList } from '$ui';
-	import { displayName, userStatus } from '$features/auth/view-models';
-	import type { UserDto } from '$features/auth/types';
+	import { DescriptionList } from '#lib/components/ui/index.ts';
+	import { displayName, userStatus } from '#lib/features/auth/view-models.ts';
+	import type { UserDto } from '#lib/features/auth/types.ts';
 
 	/**
 	 * ProfileForm: the page at /settings/account/profile owns the load + action; this component is a pure renderer

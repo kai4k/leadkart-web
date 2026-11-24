@@ -5,7 +5,7 @@
 	 * the copy is plain paragraphs, not headings, so the page form owns the `<h1>`.
 	 */
 	import { _ } from 'svelte-i18n';
-	import { BrandIcon, BrandWordmark } from '$ui';
+	import { BrandIcon, BrandWordmark } from '#lib/components/ui/index.ts';
 	import { Icon, ShieldCheck, TrendingUp, Truck } from '#lib/icons/index.ts';
 
 	const year = new Date().getFullYear();

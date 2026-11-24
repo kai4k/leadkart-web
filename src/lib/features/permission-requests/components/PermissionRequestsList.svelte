@@ -1,21 +1,21 @@
 <script lang="ts">
 	import { createDialogState, useUrlTab } from '#lib/hooks/index.ts';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { Badge, Button, EmptyState, Tabs } from '$ui';
-	import { Icon, Inbox, Plus } from '$icons';
+	import { Badge, Button, EmptyState, Tabs } from '#lib/components/ui/index.ts';
+	import { Icon, Inbox, Plus } from '#lib/icons/index.ts';
 	import type { DataTableColumn } from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import { permissionRequestsInfiniteQuery } from '$features/permission-requests/queries';
+	import { permissionRequestsInfiniteQuery } from '#lib/features/permission-requests/queries.ts';
 	import { formatDate } from '#lib/utils/format.ts';
 	import {
 		permissionRequestState,
 		daysOrIndefinite
-	} from '$features/permission-requests/view-models';
-	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
-	import type { ListRole } from '$features/permission-requests/api';
-	import { ACTION, session } from '$features/auth';
+	} from '#lib/features/permission-requests/view-models.ts';
+	import type { PermissionRequestDto } from '#lib/features/permission-requests/schemas.ts';
+	import type { ListRole } from '#lib/features/permission-requests/api.ts';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	import CreatePermissionRequestDrawer from './CreatePermissionRequestDrawer.svelte';
 
 	/**

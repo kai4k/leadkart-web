@@ -9,7 +9,7 @@
 import type { QueryClient } from '@tanstack/svelte-query';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { changeScopeContext } from '$api/operator-scope';
+import { changeScopeContext } from '#lib/api/operator-scope.ts';
 import * as api from './api';
 
 export async function enterTenantContext(qc: QueryClient, slug: string): Promise<void> {

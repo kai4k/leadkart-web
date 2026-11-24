@@ -1,15 +1,15 @@
 <!-- src/lib/features/users/components/CreateUserDrawer.svelte -->
 <script lang="ts">
 	import { passwordPolicyHint, type PolicyRules } from '#lib/utils/password-policy.ts';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 	import { oneShot } from '#lib/utils/one-shot.ts';
 	import { _ } from 'svelte-i18n';
 	import type { z } from 'zod';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Alert, Button } from '$ui';
+	import { Alert, Button } from '#lib/components/ui/index.ts';
 	import { FormSheet, TextField, PasswordField } from '#lib/components/form/index.ts';
-	import { createUserMutation } from '$features/users/queries';
-	import { createUserRequestSchema } from '$features/users/schemas';
+	import { createUserMutation } from '#lib/features/users/queries.ts';
+	import { createUserRequestSchema } from '#lib/features/users/schemas.ts';
 
 	type Props = {
 		open: boolean;

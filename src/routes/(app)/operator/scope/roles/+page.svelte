@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { plainTitle } from '#lib/utils/page-title.ts';
-	import { RolesList } from '$features/roles';
-	import { UsersTruncatedAlert, usersListQuery } from '$features/users';
-	import { ACTION, session } from '$features/auth';
+	import { RolesList } from '#lib/features/roles/index.ts';
+	import { UsersTruncatedAlert, usersListQuery } from '#lib/features/users/index.ts';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

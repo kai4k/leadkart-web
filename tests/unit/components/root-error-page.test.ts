@@ -7,7 +7,7 @@ const state = vi.hoisted(() => ({
 const logout = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 vi.mock('$app/state', () => state);
 vi.mock('$app/paths', () => ({ resolve: (p: string) => p }));
-vi.mock('$features/auth', () => ({ session: { logout } }));
+vi.mock('#lib/features/auth/index.ts', () => ({ session: { logout } }));
 
 import ErrorPage from '../../../src/routes/+error.svelte';
 

@@ -13,12 +13,16 @@
 	 * proxy forwards the request untouched, and the test suite mocks
 	 * the response inline.
 	 */
-	import { Dialog, Button, Alert } from '$ui';
-	import { Combobox, type ComboboxOption } from '$form';
+	import { Dialog, Button, Alert } from '#lib/components/ui/index.ts';
+	import { Combobox, type ComboboxOption } from '#lib/components/form/index.ts';
 	import { reassignLeadSchema } from '../schemas';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import { reassignLeadMutation } from '../queries';
-	import { membershipSearchQuery, memberSearchReady, memberSearchOptions } from '$features/users';
+	import {
+		membershipSearchQuery,
+		memberSearchReady,
+		memberSearchOptions
+	} from '#lib/features/users/index.ts';
 
 	type Props = {
 		leadId: string;

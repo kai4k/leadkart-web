@@ -22,9 +22,9 @@ import {
 	zodFieldMessages
 } from '#lib/server/form-action.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
-import { updateProfileRequestSchema } from '$features/auth/schemas';
+import { updateProfileRequestSchema } from '#lib/features/auth/schemas.ts';
 import { ownPrincipal } from '#lib/server/principal.ts';
-import type { UserDto } from '$features/auth/types';
+import type { UserDto } from '#lib/features/auth/types.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const getMembershipId = (cookies: Parameters<typeof goFetch>[0]): string =>

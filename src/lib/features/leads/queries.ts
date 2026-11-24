@@ -13,7 +13,7 @@
  */
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import * as api from './api';
-import { toast } from '$ui';
+import { toast } from '#lib/components/ui/index.ts';
 import { INLINE_ERRORS_META } from '#lib/api/mutations.ts';
 import { createInfiniteList, useOptimisticMutation, type InfiniteList } from '#lib/hooks/index.ts';
 import type { Page } from '#lib/api/pagination.ts';

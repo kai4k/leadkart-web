@@ -14,7 +14,7 @@ vi.mock('$app/navigation', () => ({
 	goto: vi.fn(),
 	invalidate: vi.fn()
 }));
-vi.mock('$features/auth', async (importOriginal) => ({
+vi.mock('#lib/features/auth/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	session: {
 		principal: { email: 'asha@acme.test' },
@@ -25,10 +25,12 @@ vi.mock('$features/auth', async (importOriginal) => ({
 		logout: vi.fn()
 	}
 }));
-vi.mock('$features/search/queries', () => ({
+vi.mock('#lib/features/search/queries.ts', () => ({
 	omniSearchQuery: () => ({ ...search.state, refetch: () => search.refetch() })
 }));
-vi.mock('$features/operator', () => ({ enterScopeMutation: () => ({ mutate: vi.fn() }) }));
+vi.mock('#lib/features/operator/index.ts', () => ({
+	enterScopeMutation: () => ({ mutate: vi.fn() })
+}));
 vi.mock('$app/state', () => ({ page: { data: {}, url: new URL('http://x/') } }));
 vi.mock('#lib/config/nav.ts', () => ({ visibleNav: () => [] }));
 

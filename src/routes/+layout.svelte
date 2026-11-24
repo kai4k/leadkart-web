@@ -3,13 +3,13 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/env';
 	import { _, locale } from 'svelte-i18n';
-	import { Toaster, Tooltip } from '$ui';
+	import { Toaster, Tooltip } from '#lib/components/ui/index.ts';
 	import {
 		createPreferences,
 		DEFAULT_PREFERENCES,
 		removeLegacyThemeKeys,
 		setPreferences
-	} from '$features/preferences';
+	} from '#lib/features/preferences/index.ts';
 
 	let { children, data } = $props();
 

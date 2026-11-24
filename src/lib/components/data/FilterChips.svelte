@@ -2,7 +2,7 @@
 <script lang="ts" generics="TFilters extends import('#lib/hooks/index.ts').UrlFiltersBase">
 	import { _ } from 'svelte-i18n';
 	import type { UrlFilters } from '#lib/hooks/index.ts';
-	import { Icon, X } from '$icons';
+	import { Icon, X } from '#lib/icons/index.ts';
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 

@@ -34,7 +34,7 @@ import {
 	type QueryClient,
 	type QueryKey
 } from '@tanstack/svelte-query';
-import { toast } from '$ui';
+import { toast } from '#lib/components/ui/index.ts';
 import { refreshCapabilities } from './capabilities-refresh.ts';
 
 /**

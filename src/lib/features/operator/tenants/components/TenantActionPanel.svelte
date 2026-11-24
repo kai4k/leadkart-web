@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Button, Card } from '$ui';
-	import { Pause, Play, Icon } from '$icons';
+	import { Button, Card } from '#lib/components/ui/index.ts';
+	import { Pause, Play, Icon } from '#lib/icons/index.ts';
 	import { canSuspend, canActivate } from '../view-models';
 	import { activateTenantMutation } from '../queries';
-	import { P, session } from '$features/auth';
+	import { P, session } from '#lib/features/auth/index.ts';
 	import type { TenantDto } from '../types';
 
 	type Props = {

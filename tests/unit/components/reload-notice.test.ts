@@ -7,12 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../src/lib/i18n/locales/en.json';
 
 const info = vi.hoisted(() => vi.fn());
-vi.mock('$ui', async () => ({
-	...(await vi.importActual<object>('$ui')),
+vi.mock('#lib/components/ui/index.ts', async () => ({
+	...(await vi.importActual<object>('#lib/components/ui/index.ts')),
 	toast: { info }
 }));
 
-import ReloadNotice from '$layouts/ReloadNotice.svelte';
+import ReloadNotice from '#lib/layouts/ReloadNotice.svelte';
 import { RELOAD_REASON_KEY } from '#lib/api/hard-reset.ts';
 import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { RolesList } from '$features/roles';
-	import { UsersTruncatedAlert, usersListQuery } from '$features/users';
-	import { ACTION, session } from '$features/auth';
+	import { RolesList } from '#lib/features/roles/index.ts';
+	import { UsersTruncatedAlert, usersListQuery } from '#lib/features/users/index.ts';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 
 	// The member counts come from GET /users, which needs a users-view permission: without it the
 	// call would 403 silently and every role would claim 0 members, so it is not made, and the

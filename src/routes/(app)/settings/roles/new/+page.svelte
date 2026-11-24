@@ -1,11 +1,16 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { Button, Card } from '$ui';
-	import { ActionForm, NumberInput, TextField } from '$form';
-	import { ROLE_LEVEL_MAX, ROLE_LEVEL_MIN, ROLE_NAME_MAX, ROLE_NAME_MIN } from '$features/roles';
+	import { Button, Card } from '#lib/components/ui/index.ts';
+	import { ActionForm, NumberInput, TextField } from '#lib/components/form/index.ts';
+	import {
+		ROLE_LEVEL_MAX,
+		ROLE_LEVEL_MIN,
+		ROLE_NAME_MAX,
+		ROLE_NAME_MIN
+	} from '#lib/features/roles/index.ts';
 	import { readFailure } from '#lib/utils/form-failure.ts';
 	import type { ActionData } from './$types';
 

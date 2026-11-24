@@ -24,14 +24,14 @@ import {
 	outstandingBalance,
 	statusBadge,
 	totalPaid
-} from '$features/orders/view-models';
+} from '#lib/features/orders/view-models.ts';
 import {
 	orderStatusSchema,
 	type OrderDto,
 	type OrderItemDto,
 	type OrderStatus,
 	type PaymentDto
-} from '$features/orders/schemas';
+} from '#lib/features/orders/schemas.ts';
 
 const ALL_STATUSES = orderStatusSchema.options as readonly OrderStatus[];
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PeopleList } from '$features/operator/people';
+	import { PeopleList } from '#lib/features/operator/people/index.ts';
 	import { createListSearch } from '#lib/hooks/index.ts';
 
 	// the search text stays out of the URL; Back brings it back

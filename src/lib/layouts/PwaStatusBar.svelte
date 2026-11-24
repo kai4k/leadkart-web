@@ -16,8 +16,8 @@
 	 */
 	import { _ } from 'svelte-i18n';
 	import { createPwa } from '#lib/hooks/index.ts';
-	import { Button } from '$ui';
-	import { CloudOff, Download, RefreshCw, Icon } from '$icons';
+	import { Button } from '#lib/components/ui/index.ts';
+	import { CloudOff, Download, RefreshCw, Icon } from '#lib/icons/index.ts';
 
 	const pwa = createPwa();
 	$effect(() => pwa.start());

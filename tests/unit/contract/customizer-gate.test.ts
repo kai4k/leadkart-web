@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CUSTOMIZER_GROUPS } from '$layouts/customizer-config.ts';
-import type { PreferenceKey } from '$features/preferences';
+import { CUSTOMIZER_GROUPS } from '#lib/layouts/customizer-config.ts';
+import type { PreferenceKey } from '#lib/features/preferences/index.ts';
 import { AXES } from '../../../scripts/arch/check-token-contrast.mjs';
 
 describe('the customizer never offers a value outside the contrast gate (server project: it reads the script)', () => {

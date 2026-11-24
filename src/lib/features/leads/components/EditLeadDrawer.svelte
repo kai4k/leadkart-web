@@ -8,9 +8,9 @@
 	 * present in the PATCH body, so we don't surface them here. Only
 	 * editable fields are bound to the form.
 	 */
-	import { Drawer, Button, Alert } from '$ui';
-	import { Select, Switch, TagInput, TextField } from '$form';
-	import { Icon, X } from '$icons';
+	import { Drawer, Button, Alert } from '#lib/components/ui/index.ts';
+	import { Select, Switch, TagInput, TextField } from '#lib/components/form/index.ts';
+	import { Icon, X } from '#lib/icons/index.ts';
 	import {
 		updateLeadSchema,
 		type CrmLeadDto,

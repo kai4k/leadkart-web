@@ -20,7 +20,7 @@ import {
 } from '@tanstack/svelte-query';
 import { INLINE_ERRORS_META } from '#lib/api/mutations.ts';
 import { nextPageParam } from '#lib/api/pagination.ts';
-import { toast } from '$ui';
+import { toast } from '#lib/components/ui/index.ts';
 import * as api from './api';
 import type { ListBatchesParams, ListMovementsParams, ListProductsParams } from './api';
 import { movementReasonLabel } from './view-models';

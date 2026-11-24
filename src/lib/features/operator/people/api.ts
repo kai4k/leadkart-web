@@ -1,6 +1,6 @@
 import { seg } from '#lib/utils/path-segment.ts';
 import { apiLegacy, parseResponse } from '#lib/api/client.ts';
-import { omniSearch, type SearchPersonHit } from '$features/search';
+import { omniSearch, type SearchPersonHit } from '#lib/features/search/index.ts';
 import { personDtoSchema, listPersonMembershipsResponseSchema } from './schemas';
 import type { PersonDto, ListPersonMembershipsResponse, GlobalSuspendRequest } from './types';
 

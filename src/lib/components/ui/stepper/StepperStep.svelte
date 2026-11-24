@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { Check, AlertTriangle } from '$icons';
+	import { Check, AlertTriangle } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	type Props = {

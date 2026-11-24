@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { ConfirmDialog } from '$ui';
-	import { quarantineBatchMutation } from '$features/inventory/queries';
-	import type { BatchDto } from '$features/inventory/schemas';
+	import { ConfirmDialog } from '#lib/components/ui/index.ts';
+	import { quarantineBatchMutation } from '#lib/features/inventory/queries.ts';
+	import type { BatchDto } from '#lib/features/inventory/schemas.ts';
 
 	type Props = {
 		open: boolean;

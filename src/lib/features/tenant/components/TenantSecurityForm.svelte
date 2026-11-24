@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { _ } from 'svelte-i18n';
-	import { Card } from '$ui';
-	import { NumberInput, Switch, type ActionFormResult } from '$form';
+	import { Card } from '#lib/components/ui/index.ts';
+	import { NumberInput, Switch, type ActionFormResult } from '#lib/components/form/index.ts';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';
 	import { PASSWORD_MIN_LENGTH_CEILING, PASSWORD_MIN_LENGTH_FLOOR } from '../schemas.ts';

@@ -282,7 +282,7 @@ describe('check-tokens (m5, fix round E): the vivid primary is a fill, a mark is
 });
 
 describe('check-tokens (m6, fix round E): no destructive text on a control fill in a material (AST)', () => {
-	const DLG = `<script lang="ts">import { Dialog } from '$ui';</script>\n`;
+	const DLG = `<script lang="ts">import { Dialog } from '#lib/components/ui/index.ts';</script>\n`;
 	const hits = (src: string, rel = 'src/lib/features/x/X.svelte') =>
 		(findTextOnControl(rel, src) as Array<{ name: string }>).map((m) => m.name);
 	it('an unprefixed utility applies in every state: text-destructive hover:bg-accent IS destructive on the hover fill', () => {
@@ -349,7 +349,9 @@ describe('check-tokens (m6, fix round E): no destructive text on a control fill 
 	it('the file scope is derived, not listed: a material utility, an overlay import, or an overlay primitive file', () => {
 		const pair = '<i class="bg-muted text-destructive"></i>';
 		expect(hits(`<div class="material-pane">${pair}</div>`)).toHaveLength(1);
-		expect(hits(`<script lang="ts">import { Sheet } from '$ui';</script>${pair}`)).toHaveLength(1);
+		expect(
+			hits(`<script lang="ts">import { Sheet } from '#lib/components/ui/index.ts';</script>${pair}`)
+		).toHaveLength(1);
 		expect(
 			hits(
 				`<script lang="ts">import { DropdownMenu } from '#lib/components/ui/index.ts';</script>${pair}`
@@ -358,7 +360,11 @@ describe('check-tokens (m6, fix round E): no destructive text on a control fill 
 		expect(hits(pair, 'src/lib/components/ui/popover/popover-content.svelte')).toHaveLength(1);
 		// a content file that renders on no material is not scanned
 		expect(hits(pair)).toEqual([]);
-		expect(hits(`<script lang="ts">import { Button } from '$ui';</script>${pair}`)).toEqual([]);
+		expect(
+			hits(
+				`<script lang="ts">import { Button } from '#lib/components/ui/index.ts';</script>${pair}`
+			)
+		).toEqual([]);
 	});
 });
 

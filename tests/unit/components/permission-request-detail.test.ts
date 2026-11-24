@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { ValidationError } from '$api/errors';
+import { ValidationError } from '#lib/api/errors.ts';
 
 const req = {
 	id: 'r1',
@@ -15,7 +15,7 @@ const m = vi.hoisted(() => ({
 	approve: { mutate: vi.fn(), error: null as unknown, isPending: false },
 	deny: { mutate: vi.fn(), error: null as unknown, isPending: false }
 }));
-vi.mock('$features/permission-requests/queries', () => ({
+vi.mock('#lib/features/permission-requests/queries.ts', () => ({
 	permissionRequestDetailQuery: () => ({
 		isPending: false,
 		isError: false,
@@ -27,7 +27,7 @@ vi.mock('$features/permission-requests/queries', () => ({
 	denyPermissionRequestMutation: () => m.deny,
 	cancelPermissionRequestMutation: () => ({ mutate: vi.fn(), error: null, isPending: false })
 }));
-vi.mock('$features/auth', () => ({ session: { principal: { membershipId: 'me' } } }));
+vi.mock('#lib/features/auth/index.ts', () => ({ session: { principal: { membershipId: 'me' } } }));
 
 import Detail from '#lib/features/permission-requests/components/PermissionRequestDetail.svelte';
 

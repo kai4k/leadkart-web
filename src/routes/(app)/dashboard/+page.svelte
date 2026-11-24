@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { dashboardVariant, session } from '$features/auth';
+	import { dashboardVariant, session } from '#lib/features/auth/index.ts';
 	import {
 		PlatformDashboard,
 		TenantAdminDashboard,
 		TenantUserDashboard
-	} from '$features/dashboard';
+	} from '#lib/features/dashboard/index.ts';
 
 	/**
 	 * /dashboard — routes to the appropriate dashboard variant based on

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import AuthShell from '$layouts/AuthShell.svelte';
-	import NavProgressBar from '$layouts/NavProgressBar.svelte';
-	import ReloadNotice from '$layouts/ReloadNotice.svelte';
+	import AuthShell from '#lib/layouts/AuthShell.svelte';
+	import NavProgressBar from '#lib/layouts/NavProgressBar.svelte';
+	import ReloadNotice from '#lib/layouts/ReloadNotice.svelte';
 
 	import { onMount } from 'svelte';
 	import { clearUserBrowserState } from '#lib/api/query-client.ts';

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Badge, Card } from '$ui';
-	import type { ProductDto } from '$features/inventory/schemas';
-	import { drugScheduleBadge } from '$features/inventory/view-models';
+	import { Badge, Card } from '#lib/components/ui/index.ts';
+	import type { ProductDto } from '#lib/features/inventory/schemas.ts';
+	import { drugScheduleBadge } from '#lib/features/inventory/view-models.ts';
 
 	type Props = { product: ProductDto };
 	let { product }: Props = $props();

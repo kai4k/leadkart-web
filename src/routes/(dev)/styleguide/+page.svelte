@@ -16,7 +16,7 @@
 	 * variant a11y silently rots whenever a new variant ships under-tested.
 	 */
 	import { Button, Card, Alert } from '#lib/components/ui/index.ts';
-	import { getPreferences, PREFERENCE_VALUES } from '$features/preferences';
+	import { getPreferences, PREFERENCE_VALUES } from '#lib/features/preferences/index.ts';
 	import { Icon, Plus } from '#lib/icons/index.ts';
 	import Fields from './Fields.svelte';
 	import Overlays from './Overlays.svelte';

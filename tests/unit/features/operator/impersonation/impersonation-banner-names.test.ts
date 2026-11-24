@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock('#lib/features/operator/impersonation/api.ts', () => api);
 vi.mock('#lib/features/operator/impersonation/api', () => api);
-vi.mock('$features/auth', () => ({
+vi.mock('#lib/features/auth/index.ts', () => ({
 	P: { platformImpersonationManage: 'platform.impersonation.manage' },
 	session: { capabilities: { tier: 'operator' }, can: () => true }
 }));

@@ -1,6 +1,6 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import * as Stepper from '$ui/stepper';
+	import * as Stepper from '#lib/components/ui/stepper/index.ts';
 	import StepperRoot from './Stepper.svelte';
 
 	const { Story } = defineMeta({

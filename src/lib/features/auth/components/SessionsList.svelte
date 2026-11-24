@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { Button, EmptyState } from '$ui';
-	import { Trash2, LogOut, Icon } from '$icons';
+	import { Button, EmptyState } from '#lib/components/ui/index.ts';
+	import { Trash2, LogOut, Icon } from '#lib/icons/index.ts';
 	import type { DataTableColumn } from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import {
 		mySessionsQuery,
 		revokeSessionMutation,
 		revokeOtherSessionsMutation
-	} from '$features/auth/queries';
-	import type { SessionDto } from '$features/auth/types';
+	} from '#lib/features/auth/queries.ts';
+	import type { SessionDto } from '#lib/features/auth/types.ts';
 	import { relativeTime } from '#lib/utils/format.ts';
 
 	/**

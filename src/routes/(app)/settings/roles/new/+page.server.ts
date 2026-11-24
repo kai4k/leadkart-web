@@ -16,7 +16,7 @@ import {
 } from '#lib/server/form-action.ts';
 import { formInt } from '#lib/server/form-int.ts';
 import { goFetch, readGoJson } from '#lib/server/go.ts';
-import { createRoleRequestSchema } from '$features/roles/schemas';
+import { createRoleRequestSchema } from '#lib/features/roles/schemas.ts';
 import { ACTION } from '#lib/features/auth/permissions.ts';
 import { readOperatorScope } from '#lib/server/scope.ts';
 import type { Actions } from './$types';

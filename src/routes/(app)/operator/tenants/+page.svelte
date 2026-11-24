@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TenantsList } from '$features/operator/tenants';
+	import { TenantsList } from '#lib/features/operator/tenants/index.ts';
 	import { createListSearch } from '#lib/hooks/index.ts';
 
 	// the search text stays out of the URL; Back brings it back

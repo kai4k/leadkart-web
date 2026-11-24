@@ -13,9 +13,9 @@
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { BrandMark, Sidebar } from '$ui';
+	import { BrandMark, Sidebar } from '#lib/components/ui/index.ts';
 	import { isNavActive, shellNav } from '#lib/config/nav.ts';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 	import NavItem from './NavItem.svelte';
 
 	let { onNavigate: onNavigateProp }: { onNavigate?: () => void } = $props();

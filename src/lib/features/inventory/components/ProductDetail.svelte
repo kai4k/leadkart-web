@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Alert, Skeleton, Tabs, ConfirmDialog } from '$ui';
+	import { Alert, Skeleton, Tabs, ConfirmDialog } from '#lib/components/ui/index.ts';
 	import { useUrlTab } from '#lib/hooks/index.ts';
-	import { productDetailQuery, deleteProductMutation } from '$features/inventory/queries';
-	import { computePriceWithGst, formatPrice } from '$features/inventory/view-models';
-	import { getListErrorMessage } from '$api/error-messages';
+	import { productDetailQuery, deleteProductMutation } from '#lib/features/inventory/queries.ts';
+	import { computePriceWithGst, formatPrice } from '#lib/features/inventory/view-models.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 	import ProductDetailHeader from './ProductDetailHeader.svelte';
 	import ProductIdentityCard from './ProductIdentityCard.svelte';
 	import ProductCommercialCard from './ProductCommercialCard.svelte';

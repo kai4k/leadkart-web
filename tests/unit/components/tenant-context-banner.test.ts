@@ -35,8 +35,8 @@ const service = vi.hoisted(() => ({ exitTenantContext: vi.fn() }));
 vi.mock('#lib/features/operator/scope/service.ts', () => service);
 vi.mock('#lib/features/operator/scope/service', () => service);
 
-import TenantContextBanner from '$layouts/TenantContextBanner.svelte';
-import ContextBanner from '$layouts/ContextBanner.svelte';
+import TenantContextBanner from '#lib/layouts/TenantContextBanner.svelte';
+import ContextBanner from '#lib/layouts/ContextBanner.svelte';
 import { createQueryClient } from '#lib/api/query-client.ts';
 import { resetBlock } from '#lib/api/reset-block.svelte.ts';
 import { Building2 } from '#lib/icons/index.ts';

@@ -9,11 +9,11 @@
 	 * and the checked radio is what a screen reader reads.
 	 */
 	import { _ } from 'svelte-i18n';
-	import { Button, Sheet } from '$ui';
-	import { Icon, RotateCcw } from '$icons';
+	import { Button, Sheet } from '#lib/components/ui/index.ts';
+	import { Icon, RotateCcw } from '#lib/icons/index.ts';
 	import * as RadioGroup from '#lib/components/ui/radio-group/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
-	import { getPreferences, type PreferenceKey } from '$features/preferences';
+	import { getPreferences, type PreferenceKey } from '#lib/features/preferences/index.ts';
 	import CustomizerTile from './CustomizerTile.svelte';
 	import { effectiveValue, visibleGroups } from './customizer-config.ts';
 

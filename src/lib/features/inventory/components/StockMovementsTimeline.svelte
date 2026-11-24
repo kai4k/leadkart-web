@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { Button, EmptyState, Skeleton, Timeline } from '$ui';
-	import { Activity } from '$icons';
-	import { movementsInfiniteQuery } from '$features/inventory/queries';
+	import { Button, EmptyState, Skeleton, Timeline } from '#lib/components/ui/index.ts';
+	import { Activity } from '#lib/icons/index.ts';
+	import { movementsInfiniteQuery } from '#lib/features/inventory/queries.ts';
 	import {
 		formatDelta,
 		movementReasonAccent,
 		movementReasonLabel
-	} from '$features/inventory/view-models';
-	import { getListErrorMessage } from '$api/error-messages';
+	} from '#lib/features/inventory/view-models.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 
 	/**
 	 * StockMovementsTimeline — cursor-paginated audit log of every

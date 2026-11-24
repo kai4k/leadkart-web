@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { plainTitle } from '#lib/utils/page-title.ts';
-	import { UsersList } from '$features/users';
+	import { UsersList } from '#lib/features/users/index.ts';
 	import { createListSearch } from '#lib/hooks/index.ts';
 	import { rulesOfTenantPolicy } from '#lib/utils/password-policy.ts';
 	import type { LayoutData } from '../$types';

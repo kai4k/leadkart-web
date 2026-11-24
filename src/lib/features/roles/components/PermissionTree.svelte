@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Tooltip } from '$ui';
+	import { Tooltip } from '#lib/components/ui/index.ts';
 	import { Checkbox } from '#lib/components/ui/checkbox/index.ts';
-	import { Info, Icon } from '$icons';
+	import { Info, Icon } from '#lib/icons/index.ts';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		groupedCatalogue,
 		type PermissionCatalogueEntry
-	} from '$features/roles/permissions-catalogue';
+	} from '#lib/features/roles/permissions-catalogue.ts';
 
 	type Props = {
 		selected: string[];

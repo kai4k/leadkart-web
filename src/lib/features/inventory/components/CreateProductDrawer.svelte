@@ -1,21 +1,27 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
-	import { Drawer, Button, Alert } from '$ui';
-	import { TextField, NumberInput, Combobox, RadioGroup, RadioItem } from '$form';
+	import { Drawer, Button, Alert } from '#lib/components/ui/index.ts';
+	import {
+		TextField,
+		NumberInput,
+		Combobox,
+		RadioGroup,
+		RadioItem
+	} from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/use-form.svelte.ts';
 	import {
 		categoriesQuery,
 		createProductMutation,
 		gstDefaultsQuery,
 		typesQuery
-	} from '$features/inventory/queries';
+	} from '#lib/features/inventory/queries.ts';
 	import {
 		createProductRequestSchema,
 		type CreateProductRequest,
 		type DrugSchedule
-	} from '$features/inventory/schemas';
-	import { DRUG_SCHEDULE_OPTIONS } from '$features/inventory/view-models';
-	import { Icon, X } from '$icons';
+	} from '#lib/features/inventory/schemas.ts';
+	import { DRUG_SCHEDULE_OPTIONS } from '#lib/features/inventory/view-models.ts';
+	import { Icon, X } from '#lib/icons/index.ts';
 
 	/**
 	 * CreateProductDrawer — long pharma product form. Sections:

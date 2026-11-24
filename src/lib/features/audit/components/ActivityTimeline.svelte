@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Badge, Button, EmptyState, Skeleton, Timeline, type TimelineItemAccent } from '$ui';
+	import {
+		Badge,
+		Button,
+		EmptyState,
+		Skeleton,
+		Timeline,
+		type TimelineItemAccent
+	} from '#lib/components/ui/index.ts';
 	import { QueryState, type QueryLike } from '#lib/components/feedback/index.ts';
-	import { Activity, User, Building2, Shield, AlertCircle } from '$icons';
+	import { Activity, User, Building2, Shield, AlertCircle } from '#lib/icons/index.ts';
 	import { relativeTime } from '#lib/utils/format.ts';
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { ActivityDto, ActivityListResponse } from '../schemas';

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { AuthCard } from '$ui';
+	import { AuthCard } from '#lib/components/ui/index.ts';
 	import { ActionForm, PasswordField } from '#lib/components/form/index.ts';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 	import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 	import { announceSessionChange } from '#lib/features/auth/session-change.ts';
 	import type { ActionData } from './$types';

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { tenantActivityQuery } from '#lib/features/audit/queries.ts';
-	import { ActivityTimeline } from '$features/audit';
+	import { ActivityTimeline } from '#lib/features/audit/index.ts';
 	import type { LayoutData } from '../$types';
 
 	let { data }: { data: LayoutData } = $props();

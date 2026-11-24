@@ -2,9 +2,9 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { _ } from 'svelte-i18n';
-	import { Button } from '$ui';
+	import { Button } from '#lib/components/ui/index.ts';
 	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 
 	// A 5xx here can come from the (app) layout (capabilities 502, refresh-unreachable 503) where the
 	// "home" link leads straight back to the same error: the user must still be able to end the session.

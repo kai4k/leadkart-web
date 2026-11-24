@@ -8,7 +8,7 @@ const toastMock = vi.hoisted(() => ({
 }));
 const gotoMock = vi.hoisted(() => vi.fn((_url: string) => Promise.resolve()));
 const invalidateMock = vi.hoisted(() => vi.fn((_key: string) => Promise.resolve()));
-vi.mock('$ui', () => ({ toast: toastMock }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: toastMock }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock, invalidate: invalidateMock }));
 vi.mock('#lib/api/client.ts', () => ({ api: { delete: vi.fn() } }));
 import { createQueryClient } from '#lib/api/query-client.ts';

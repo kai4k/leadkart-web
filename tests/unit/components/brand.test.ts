@@ -7,9 +7,9 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
-import BrandMark from '$ui/BrandMark.svelte';
-import BrandWordmark from '$ui/BrandWordmark.svelte';
-import BrandIcon from '$ui/BrandIcon.svelte';
+import BrandMark from '#lib/components/ui/BrandMark.svelte';
+import BrandWordmark from '#lib/components/ui/BrandWordmark.svelte';
+import BrandIcon from '#lib/components/ui/BrandIcon.svelte';
 import en from '../../../src/lib/i18n/locales/en.json';
 
 const mounted: Array<ReturnType<typeof mount>> = [];

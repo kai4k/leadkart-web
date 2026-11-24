@@ -35,7 +35,7 @@ vi.mock('$app/state', () => ({
 }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
 const empty = vi.hoisted(() => ({ default: undefined as unknown }));
-vi.mock('$ui', async (importOriginal) => ({
+vi.mock('#lib/components/ui/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	toast: toastMock,
 	// These need a Tooltip.Provider the test does not mount.

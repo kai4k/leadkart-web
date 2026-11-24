@@ -3,7 +3,7 @@ import { QueryClient } from '@tanstack/svelte-query';
 
 const state = vi.hoisted(() => ({ qc: undefined as unknown, opts: undefined as unknown }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
-vi.mock('$ui', () => ({ toast: toastMock }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: toastMock }));
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	useQueryClient: () => state.qc,

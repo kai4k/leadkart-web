@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import Toolbar from './Toolbar.svelte';
-	import { Button } from '$ui/button';
+	import { Button } from '#lib/components/ui/button/index.ts';
 	import TextField from '#lib/components/form/TextField.svelte';
-	import * as Tabs from '$ui/tabs';
-	import { Plus, Download, Filter, Search } from '$icons';
+	import * as Tabs from '#lib/components/ui/tabs/index.ts';
+	import { Plus, Download, Filter, Search } from '#lib/icons/index.ts';
 
 	const { Story } = defineMeta({
 		title: 'Data/Toolbar',

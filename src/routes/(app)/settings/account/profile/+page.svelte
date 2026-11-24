@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Card } from '$ui';
-	import { ProfileForm } from '$features/auth';
+	import { Card } from '#lib/components/ui/index.ts';
+	import { ProfileForm } from '#lib/features/auth/index.ts';
 	import type { PageData, ActionData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();

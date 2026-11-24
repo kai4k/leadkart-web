@@ -8,7 +8,7 @@
 	 * (`--palette-*`, `--neutral-*`, `--swatch-*`; the one place components read those).
 	 */
 	import * as RadioGroup from '#lib/components/ui/radio-group/index.ts';
-	import type { PreferenceKey } from '$features/preferences';
+	import type { PreferenceKey } from '#lib/features/preferences/index.ts';
 	import type { TileKind } from './customizer-config.ts';
 
 	let {

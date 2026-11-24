@@ -4,9 +4,9 @@
 	`invoice` is null so the parent can compose without conditionals.
 -->
 <script lang="ts">
-	import { Badge, Card } from '$ui';
-	import { formatMoney, longDate } from '$features/orders/view-models';
-	import type { InvoiceDto } from '$features/orders/schemas';
+	import { Badge, Card } from '#lib/components/ui/index.ts';
+	import { formatMoney, longDate } from '#lib/features/orders/view-models.ts';
+	import type { InvoiceDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		invoice: InvoiceDto | null | undefined;

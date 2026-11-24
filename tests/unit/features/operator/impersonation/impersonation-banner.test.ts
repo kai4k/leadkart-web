@@ -54,7 +54,7 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		reconcile: () => store.state.reconcile()
 	}
 }));
-vi.mock('$features/auth', async () => {
+vi.mock('#lib/features/auth/index.ts', async () => {
 	const { can } = await import('#lib/features/auth/capabilities.ts');
 	const caps = () => ({ effective_permissions: store.state.permissions }) as never;
 	return {

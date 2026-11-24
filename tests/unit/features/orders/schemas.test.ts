@@ -16,7 +16,7 @@ import {
 	paymentMethodSchema,
 	recordPaymentRequestSchema,
 	reviseQuotationRequestSchema
-} from '$features/orders/schemas';
+} from '#lib/features/orders/schemas.ts';
 
 describe('orderStatusSchema', () => {
 	const all = [

@@ -1,12 +1,12 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
 	import DataTable, { type DataTableColumn } from './DataTable.svelte';
-	import { Badge } from '$ui/badge';
-	import { Button } from '$ui/button';
-	import StatusPill from '$ui/StatusPill.svelte';
-	import { EmptyState } from '$ui';
+	import { Badge } from '#lib/components/ui/badge/index.ts';
+	import { Button } from '#lib/components/ui/button/index.ts';
+	import StatusPill from '#lib/components/ui/StatusPill.svelte';
+	import { EmptyState } from '#lib/components/ui/index.ts';
 	import { createBulkSelection } from '#lib/hooks/index.ts';
-	import { Edit, Trash2, Boxes } from '$icons';
+	import { Edit, Trash2, Boxes } from '#lib/icons/index.ts';
 
 	const { Story } = defineMeta({
 		title: 'Data/DataTable',

@@ -19,7 +19,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 );
 vi.mock('$app/navigation', () => ({ beforeNavigate: vi.fn(), invalidate: vi.fn() }));
 vi.mock('#lib/api/capabilities-refresh.ts', () => ({ refreshCapabilities: vi.fn() }));
-vi.mock('$features/auth', () => ({
+vi.mock('#lib/features/auth/index.ts', () => ({
 	session: {
 		get capabilities() {
 			return h.capabilities;

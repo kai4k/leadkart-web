@@ -7,7 +7,7 @@
  * columns dispatch the registered `onCardMove` on drop.
  *
  * Usage:
- *   import * as Kanban from '$ui/kanban';
+ *   import * as Kanban from '#lib/components/ui/kanban/index.ts';
  *
  *   <Kanban.Board onCardMove={handleMove}>
  *     {#each columns as col (col.id)}

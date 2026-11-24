@@ -27,7 +27,7 @@ vi.mock('#lib/features/operator/impersonation/stores/impersonation.svelte.ts', (
 		reconcile: () => store.reconcile()
 	}
 }));
-vi.mock('$features/auth', () => ({
+vi.mock('#lib/features/auth/index.ts', () => ({
 	P: { platformImpersonationManage: 'platform.impersonation.manage' },
 	session: { capabilities: { tier: 'platform' }, can: () => true }
 }));

@@ -2,15 +2,19 @@
 	import { createDialogState, useUrlTab } from '#lib/hooks/index.ts';
 	import { plainTitle } from '#lib/utils/page-title.ts';
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { page } from '$app/state';
-	import { Badge, Skeleton } from '$ui';
+	import { Badge, Skeleton } from '#lib/components/ui/index.ts';
 	import { IdentityCell, RowActionsMenu, type RowAction } from '#lib/components/data/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { Lock, Shield, UserMinus, UserPlus, Users } from '$icons';
-	import { userDetailQuery, usersListQuery, reactivateUserMutation } from '$features/users/queries';
-	import { rolesListQuery } from '$features/roles';
-	import { displayName, userStatus } from '$features/auth/view-models';
+	import { Lock, Shield, UserMinus, UserPlus, Users } from '#lib/icons/index.ts';
+	import {
+		userDetailQuery,
+		usersListQuery,
+		reactivateUserMutation
+	} from '#lib/features/users/queries.ts';
+	import { rolesListQuery } from '#lib/features/roles/index.ts';
+	import { displayName, userStatus } from '#lib/features/auth/view-models.ts';
 	import {
 		DeactivateUserDialog,
 		RoleAssignmentDrawer,
@@ -18,7 +22,7 @@
 		PermissionOverridesPanel,
 		UserDetailTabs,
 		createMemberPermissions
-	} from '$features/users';
+	} from '#lib/features/users/index.ts';
 
 	const membershipId = $derived(page.params.id ?? '');
 	// An unknown `?tab=` is the first tab, not a blank panel.

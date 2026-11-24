@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { ActionForm, PasswordField, type ActionFormResult } from '$form';
+	import { ActionForm, PasswordField, type ActionFormResult } from '#lib/components/form/index.ts';
 	import { session } from '../stores/session.svelte';
 	import { passwordPolicyHint } from '#lib/utils/password-policy.ts';
 	import { announceSessionChange } from '#lib/features/auth/session-change.ts';

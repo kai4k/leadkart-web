@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { ConflictError, ValidationError } from '$api/errors';
+import { ConflictError, ValidationError } from '#lib/api/errors.ts';
 import { reactiveProps } from '../helpers/reactive-props.svelte.ts';
 import Host from '../stubs/ReasonHost.svelte';
 

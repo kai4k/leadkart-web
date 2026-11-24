@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import NestedPageHeaders from '$layouts/NestedPageHeaders.svelte';
-	import SectionNav from '$layouts/SectionNav.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import NestedPageHeaders from '#lib/layouts/NestedPageHeaders.svelte';
+	import SectionNav from '#lib/layouts/SectionNav.svelte';
 	import { page } from '$app/state';
-	import { Badge } from '$ui';
-	import { tenantDisplayName, tenantStatus } from '$features/tenant/view-models';
+	import { Badge } from '#lib/components/ui/index.ts';
+	import { tenantDisplayName, tenantStatus } from '#lib/features/tenant/view-models.ts';
 	import type { LayoutData } from './$types';
 
 	/**

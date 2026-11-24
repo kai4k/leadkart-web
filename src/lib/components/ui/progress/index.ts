@@ -5,7 +5,7 @@
  * (ARIA progressbar role + value attributes).
  *
  * Usage:
- *   import { Progress } from '$ui';
+ *   import { Progress } from '#lib/components/ui/index.ts';
  *   <Progress value={42} max={100} variant="primary" label="Loading..." />
  *   <Progress value={null} variant="primary" label="Indeterminate..." />
  */

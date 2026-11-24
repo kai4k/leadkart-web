@@ -4,9 +4,9 @@
 	receipt timestamp.
 -->
 <script lang="ts">
-	import { Badge } from '$ui';
-	import { formatMoney, longDate } from '$features/orders/view-models';
-	import type { PaymentDto } from '$features/orders/schemas';
+	import { Badge } from '#lib/components/ui/index.ts';
+	import { formatMoney, longDate } from '#lib/features/orders/view-models.ts';
+	import type { PaymentDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		payments: ReadonlyArray<PaymentDto>;

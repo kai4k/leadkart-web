@@ -5,10 +5,10 @@
 -->
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Timeline } from '$ui';
-	import { Edit } from '$icons';
-	import { formatMoney, longDate } from '$features/orders/view-models';
-	import type { QuotationRevisionDto } from '$features/orders/schemas';
+	import { Timeline } from '#lib/components/ui/index.ts';
+	import { Edit } from '#lib/icons/index.ts';
+	import { formatMoney, longDate } from '#lib/features/orders/view-models.ts';
+	import type { QuotationRevisionDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		revisions: ReadonlyArray<QuotationRevisionDto>;

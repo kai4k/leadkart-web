@@ -3,8 +3,8 @@ import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
 import { SvelteDate, SvelteSet } from 'svelte/reactivity';
 import { startImpersonation, endImpersonation, listImpersonationSessions } from '../api';
-import { describeError } from '$api/errors';
-import { DEFAULT_READ_TIMEOUT_MS } from '$api/timeouts';
+import { describeError } from '#lib/api/errors.ts';
+import { DEFAULT_READ_TIMEOUT_MS } from '#lib/api/timeouts.ts';
 import type { ImpersonationSessionDto, CreateImpersonationSessionRequest } from '../types';
 import {
 	MUTATION_DEADLINE_MS,

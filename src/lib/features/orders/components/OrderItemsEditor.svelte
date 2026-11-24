@@ -14,15 +14,15 @@
 	component stays stateless on the network.
 -->
 <script lang="ts">
-	import { Alert, Button } from '$ui';
-	import { Combobox, NumberInput } from '$form';
-	import { Icon, Plus, X } from '$icons';
+	import { Alert, Button } from '#lib/components/ui/index.ts';
+	import { Combobox, NumberInput } from '#lib/components/form/index.ts';
+	import { Icon, Plus, X } from '#lib/icons/index.ts';
 	import {
 		checkPriceBand,
 		computeLineTotal,
 		computeOrderTotals,
 		formatMoney
-	} from '$features/orders/view-models';
+	} from '#lib/features/orders/view-models.ts';
 	import type { ComboboxOption } from '#lib/components/form/Combobox.svelte';
 
 	export interface BatchCatalogueEntry {

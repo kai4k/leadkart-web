@@ -6,8 +6,8 @@
 	 * Each row exposes complete / snooze / dismiss actions wired to
 	 * updateReminderMutation.
 	 */
-	import { Card, Badge, Button, Skeleton, EmptyState } from '$ui';
-	import { Icon, Bell, Check, Pause, X } from '$icons';
+	import { Card, Badge, Button, Skeleton, EmptyState } from '#lib/components/ui/index.ts';
+	import { Icon, Bell, Check, Pause, X } from '#lib/icons/index.ts';
 	import type { ReminderDto } from '../schemas';
 	import { REMINDER_KIND_LABEL } from '../view-models';
 	import { relativeTime } from '#lib/utils/format.ts';

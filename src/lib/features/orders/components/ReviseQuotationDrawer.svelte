@@ -6,20 +6,20 @@
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { Alert, Button, Drawer } from '$ui';
-	import { TextField } from '$form';
+	import { Alert, Button, Drawer } from '#lib/components/ui/index.ts';
+	import { TextField } from '#lib/components/form/index.ts';
 	import { useForm } from '#lib/hooks/index.ts';
 	import {
 		reviseQuotationRequestSchema,
 		type ReviseQuotationRequest,
 		type OrderDto
-	} from '$features/orders/schemas';
-	import { reviseQuotationMutation } from '$features/orders/queries';
+	} from '#lib/features/orders/schemas.ts';
+	import { reviseQuotationMutation } from '#lib/features/orders/queries.ts';
 	import OrderItemsEditor, {
 		type BatchCatalogueEntry,
 		type DraftItem
 	} from './OrderItemsEditor.svelte';
-	import { ValidationError, describeError } from '$api/errors';
+	import { ValidationError, describeError } from '#lib/api/errors.ts';
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 
 	type Props = {

@@ -14,11 +14,11 @@ const apiPost = vi.hoisted(() =>
 const logoutRequest = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const goto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
-vi.mock('$api/client', () => ({ api: { deleteJson: apiDelete, postJson: apiPost } }));
-vi.mock('$api/csrf', () => ({ getCsrfToken: () => 'csrf' }));
+vi.mock('#lib/api/client.ts', () => ({ api: { deleteJson: apiDelete, postJson: apiPost } }));
+vi.mock('#lib/api/csrf.ts', () => ({ getCsrfToken: () => 'csrf' }));
 vi.mock('$app/navigation', () => ({ goto, invalidate: vi.fn(() => Promise.resolve()) }));
 vi.mock('$app/state', () => ({ page: { data: {} } }));
-vi.mock('$ui', () => ({ toast: { error: vi.fn() } }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: { error: vi.fn() } }));
 vi.mock('#lib/features/auth/api.ts', () => ({ logout: logoutRequest }));
 
 import { AuthError, ScopeInvalidError, SESSION_EXPIRED_CODE } from '#lib/api/errors.ts';

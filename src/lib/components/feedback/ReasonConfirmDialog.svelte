@@ -6,7 +6,7 @@
 	} from '#lib/components/ui/ConfirmDialog.svelte';
 	import { Alert } from '#lib/components/ui/alert/index.ts';
 	import { TextareaField, TextField } from '#lib/components/form/index.ts';
-	import { describeReasonError, ValidationError } from '$api/errors';
+	import { describeReasonError, ValidationError } from '#lib/api/errors.ts';
 	import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
 	import { focusFirstInvalid } from '#lib/utils/focus-first-invalid.ts';
 

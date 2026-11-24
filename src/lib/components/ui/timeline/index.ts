@@ -5,7 +5,7 @@
  * guide line. Composable: drop any number of TimelineItem children.
  *
  * Usage:
- *   import * as Timeline from '$ui/timeline';
+ *   import * as Timeline from '#lib/components/ui/timeline/index.ts';
  *
  *   <Timeline.Root>
  *     <Timeline.Item icon={Check} iconAccent="success" time="2h ago" title="Order placed">

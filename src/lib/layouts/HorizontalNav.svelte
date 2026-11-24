@@ -12,11 +12,11 @@
 	 */
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
-	import { DropdownMenu } from '$ui';
+	import { DropdownMenu } from '#lib/components/ui/index.ts';
 	import { ChevronDown } from '#lib/icons/index.ts';
 	import { isNavActive, shellNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 	import NavItem from './NavItem.svelte';
 
 	const sections = $derived(shellNav(session.capabilities, session.inTenantContext));

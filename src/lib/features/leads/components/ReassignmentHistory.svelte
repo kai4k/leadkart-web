@@ -5,8 +5,8 @@
 	 * UUIDs aren't humanised yet (no name-resolution endpoint); they're
 	 * rendered as short hashes pending the directory API.
 	 */
-	import { Timeline, Skeleton, EmptyState } from '$ui';
-	import { Icon, UserCheck } from '$icons';
+	import { Timeline, Skeleton, EmptyState } from '#lib/components/ui/index.ts';
+	import { Icon, UserCheck } from '#lib/icons/index.ts';
 	import type { AssignmentHistoryDto } from '../schemas';
 	import { relativeTime } from '#lib/utils/format.ts';
 

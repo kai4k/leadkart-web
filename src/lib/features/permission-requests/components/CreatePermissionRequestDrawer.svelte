@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { FormSheet, NumberInput, TextareaField } from '#lib/components/form/index.ts';
-	import { PermissionPicker } from '$features/roles';
-	import { createPermissionRequestMutation } from '$features/permission-requests/queries';
+	import { PermissionPicker } from '#lib/features/roles/index.ts';
+	import { createPermissionRequestMutation } from '#lib/features/permission-requests/queries.ts';
 	import {
 		createPermissionRequestSchema,
 		PERMISSION_REQUEST_MAX_DAYS
-	} from '$features/permission-requests/schemas';
+	} from '#lib/features/permission-requests/schemas.ts';
 
 	type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 	let { open = $bindable(false), onOpenChange }: Props = $props();

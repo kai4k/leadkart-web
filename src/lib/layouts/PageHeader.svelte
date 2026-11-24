@@ -11,7 +11,7 @@
 	import type { Snippet } from 'svelte';
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
-	import { ChevronRight, Icon } from '$icons';
+	import { ChevronRight, Icon } from '#lib/icons/index.ts';
 	import { routeContext } from '#lib/utils/routeTitle.ts';
 	import { inNestedPageHeaders } from './nested-page-header.ts';
 

@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installMatchMedia } from '../helpers/match-media.ts';
-import AuthShell from '$layouts/AuthShell.svelte';
+import AuthShell from '#lib/layouts/AuthShell.svelte';
 import en from '../../../src/lib/i18n/locales/en.json';
 
 let target: HTMLElement;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { ACTION, session } from '$features/auth';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	/**
 	 * Lead detail page — header strip + tabs (Profile / Activity /
 	 * Reminders / History).
@@ -10,15 +10,15 @@
 	 * goes through TanStack hooks, every mutation lives in `queries.ts`.
 	 */
 	import { page } from '$app/state';
-	import { Tabs, Skeleton, Button } from '$ui';
-	import { Icon, Plus } from '$icons';
+	import { Tabs, Skeleton, Button } from '#lib/components/ui/index.ts';
+	import { Icon, Plus } from '#lib/icons/index.ts';
 	import { useUrlTab } from '#lib/hooks/index.ts';
 	import {
 		leadDetailQuery,
 		leadCallsQuery,
 		leadRemindersQuery,
 		leadHistoryQuery
-	} from '$features/leads/queries';
+	} from '#lib/features/leads/queries.ts';
 	import {
 		LeadDetailHeader,
 		LeadProfileCard,
@@ -29,8 +29,8 @@
 		ReassignmentHistory,
 		EditLeadDrawer,
 		ReassignDialog
-	} from '$features/leads';
-	import { getListErrorMessage } from '$api/error-messages';
+	} from '#lib/features/leads/index.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 
 	const id = $derived(page.params.id ?? '');
 	const detail = $derived(leadDetailQuery(id));

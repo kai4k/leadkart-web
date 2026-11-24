@@ -13,7 +13,7 @@ import {
 	SALES_EXECUTIVE
 } from '../../support/go-personas.ts';
 import type { Capabilities } from '#lib/features/auth/capabilities.ts';
-import type { Preferences } from '$features/preferences';
+import type { Preferences } from '#lib/features/preferences/index.ts';
 
 const pageUrl = vi.hoisted(() => ({ value: new URL('http://localhost/settings/users') }));
 vi.mock('$app/state', () => ({
@@ -27,7 +27,7 @@ const sessionState = vi.hoisted(() => ({
 	capabilities: null as unknown,
 	inTenantContext: false
 }));
-vi.mock('$features/auth', () => ({ session: sessionState }));
+vi.mock('#lib/features/auth/index.ts', () => ({ session: sessionState }));
 
 import SidebarHost from '../stubs/SidebarHost.svelte';
 

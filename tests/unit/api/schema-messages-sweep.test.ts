@@ -6,12 +6,12 @@ import {
 	changePasswordSchema,
 	loginRequestSchema,
 	updateProfileRequestSchema
-} from '$features/auth/schemas';
+} from '#lib/features/auth/schemas.ts';
 import {
 	createPermissionRequestSchema,
 	denyPermissionRequestSchema
-} from '$features/permission-requests/schemas';
-import { reassignLeadSchema, updateLeadSchema } from '$features/leads/schemas';
+} from '#lib/features/permission-requests/schemas.ts';
+import { reassignLeadSchema, updateLeadSchema } from '#lib/features/leads/schemas.ts';
 import {
 	bulkOrderActionRequestSchema,
 	cancelOrderRequestSchema,
@@ -20,16 +20,19 @@ import {
 	markPackedRequestSchema,
 	recordPaymentRequestSchema,
 	reviseQuotationRequestSchema
-} from '$features/orders/schemas';
+} from '#lib/features/orders/schemas.ts';
 import {
 	createBatchRequestSchema,
 	createMovementRequestSchema,
 	createProductRequestSchema,
 	writeOffBatchRequestSchema
-} from '$features/inventory/schemas';
-import { createRoleRequestSchema, updateRoleRequestSchema } from '$features/roles/schemas';
-import { updateTenantProfileSchema } from '$features/tenant/schemas';
-import { createUserRequestSchema, deactivateUserRequestSchema } from '$features/users/schemas';
+} from '#lib/features/inventory/schemas.ts';
+import { createRoleRequestSchema, updateRoleRequestSchema } from '#lib/features/roles/schemas.ts';
+import { updateTenantProfileSchema } from '#lib/features/tenant/schemas.ts';
+import {
+	createUserRequestSchema,
+	deactivateUserRequestSchema
+} from '#lib/features/users/schemas.ts';
 import {
 	registerTenantRequestSchema,
 	suspendTenantRequestSchema

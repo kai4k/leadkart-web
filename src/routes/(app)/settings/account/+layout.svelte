@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import NestedPageHeaders from '$layouts/NestedPageHeaders.svelte';
-	import SectionNav from '$layouts/SectionNav.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import NestedPageHeaders from '#lib/layouts/NestedPageHeaders.svelte';
+	import SectionNav from '#lib/layouts/SectionNav.svelte';
 	import { page } from '$app/state';
-	import { Skeleton } from '$ui';
+	import { Skeleton } from '#lib/components/ui/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { myProfileQuery } from '$features/auth/queries';
-	import { session } from '$features/auth';
-	import { displayName } from '$features/auth/view-models';
+	import { myProfileQuery } from '#lib/features/auth/queries.ts';
+	import { session } from '#lib/features/auth/index.ts';
+	import { displayName } from '#lib/features/auth/view-models.ts';
 
 	/**
 	 * Account Settings layout — owns the shared chrome (header + sub-

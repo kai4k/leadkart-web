@@ -7,10 +7,10 @@
 	complete) fire straight through to their mutations.
 -->
 <script lang="ts">
-	import { Button } from '$ui';
-	import { ACTION, session } from '$features/auth';
-	import { Icon, Edit, Check, Truck, Package, X, CheckCircle2 } from '$icons';
-	import type { OrderDto } from '$features/orders/schemas';
+	import { Button } from '#lib/components/ui/index.ts';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
+	import { Icon, Edit, Check, Truck, Package, X, CheckCircle2 } from '#lib/icons/index.ts';
+	import type { OrderDto } from '#lib/features/orders/schemas.ts';
 	import {
 		canApprove,
 		canCancel,
@@ -23,14 +23,14 @@
 		canRecordFullPayment,
 		canRecordTokenPayment,
 		canRevise
-	} from '$features/orders/view-models';
+	} from '#lib/features/orders/view-models.ts';
 	import {
 		approveQuotationMutation,
 		completeOrderMutation,
 		confirmOrderMutation,
 		generateInvoiceMutation,
 		markDeliveredMutation
-	} from '$features/orders/queries';
+	} from '#lib/features/orders/queries.ts';
 
 	type Props = {
 		order: OrderDto;

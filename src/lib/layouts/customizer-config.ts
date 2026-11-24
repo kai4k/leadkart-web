@@ -5,7 +5,11 @@
  *
  * Titles and labels are i18n keys (`customizer.<key>.title`, `customizer.<key>.<value>`).
  */
-import { PREFERENCE_VALUES, type PreferenceKey, type Preferences } from '$features/preferences';
+import {
+	PREFERENCE_VALUES,
+	type PreferenceKey,
+	type Preferences
+} from '#lib/features/preferences/index.ts';
 
 /** `wireframe`: a miniature of the layout; `swatch`: a colour dot. */
 export type TileKind = 'wireframe' | 'swatch';

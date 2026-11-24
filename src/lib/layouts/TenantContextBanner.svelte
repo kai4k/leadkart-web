@@ -7,9 +7,9 @@
 	 */
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
-	import { Badge, Button } from '$ui';
-	import { Building2, Icon, LogOut } from '$icons';
-	import { exitScopeMutation } from '$features/operator/scope';
+	import { Badge, Button } from '#lib/components/ui/index.ts';
+	import { Building2, Icon, LogOut } from '#lib/icons/index.ts';
+	import { exitScopeMutation } from '#lib/features/operator/scope/index.ts';
 	import { resetPending } from '#lib/api/hard-reset.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import ContextBanner from './ContextBanner.svelte';

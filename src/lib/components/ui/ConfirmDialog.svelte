@@ -15,7 +15,7 @@
 <script lang="ts">
 	import * as AlertDialog from './alert-dialog/index.js';
 	import { Button } from './button';
-	import { Icon, AlertTriangle, Info, AlertCircle } from '$icons';
+	import { Icon, AlertTriangle, Info, AlertCircle } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 	import { untrack, type Snippet, type Component } from 'svelte';
 

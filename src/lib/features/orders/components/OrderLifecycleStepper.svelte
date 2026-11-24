@@ -6,9 +6,9 @@
 	cancellation happened with an `error` state.
 -->
 <script lang="ts">
-	import { Stepper } from '$ui';
-	import { lifecycleStepsFor } from '$features/orders/view-models';
-	import type { OrderDto } from '$features/orders/schemas';
+	import { Stepper } from '#lib/components/ui/index.ts';
+	import { lifecycleStepsFor } from '#lib/features/orders/view-models.ts';
+	import type { OrderDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = { order: OrderDto };
 	let { order }: Props = $props();

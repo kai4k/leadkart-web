@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Alert, AuthCard, Button } from '$ui';
+	import { Alert, AuthCard, Button } from '#lib/components/ui/index.ts';
 	import { resolve } from '$app/paths';
 	import { confirmEmailChange, type ConfirmEmailChangeOutcome } from '../api.ts';
 

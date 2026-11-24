@@ -30,7 +30,7 @@ vi.mock('$app/state', () => ({
 	page: { params: { id: 'asha' }, url: new URL('http://localhost/settings/users/asha?tab=reports') }
 }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn(), beforeNavigate: vi.fn(), invalidate: vi.fn() }));
-vi.mock('$features/users/queries', () => ({
+vi.mock('#lib/features/users/queries.ts', () => ({
 	userDetailQuery: () => ({
 		get data() {
 			return h.detail;
@@ -50,10 +50,10 @@ vi.mock('$features/users/queries', () => ({
 	reactivateUserMutation: () => ({ mutate: vi.fn() }),
 	removeManagerMutation: () => ({ mutate: vi.fn(), isPending: false })
 }));
-vi.mock('$features/roles', () => ({
+vi.mock('#lib/features/roles/index.ts', () => ({
 	rolesListQuery: () => ({ data: { roles: [] }, isPending: false })
 }));
-vi.mock('$features/users', async () => {
+vi.mock('#lib/features/users/index.ts', async () => {
 	const stub = (await import('../stubs/Empty.svelte')).default;
 	const tabs = (await import('#lib/features/users/components/UserDetailTabs.svelte')).default;
 	return {
@@ -71,11 +71,11 @@ vi.mock('$features/users', async () => {
 		})
 	};
 });
-vi.mock('$features/auth/view-models', async () => ({
+vi.mock('#lib/features/auth/view-models.ts', async () => ({
 	...(await import('#lib/features/auth/view-models.ts')),
 	displayName: (u: { first_name: string }) => u.first_name
 }));
-vi.mock('$features/auth', async () => {
+vi.mock('#lib/features/auth/index.ts', async () => {
 	const vm = await import('#lib/features/auth/view-models.ts');
 	const { ACTION } = await import('#lib/features/auth/permissions.ts');
 	return {

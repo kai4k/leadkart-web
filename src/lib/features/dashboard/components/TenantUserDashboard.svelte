@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { AlarmClock, ClipboardList, PhoneCall, UserPlus } from '#lib/icons/index.ts';
-	import { Alert, StatCard, type StatCardAccent } from '$ui';
-	import { session } from '$features/auth';
+	import { Alert, StatCard, type StatCardAccent } from '#lib/components/ui/index.ts';
+	import { session } from '#lib/features/auth/index.ts';
 
 	/**
 	 * Regular-tenant-user dashboard skeleton.

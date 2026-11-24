@@ -18,11 +18,11 @@
 >
 	import { _ } from 'svelte-i18n';
 	import type { UrlFilters, BulkSelection, SavedViews } from '#lib/hooks/index.ts';
-	import { Button } from '$ui';
-	import { Icon } from '$icons';
+	import { Button } from '#lib/components/ui/index.ts';
+	import { Icon } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 	import Toolbar from './Toolbar.svelte';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import FilterChips from './FilterChips.svelte';
 	import SearchInput from './SearchInput.svelte';
 

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Card } from '$ui';
-	import type { ProductDto } from '$features/inventory/schemas';
+	import { Card } from '#lib/components/ui/index.ts';
+	import type { ProductDto } from '#lib/features/inventory/schemas.ts';
 
 	type Props = { product: ProductDto };
 	let { product }: Props = $props();

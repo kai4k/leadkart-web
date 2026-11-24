@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import { ACTION, session } from '$features/auth';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	/**
 	 * LeadsTable — table view of leads with cursor-based infinite scroll,
 	 * bulk select, inline stage + temperature pickers, and Linear-style
@@ -13,8 +13,8 @@
 	 */
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Skeleton, EmptyState, StatusPill } from '$ui';
-	import { Icon, Inbox } from '$icons';
+	import { Skeleton, EmptyState, StatusPill } from '#lib/components/ui/index.ts';
+	import { Icon, Inbox } from '#lib/icons/index.ts';
 	import { InfiniteListFooter } from '#lib/components/data/index.ts';
 	import type { BulkSelection, InfiniteList, KeyboardListNav } from '#lib/hooks/index.ts';
 	import type { CrmLeadDto, LeadStage, LeadTemperature } from '../schemas';

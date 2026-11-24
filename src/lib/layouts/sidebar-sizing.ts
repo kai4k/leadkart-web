@@ -6,7 +6,7 @@
  * Per-provider state (a closure created by AppShell), never a module value: the server renders many
  * requests in one process.
  */
-import type { PreferencesStore } from '$features/preferences';
+import type { PreferencesStore } from '#lib/features/preferences/index.ts';
 
 type Expanded = 'large' | 'medium';
 

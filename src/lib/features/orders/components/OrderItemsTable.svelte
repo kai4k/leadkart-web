@@ -4,8 +4,8 @@
 	Editable items are surfaced via ReviseQuotationDrawer instead.
 -->
 <script lang="ts">
-	import { formatMoney } from '$features/orders/view-models';
-	import type { OrderItemDto } from '$features/orders/schemas';
+	import { formatMoney } from '#lib/features/orders/view-models.ts';
+	import type { OrderItemDto } from '#lib/features/orders/schemas.ts';
 
 	type Props = {
 		items: ReadonlyArray<OrderItemDto>;

@@ -4,11 +4,14 @@
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
 	import { FormSheet, TagInput } from '#lib/components/form/index.ts';
 	import * as Sheet from '#lib/components/ui/sheet/index.ts';
-	import { Alert } from '$ui';
-	import { replacePermissionOverridesMutation, userDetailQuery } from '$features/users/queries';
-	import type { UserDto } from '$features/users/types';
-	import { displayName } from '$features/auth';
-	import { ConflictError, ValidationError } from '$api/errors';
+	import { Alert } from '#lib/components/ui/index.ts';
+	import {
+		replacePermissionOverridesMutation,
+		userDetailQuery
+	} from '#lib/features/users/queries.ts';
+	import type { UserDto } from '#lib/features/users/types.ts';
+	import { displayName } from '#lib/features/auth/index.ts';
+	import { ConflictError, ValidationError } from '#lib/api/errors.ts';
 	import { formatDate } from '#lib/utils/format.ts';
 
 	type Props = {

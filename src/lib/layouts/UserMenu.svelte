@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { LogOut, User, Icon } from '$icons';
+	import { LogOut, User, Icon } from '#lib/icons/index.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Dropdown } from '$ui';
+	import { Dropdown } from '#lib/components/ui/index.ts';
 	import { initials } from '#lib/utils/person-name.ts';
-	import { session } from '$features/auth';
+	import { session } from '#lib/features/auth/index.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 
 	/**

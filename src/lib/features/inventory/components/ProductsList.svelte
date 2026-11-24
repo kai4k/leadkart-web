@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import { ACTION, session } from '$features/auth';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Badge, Button, DataTable, EmptyState, type DataTableColumn } from '$ui';
+	import {
+		Badge,
+		Button,
+		DataTable,
+		EmptyState,
+		type DataTableColumn
+	} from '#lib/components/ui/index.ts';
 	import {
 		ResourceListPage,
 		type ResourceListAction,
 		type BulkAction
 	} from '#lib/components/data/index.ts';
-	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '$icons';
+	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '#lib/icons/index.ts';
 	import {
 		createBulkSelection,
 		createKeyboardListNav,
@@ -23,21 +29,21 @@
 		bulkProductActionMutation,
 		categoriesQuery,
 		typesQuery
-	} from '$features/inventory/queries';
+	} from '#lib/features/inventory/queries.ts';
 	import {
 		activeBadge,
 		drugScheduleBadge,
 		expiryStatus,
 		formatPrice,
 		stockLevelBadge
-	} from '$features/inventory/view-models';
+	} from '#lib/features/inventory/view-models.ts';
 	import {
 		type ProductDto,
 		type DrugSchedule,
 		drugScheduleSchema
-	} from '$features/inventory/schemas';
-	import type { ListProductsParams, ProductSort } from '$features/inventory/api';
-	import { getListErrorMessage } from '$api/error-messages';
+	} from '#lib/features/inventory/schemas.ts';
+	import type { ListProductsParams, ProductSort } from '#lib/features/inventory/api.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 	import { buildProductFilterConfig, type ProductFilters } from './ProductFilters.svelte';
 	import CreateProductDrawer from './CreateProductDrawer.svelte';
 	import ProductBulkUploadDrawer from './ProductBulkUploadDrawer.svelte';

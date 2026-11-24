@@ -8,7 +8,7 @@
 	import { _ } from 'svelte-i18n';
 	import type { Attachment } from 'svelte/attachments';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { ChevronRight, Icon } from '$icons';
+	import { ChevronRight, Icon } from '#lib/icons/index.ts';
 	import { cn, type WithElementRef } from '#lib/utils/cn.ts';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLElement>> & { items: BreadcrumbItem[] };

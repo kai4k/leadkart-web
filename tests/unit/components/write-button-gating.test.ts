@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 
 const held = vi.hoisted(() => ({ set: new Set<string>() }));
-vi.mock('$features/auth', async (importOriginal) => ({
+vi.mock('#lib/features/auth/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	session: {
 		canAny: (...p: string[]) => p.some((x) => held.set.has(x)),
@@ -14,14 +14,14 @@ const mutation = vi.hoisted(() => () => ({
 	mutate: () => {},
 	mutateAsync: () => {}
 }));
-vi.mock('$features/orders/queries', () => ({
+vi.mock('#lib/features/orders/queries.ts', () => ({
 	approveQuotationMutation: mutation,
 	completeOrderMutation: mutation,
 	confirmOrderMutation: mutation,
 	generateInvoiceMutation: mutation,
 	markDeliveredMutation: mutation
 }));
-vi.mock('$features/leads/queries', () => ({
+vi.mock('#lib/features/leads/queries.ts', () => ({
 	changeStageMutation: mutation,
 	changeTemperatureMutation: mutation
 }));

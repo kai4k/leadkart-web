@@ -1,8 +1,8 @@
 <script context="module" lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf';
-	import * as Timeline from '$ui/timeline';
+	import * as Timeline from '#lib/components/ui/timeline/index.ts';
 	import TimelineRoot from './Timeline.svelte';
-	import { Check, Truck, Info, AlertTriangle, FileText } from '$icons';
+	import { Check, Truck, Info, AlertTriangle, FileText } from '#lib/icons/index.ts';
 
 	const { Story } = defineMeta({
 		title: 'UI/Timeline',

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { ForgotPasswordForm } from '$features/auth';
+	import { ForgotPasswordForm } from '#lib/features/auth/index.ts';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();

@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
 import type { z } from 'zod';
-import { codeCopy } from '$api/code-copy';
+import { codeCopy } from '#lib/api/code-copy.ts';
 import { fieldErrorCopy, fieldErrorsCopy } from '#lib/utils/field-error-copy.ts';
 
 /**

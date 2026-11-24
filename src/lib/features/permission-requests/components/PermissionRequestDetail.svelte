@@ -1,32 +1,39 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { Alert, Badge, Button, Card, DescriptionList, type DescriptionItem } from '$ui';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import {
+		Alert,
+		Badge,
+		Button,
+		Card,
+		DescriptionList,
+		type DescriptionItem
+	} from '#lib/components/ui/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
 	import { BackLink, IdChip } from '#lib/components/data/index.ts';
-	import { TextareaField } from '$form';
-	import { ValidationError, describeError } from '$api/errors';
-	import { codeCopy } from '$api/code-copy';
+	import { TextareaField } from '#lib/components/form/index.ts';
+	import { ValidationError, describeError } from '#lib/api/errors.ts';
+	import { codeCopy } from '#lib/api/code-copy.ts';
 	import { fieldErrorCopy } from '#lib/utils/field-error-copy.ts';
 	import { formatDateTime } from '#lib/utils/format.ts';
-	import { CheckCircle2, XCircle, Icon } from '$icons';
+	import { CheckCircle2, XCircle, Icon } from '#lib/icons/index.ts';
 	import {
 		permissionRequestDetailQuery,
 		permissionRequestQueueItemQuery,
 		approvePermissionRequestMutation,
 		denyPermissionRequestMutation,
 		cancelPermissionRequestMutation
-	} from '$features/permission-requests/queries';
+	} from '#lib/features/permission-requests/queries.ts';
 	import {
 		permissionRequestState,
 		canCancel,
 		canDecide,
 		decisionControls,
 		daysOrIndefinite
-	} from '$features/permission-requests/view-models';
-	import { session } from '$features/auth';
+	} from '#lib/features/permission-requests/view-models.ts';
+	import { session } from '#lib/features/auth/index.ts';
 	import { resolve } from '$app/paths';
-	import type { PermissionRequestDto } from '$features/permission-requests/schemas';
+	import type { PermissionRequestDto } from '#lib/features/permission-requests/schemas.ts';
 
 	type Props = { id: string };
 	let { id }: Props = $props();

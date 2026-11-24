@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { Card, EmptyState, Skeleton } from '$ui';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import { Card, EmptyState, Skeleton } from '#lib/components/ui/index.ts';
 	import { QueryState } from '#lib/components/feedback/index.ts';
-	import { Users } from '$icons';
-	import { usersListQuery } from '$features/users/queries';
-	import { buildOrgTree } from '$features/users/view-models-hierarchy';
-	import { OrgTreeNode, UsersTruncatedAlert } from '$features/users';
+	import { Users } from '#lib/icons/index.ts';
+	import { usersListQuery } from '#lib/features/users/queries.ts';
+	import { buildOrgTree } from '#lib/features/users/view-models-hierarchy.ts';
+	import { OrgTreeNode, UsersTruncatedAlert } from '#lib/features/users/index.ts';
 
 	/**
 	 * Org chart — renders the tenant's reporting structure as a tree

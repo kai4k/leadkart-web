@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { TextField, type ActionFormResult } from '$form';
+	import { TextField, type ActionFormResult } from '#lib/components/form/index.ts';
 	import * as Field from '#lib/components/ui/field/index.ts';
 	import TenantSectionForm from './TenantSectionForm.svelte';
 	import type { Tenant } from '../types';

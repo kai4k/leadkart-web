@@ -6,7 +6,7 @@
  *
  * This barrel is the required entry point for cross-feature imports from
  * outside `operator/` (it exports `platformStatsQuery`). Import from it as
- * `$features/operator`.
+ * `#lib/features/operator/index.ts`.
  */
 export { platformStatsQuery } from './dashboard/queries.ts';
 export { enterScopeMutation } from './scope';

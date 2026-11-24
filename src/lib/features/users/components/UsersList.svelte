@@ -5,19 +5,28 @@
 	import { resolve } from '$app/paths';
 	import { SvelteURL } from 'svelte/reactivity';
 	import type { ResolvedPathname } from '$app/types';
-	import { Badge, Button, buttonVariants, EmptyState } from '$ui';
-	import { Plus, Shield, UserMinus, UserPlus, Users as UsersIcon, Users, Lock, Icon } from '$icons';
+	import { Badge, Button, buttonVariants, EmptyState } from '#lib/components/ui/index.ts';
+	import {
+		Plus,
+		Shield,
+		UserMinus,
+		UserPlus,
+		Users as UsersIcon,
+		Users,
+		Lock,
+		Icon
+	} from '#lib/icons/index.ts';
 	import {
 		usersListQuery,
 		usersStatusCountsQuery,
 		reactivateUserMutation,
 		bulkUserStatusMutation
-	} from '$features/users/queries';
-	import type { UserStatusFilter } from '$features/users/api';
-	import { rolesListQuery } from '$features/roles';
-	import { userRoleBadges, canDeactivate, bulkTargets } from '$features/users/view-models';
-	import { displayName, userStatus } from '$features/auth';
-	import type { UserDto } from '$features/users/types';
+	} from '#lib/features/users/queries.ts';
+	import type { UserStatusFilter } from '#lib/features/users/api.ts';
+	import { rolesListQuery } from '#lib/features/roles/index.ts';
+	import { userRoleBadges, canDeactivate, bulkTargets } from '#lib/features/users/view-models.ts';
+	import { displayName, userStatus } from '#lib/features/auth/index.ts';
+	import type { UserDto } from '#lib/features/users/types.ts';
 	import {
 		createBulkSelection,
 		createDialogState,

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { ACTION, session } from '$features/auth';
-	import { Badge, Button, Dropdown, EmptyState, Skeleton } from '$ui';
-	import { Icon, Plus, MoreVertical, Pause, Trash2, RotateCcw, Boxes } from '$icons';
-	import { batchesQuery } from '$features/inventory/queries';
-	import { expiryStatus, fefoSort, formatPrice } from '$features/inventory/view-models';
-	import type { BatchDto } from '$features/inventory/schemas';
-	import { getListErrorMessage } from '$api/error-messages';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
+	import { Badge, Button, Dropdown, EmptyState, Skeleton } from '#lib/components/ui/index.ts';
+	import { Icon, Plus, MoreVertical, Pause, Trash2, RotateCcw, Boxes } from '#lib/icons/index.ts';
+	import { batchesQuery } from '#lib/features/inventory/queries.ts';
+	import { expiryStatus, fefoSort, formatPrice } from '#lib/features/inventory/view-models.ts';
+	import type { BatchDto } from '#lib/features/inventory/schemas.ts';
+	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 	import AddBatchDrawer from './AddBatchDrawer.svelte';
 	import AdjustStockDialog from './AdjustStockDialog.svelte';
 	import WriteOffBatchDialog from './WriteOffBatchDialog.svelte';

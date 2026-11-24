@@ -18,19 +18,19 @@ vi.mock('#lib/api/query-client.ts', async () => {
 	return { renderQueryClient: () => new QueryClient() };
 });
 vi.mock('#lib/hooks/index.ts', () => ({ useRefreshOnFocus: () => {} }));
-vi.mock('$features/operator/impersonation', async () => ({
+vi.mock('#lib/features/operator/impersonation/index.ts', async () => ({
 	ImpersonationBanner: (await import('./stubs/Nothing.svelte')).default
 }));
-vi.mock('$layouts/AppShell.svelte', async () => ({
+vi.mock('#lib/layouts/AppShell.svelte', async () => ({
 	default: (await import('./stubs/PassThrough.svelte')).default
 }));
-vi.mock('$layouts/NavProgressBar.svelte', async () => ({
+vi.mock('#lib/layouts/NavProgressBar.svelte', async () => ({
 	default: (await import('./stubs/Nothing.svelte')).default
 }));
-vi.mock('$layouts/PwaStatusBar.svelte', async () => ({
+vi.mock('#lib/layouts/PwaStatusBar.svelte', async () => ({
 	default: (await import('./stubs/Nothing.svelte')).default
 }));
-vi.mock('$layouts/ReloadNotice.svelte', async () => ({
+vi.mock('#lib/layouts/ReloadNotice.svelte', async () => ({
 	default: (await import('./stubs/Nothing.svelte')).default
 }));
 

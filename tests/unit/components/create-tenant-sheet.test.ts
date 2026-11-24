@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 import type { QueryClient } from '@tanstack/svelte-query';
-import { ValidationError } from '$api/errors';
+import { ValidationError } from '#lib/api/errors.ts';
 
 const h = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient }));
 vi.mock('@tanstack/svelte-query', async (importOriginal) =>
@@ -12,7 +12,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 );
 vi.mock('$app/navigation', () => ({ beforeNavigate: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
-vi.mock('$ui', async (importOriginal) => ({
+vi.mock('#lib/components/ui/index.ts', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	toast: toastMock
 }));

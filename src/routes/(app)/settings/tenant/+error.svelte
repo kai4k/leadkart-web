@@ -2,7 +2,7 @@
 	import { _ } from 'svelte-i18n';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import RouteError, { routeErrorTitleKey } from '#lib/components/feedback/RouteError.svelte';
 
 	/** Tenant Settings error boundary (an error thrown by this directory's own +layout.server.ts renders in the parent page, `(app)/+error.svelte`). */

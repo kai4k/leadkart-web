@@ -12,7 +12,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) =>
 	)
 );
 const toastMock = vi.hoisted(() => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }));
-vi.mock('$ui', () => ({ toast: toastMock }));
+vi.mock('#lib/components/ui/index.ts', () => ({ toast: toastMock }));
 const gw = vi.hoisted(() => ({
 	deactivateUser: vi.fn(),
 	reactivateUser: vi.fn()

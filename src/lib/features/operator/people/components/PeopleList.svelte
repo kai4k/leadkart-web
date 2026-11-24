@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { resolve } from '$app/paths';
-	import { Alert, Button, EmptyState } from '$ui';
-	import { Search, Users } from '$icons';
+	import { Alert, Button, EmptyState } from '#lib/components/ui/index.ts';
+	import { Search, Users } from '#lib/icons/index.ts';
 	import {
 		ResourceListPage,
 		IdentityCell,
 		type DataTableColumn
 	} from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import type { SearchPersonHit } from '$features/search/schemas';
+	import type { SearchPersonHit } from '#lib/features/search/schemas.ts';
 	import { formatDate } from '#lib/utils/format.ts';
 	import { displayName } from '#lib/utils/person-name.ts';
 	import { PERSON_SEARCH_MIN, personsSearchQuery } from '../queries';

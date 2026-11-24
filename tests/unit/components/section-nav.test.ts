@@ -15,7 +15,7 @@ vi.mock('$app/state', () => ({
 	}
 }));
 
-import SectionNav from '$layouts/SectionNav.svelte';
+import SectionNav from '#lib/layouts/SectionNav.svelte';
 
 let target: HTMLElement;
 let component: ReturnType<typeof mount> | undefined;

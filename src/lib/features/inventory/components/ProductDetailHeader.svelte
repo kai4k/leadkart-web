@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
-	import PageHeader from '$layouts/PageHeader.svelte';
-	import { ACTION, session } from '$features/auth';
-	import { Badge, Dropdown } from '$ui';
-	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '$icons';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
+	import { ACTION, session } from '#lib/features/auth/index.ts';
+	import { Badge, Dropdown } from '#lib/components/ui/index.ts';
+	import { Icon, ArrowLeft, MoreVertical, Edit, Trash2 } from '#lib/icons/index.ts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import type { ProductDto } from '$features/inventory/schemas';
+	import type { ProductDto } from '#lib/features/inventory/schemas.ts';
 	import {
 		drugScheduleBadge,
 		expiryStatus,
 		stockLevelBadge,
 		activeBadge
-	} from '$features/inventory/view-models';
+	} from '#lib/features/inventory/view-models.ts';
 
 	type Props = {
 		product: ProductDto;

@@ -1,22 +1,22 @@
 <script lang="ts">
-	import PageHeader from '$layouts/PageHeader.svelte';
+	import PageHeader from '#lib/layouts/PageHeader.svelte';
 	import { _ } from 'svelte-i18n';
-	import { Badge, buttonVariants, EmptyState } from '$ui';
-	import { Plus, Shield, Trash2, Edit, Icon } from '$icons';
+	import { Badge, buttonVariants, EmptyState } from '#lib/components/ui/index.ts';
+	import { Plus, Shield, Trash2, Edit, Icon } from '#lib/icons/index.ts';
 	import {
 		RowActionsMenu,
 		type DataTableColumn,
 		type RowAction
 	} from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import { rolesListQuery } from '$features/roles/queries';
-	import type { RoleDto } from '$features/roles/types';
+	import { rolesListQuery } from '#lib/features/roles/queries.ts';
+	import type { RoleDto } from '#lib/features/roles/types.ts';
 	import {
 		roleKind,
 		roleKindKey,
 		isProtectedRole,
 		roleMemberCount
-	} from '$features/roles/view-models';
+	} from '#lib/features/roles/view-models.ts';
 	import { createDialogState, createListPagination } from '#lib/hooks/index.ts';
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';

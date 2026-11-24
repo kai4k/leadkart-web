@@ -41,8 +41,8 @@
 <script lang="ts" generics="TItem extends import('#lib/hooks/index.ts').SelectableItem">
 	import type { BulkSelection } from '#lib/hooks/index.ts';
 	import { _ } from 'svelte-i18n';
-	import { Button, ConfirmDialog, Dropdown } from '$ui';
-	import { Icon, ChevronDown } from '$icons';
+	import { Button, ConfirmDialog, Dropdown } from '#lib/components/ui/index.ts';
+	import { Icon, ChevronDown } from '#lib/icons/index.ts';
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
