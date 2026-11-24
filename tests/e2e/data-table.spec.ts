@@ -155,7 +155,12 @@ for (const density of ['compact', 'default'] as const) {
 		page
 	}) => {
 		const errors: string[] = [];
-		page.on('pageerror', (e) => errors.push(e.message));
+		// WebKit reports "ResizeObserver loop completed with undelivered notifications" as a page error; Chromium and
+		// Firefox raise the same benign notification (virtua's row observer) and show it to nobody. Delivery is only
+		// deferred to the next frame, so exactly that message is not a failure; every other page error still is.
+		page.on('pageerror', (e) => {
+			if (!/^ResizeObserver loop/.test(e.message)) errors.push(e.message);
+		});
 		await open(page);
 		await page.getByRole('button', { name: density, exact: true }).click();
 		const blank = async () =>
