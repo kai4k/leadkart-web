@@ -258,12 +258,12 @@ const UNGUARDED_REVIEWED: Record<string, string> = {
 	'+layout.server.ts': 'a3aa6cf586cade7fa9c7c830',
 	'+page.server.ts': 'd584880de3ad98cfcd66b155',
 	'(app)/+layout.server.ts': 'c348bde0597e9584bdde65b1',
-	'(auth)/signin/+page.server.ts': 'b7da86af71a08251a5a38ca1',
+	'(auth)/signin/+page.server.ts': '37083561ec26b6efe76316a5',
 	'(auth)/forgot-password/+page.server.ts': '234d7157d19409c9ddf6ad3b',
 	'(auth)/reset-password/+page.server.ts': '7dc42171f7e675b737865207',
 	'(dev)/+layout.server.ts': '27bb3985dd4fd968ce81e3f9',
 	'auth/logout/+server.ts': 'bcd677fad56c1d16ab658be0',
-	'auth/confirm-email-change/+server.ts': '05096bba008b2810c60afd42',
+	'auth/confirm-email-change/+server.ts': '846e35f3375c57fb6dcc02e6',
 	'api/[...path]/+server.ts': '30cf34a801cdfaf57e1d5564',
 	'api/operator/scope/+server.ts': '38bfa0d8e667c367d3ca291d'
 };

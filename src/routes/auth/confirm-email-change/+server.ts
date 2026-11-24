@@ -14,7 +14,7 @@
 import type { RequestHandler } from './$types';
 import { goAuthFetch, goErrorStatus } from '#lib/server/go.ts';
 import { jsonError, upstreamJsonError } from '#lib/server/http.ts';
-import { confirmEmailChangeBodySchema } from '$features/auth/schemas';
+import { confirmEmailChangeBodySchema } from '#lib/features/auth/schemas.ts';
 
 export const POST: RequestHandler = async (event) => {
 	let json: unknown;

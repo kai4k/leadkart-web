@@ -32,7 +32,7 @@ import {
 import { goAuthFetch, readGoError } from '#lib/server/go.ts';
 import { establishSession, tokenPairSchema } from '#lib/server/auth-refresh.ts';
 import { safeRedirectPath } from '#lib/server/redirect.ts';
-import { loginRequestSchema } from '$features/auth/schemas';
+import { loginRequestSchema } from '#lib/features/auth/schemas.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
