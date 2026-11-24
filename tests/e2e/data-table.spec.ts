@@ -224,12 +224,23 @@ test('sorting starts at the top', async ({ page }) => {
 	await expect.poll(() => scroller(page).evaluate((el) => el.scrollTop)).toBe(0);
 });
 
+/**
+ * Presses Tab until focus reaches the focusable sentinel the bench page puts after the table (`#after-table`); returns the
+ * number of presses, or Infinity if it never arrives. "Focus left the table" is only observable with something to land on:
+ * with nothing after it, Firefox hands focus to its own chrome and `document.activeElement` stays on the last control.
+ */
+async function tabsToSentinel(page: Page, max = 6): Promise<number> {
+	for (let i = 1; i <= max; i++) {
+		await page.keyboard.press('Tab');
+		if (await page.evaluate(() => document.activeElement?.id === 'after-table')) return i;
+	}
+	return Infinity;
+}
+
 test('Tab leaves the table in a few presses', async ({ page }) => {
 	await open(page);
 	await page.locator('tbody tr[data-row-id]').first().focus();
-	for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
-	const inside = await page.evaluate(() => !!document.activeElement?.closest('tbody'));
-	expect(inside).toBe(false);
+	expect(await tabsToSentinel(page)).toBeLessThanOrEqual(6);
 });
 
 test('axe finds no serious or critical violation, at the top and scrolled', async ({ page }) => {
@@ -286,8 +297,7 @@ test('without nav: the row whose checkbox has focus stays mounted, and Tab leave
 	expect((await rowIds(page))[0]).toBe('r-5');
 	await expect(box).toBeFocused();
 	expect((await rowIds(page)).length).toBeLessThan(60);
-	for (let i = 0; i < 6; i++) await page.keyboard.press('Tab');
-	expect(await page.evaluate(() => !!document.activeElement?.closest('tbody'))).toBe(false);
+	expect(await tabsToSentinel(page)).toBeLessThanOrEqual(6);
 });
 
 test('with locked widths a cell clips what does not fit instead of drawing over the next column', async ({

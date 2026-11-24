@@ -151,4 +151,7 @@
 		nav={params.get('nav') === '0' ? undefined : nav}
 		{density}
 	/>
+	<!-- the table's tab sequence must end somewhere the spec can see (the last focusable element of a page is
+	     engine-dependent: Firefox moves focus to its own chrome) -->
+	<button type="button" id="after-table" class="sr-only focus:not-sr-only">After the table</button>
 </main>
