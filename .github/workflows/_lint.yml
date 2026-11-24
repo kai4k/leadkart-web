@@ -61,8 +61,6 @@ jobs:
         # /v1/platform path scope, mutate-then-refetch ban.
         run: npm run arch:check
 
-      - name: Knip — dead code + unused exports (advisory)
-        # Knip surfaces unused exports + files. Currently advisory because
-        # feature barrels expose types not yet consumed by route code.
-        # Promote to a hard gate once consumer surface stabilises.
-        run: npm run lint:dead -- --no-exit-code || true
+      - name: Knip — dead code + unused exports
+        # A hard gate: an unused export, file or unlisted dependency fails the job.
+        run: npm run lint:dead
