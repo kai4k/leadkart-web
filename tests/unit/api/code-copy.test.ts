@@ -74,7 +74,6 @@ describe('the code table', () => {
 			'tenant_scope_forbidden',
 			'tenant_scope_conflict',
 			'tenant_not_active',
-			'tenant_has_dependents',
 			'scope_changed',
 			'scope_invalid'
 		]);

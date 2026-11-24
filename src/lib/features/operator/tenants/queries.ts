@@ -77,15 +77,3 @@ export function suspendTenantMutation() {
 export function activateTenantMutation() {
 	return lifecycleMutation((id: string) => api.activateTenant(id), 'Tenant activated');
 }
-
-export function markForDeletionMutation() {
-	return lifecycleMutation(
-		({ id, reason }: { id: string; reason: string }) => api.markForDeletion(id, { reason }),
-		'Tenant marked for deletion',
-		true
-	);
-}
-
-export function restoreTenantMutation() {
-	return lifecycleMutation((id: string) => api.restoreTenant(id), 'Tenant restored');
-}

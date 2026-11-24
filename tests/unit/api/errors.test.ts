@@ -466,11 +466,6 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 			'The request was not accepted. Check the values and try again.'
 		],
 		[409, 'tenant_not_active', 'This tenant is not active. Changes are disabled.'],
-		[
-			409,
-			'tenant_has_dependents',
-			"This tenant still has members or data, so it can't be deleted yet."
-		],
 		[422, 'permission_not_requestable', "This permission can't be requested."],
 		[403, 'insufficient_rank', 'You can only do this for people and roles below your own level.'],
 		[409, 'last_owner_protected', 'A company must keep at least one active owner.'],

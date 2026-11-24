@@ -9,7 +9,6 @@ import {
 	registerTenantRequestSchema,
 	registerTenantResponseSchema,
 	suspendTenantRequestSchema,
-	markForDeletionRequestSchema,
 	tenantDtoSchema,
 	listAllTenantsResponseSchema
 } from '#lib/features/operator/tenants/schemas.ts';
@@ -128,28 +127,6 @@ describe('suspendTenantRequestSchema', () => {
 		expect(
 			suspendTenantRequestSchema.safeParse({ reason: 'Valid reason', extra: true }).success
 		).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// markForDeletionRequestSchema
-// ---------------------------------------------------------------------------
-
-describe('markForDeletionRequestSchema', () => {
-	it('accepts a valid reason', () => {
-		expect(
-			markForDeletionRequestSchema.safeParse({ reason: 'Tenant requested account closure' }).success
-		).toBe(true);
-	});
-
-	it('rejects empty reason', () => {
-		expect(markForDeletionRequestSchema.safeParse({ reason: '' }).success).toBe(false);
-	});
-
-	it('rejects extra fields (strict mode)', () => {
-		expect(markForDeletionRequestSchema.safeParse({ reason: 'Valid', extra: 'oops' }).success).toBe(
-			false
-		);
 	});
 });
 

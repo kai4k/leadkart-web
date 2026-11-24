@@ -5,12 +5,7 @@
  * without a browser environment or store setup.
  */
 import { describe, expect, it } from 'vitest';
-import {
-	canSuspend,
-	canActivate,
-	canMarkForDeletion,
-	canRestore
-} from '#lib/features/operator/tenants/view-models.ts';
+import { canSuspend, canActivate } from '#lib/features/operator/tenants/view-models.ts';
 import type { TenantDto } from '#lib/features/operator/tenants/types.ts';
 
 // ---------------------------------------------------------------------------
@@ -51,10 +46,6 @@ describe('canSuspend', () => {
 		expect(canSuspend(makeTenant('suspended'))).toBe(false);
 	});
 
-	it('false when status is pending_deletion', () => {
-		expect(canSuspend(makeTenant('pending_deletion'))).toBe(false);
-	});
-
 	it('false when status is pending', () => {
 		expect(canSuspend(makeTenant('pending'))).toBe(false);
 	});
@@ -73,51 +64,7 @@ describe('canActivate', () => {
 		expect(canActivate(makeTenant('active'))).toBe(false);
 	});
 
-	it('false when status is pending_deletion', () => {
-		expect(canActivate(makeTenant('pending_deletion'))).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// canMarkForDeletion
-// ---------------------------------------------------------------------------
-
-describe('canMarkForDeletion', () => {
-	it('true when status is active', () => {
-		expect(canMarkForDeletion(makeTenant('active'))).toBe(true);
-	});
-
-	it('true when status is suspended', () => {
-		expect(canMarkForDeletion(makeTenant('suspended'))).toBe(true);
-	});
-
-	it('false when status is pending_deletion', () => {
-		expect(canMarkForDeletion(makeTenant('pending_deletion'))).toBe(false);
-	});
-
 	it('false when status is pending', () => {
-		expect(canMarkForDeletion(makeTenant('pending'))).toBe(false);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// canRestore
-// ---------------------------------------------------------------------------
-
-describe('canRestore', () => {
-	it('true when status is pending_deletion', () => {
-		expect(canRestore(makeTenant('pending_deletion'))).toBe(true);
-	});
-
-	it('false when status is active', () => {
-		expect(canRestore(makeTenant('active'))).toBe(false);
-	});
-
-	it('false when status is suspended', () => {
-		expect(canRestore(makeTenant('suspended'))).toBe(false);
-	});
-
-	it('false when status is pending', () => {
-		expect(canRestore(makeTenant('pending'))).toBe(false);
+		expect(canActivate(makeTenant('pending'))).toBe(false);
 	});
 });

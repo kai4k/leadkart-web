@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
 	import { Badge, Button, EmptyState, Spinner } from '$ui';
-	import { Building2, Eye, Pause, Play, Plus, RotateCcw, Shield, Trash2, Icon } from '$icons';
+	import { Building2, Eye, Pause, Play, Plus, Shield, Icon } from '$icons';
 	import {
 		ResourceListPage,
 		RowActionsMenu,
@@ -10,15 +10,14 @@
 		type RowAction
 	} from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
-	import { activateTenantMutation, restoreTenantMutation, tenantsListQuery } from '../queries';
-	import { canActivate, canMarkForDeletion, canRestore, canSuspend } from '../view-models';
+	import { activateTenantMutation, tenantsListQuery } from '../queries';
+	import { canActivate, canSuspend } from '../view-models';
 	import { tenantStatus } from '$features/tenant';
 	import { P, session } from '$features/auth';
 	import { enterScopeMutation } from '$features/operator/scope';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
 	import CreateTenantDrawer from './CreateTenantDrawer.svelte';
 	import SuspendDialog from './SuspendDialog.svelte';
-	import MarkForDeletionDialog from './MarkForDeletionDialog.svelte';
 	import { ImpersonateModal, impersonation } from '../../impersonation';
 	import type { TenantDto } from '../types';
 	import {
@@ -32,14 +31,13 @@
 	let { search: searchState }: { search: ListSearch } = $props();
 
 	const PAGE_SIZE = 10;
-	const STATUSES = ['active', 'suspended', 'pending', 'pending_deletion'] as const;
+	const STATUSES = ['active', 'suspended', 'pending'] as const;
 	type Status = (typeof STATUSES)[number];
 	/** Go cuts a search at 100 bytes; the box stops a little before. */
 	const SEARCH_MAX = 100;
 
 	const createDialog = createDialogState();
 	const suspendDialog = createDialogState<TenantDto>();
-	const markDialog = createDialogState<TenantDto>();
 	const impersonateDialog = createDialogState<TenantDto>();
 	/** Slug of the tenant currently being opened: drives the inline row spinner and blocks a second open. */
 	let openingScopeSlug = $state<string | null>(null);
@@ -70,15 +68,13 @@
 
 	const canCreate = $derived(session.can(P.platformTenantsCreate));
 	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
-	// One Go permission per lifecycle action (suspend / activate / delete = mark + restore).
+	// One Go permission per lifecycle action (suspend, activate).
 	const mayActivate = $derived(session.can(P.identityTenantsActivate));
 	const maySuspend = $derived(session.can(P.identityTenantsSuspend));
-	const mayDelete = $derived(session.can(P.identityTenantsDelete));
-	const canManage = $derived(maySuspend || mayActivate || mayDelete);
+	const canManage = $derived(maySuspend || mayActivate);
 
 	const query = tenantsListQuery();
 	const activateMutation = activateTenantMutation();
-	const restoreMutation = restoreTenantMutation();
 	const enterMutation = enterScopeMutation();
 
 	const filtered = $derived.by(() => {
@@ -106,8 +102,7 @@
 		return [
 			{ value: 'active', label: 'Active', count: count('active') },
 			{ value: 'suspended', label: 'Suspended', count: count('suspended') },
-			{ value: 'pending', label: 'Pending', count: count('pending') },
-			{ value: 'pending_deletion', label: 'Pending deletion', count: count('pending_deletion') }
+			{ value: 'pending', label: 'Pending', count: count('pending') }
 		];
 	});
 
@@ -132,7 +127,7 @@
 		{ id: 'legal', header: 'Legal name', accessor: (t) => t.legal_name, hideBelow: 'lg' }
 	];
 
-	/** The tenant's lifecycle menu: icons on every item, the destructive one last. */
+	/** The tenant's lifecycle menu: suspend and activate. */
 	function lifecycleActions(tenant: TenantDto): RowAction[] {
 		const list: RowAction[] = [];
 		if (maySuspend && canSuspend(tenant))
@@ -148,21 +143,6 @@
 				label: 'Activate',
 				icon: Play,
 				onSelect: () => activateMutation.mutate(tenant.id)
-			});
-		if (mayDelete && canRestore(tenant))
-			list.push({
-				id: 'restore',
-				label: 'Restore',
-				icon: RotateCcw,
-				onSelect: () => restoreMutation.mutate(tenant.id)
-			});
-		if (mayDelete && canMarkForDeletion(tenant))
-			list.push({
-				id: 'mark',
-				label: 'Mark for deletion',
-				icon: Trash2,
-				variant: 'destructive',
-				onSelect: () => markDialog.show(tenant)
 			});
 		return list;
 	}
@@ -319,11 +299,6 @@
 	bind:open={suspendDialog.open}
 	tenant={suspendDialog.target}
 	onOpenChange={suspendDialog.onOpenChange}
-/>
-<MarkForDeletionDialog
-	bind:open={markDialog.open}
-	tenant={markDialog.target}
-	onOpenChange={markDialog.onOpenChange}
 />
 <ImpersonateModal
 	bind:open={impersonateDialog.open}

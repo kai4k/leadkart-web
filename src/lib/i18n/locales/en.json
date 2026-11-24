@@ -353,7 +353,7 @@
 			"email_has_active_membership": "This email is active in another company. It must be deactivated there before it can be added here.",
 			"person_active_elsewhere": "This person is active in another company. They must be deactivated there before they can be reactivated here.",
 			"concurrency_conflict": "Someone else changed this at the same time. Reload the page and try again.",
-			"platform_tenant_undeletable": "The platform's own company can't be deleted.",
+			"platform_tenant_undeletable": "The platform's own company can't be suspended.",
 			"permission_request_pending_exists": "You already have a pending request for this permission.",
 			"permission_request_not_pending": "This request has already been decided or withdrawn.",
 			"permission_request_invalid": "The request could not be accepted. Check the reason and try again.",
@@ -368,7 +368,6 @@
 			"session_not_found": "This session was already removed.",
 			"current_session_unknown": "We could not tell which session is this device. Sign in again, then try once more.",
 			"overrides_changed": "These permissions changed while you were editing (a time-limited grant ended, a request was approved or someone else saved). Close this panel and open it again to see the current set, then make your change again.",
-			"tenant_has_dependents": "This tenant still has members or data, so it can't be deleted yet.",
 			"forbidden": "You don't have permission to do this.",
 			"insufficient_rank": "You can only do this for people and roles below your own level.",
 			"ownership_authority_required": "Only a platform administrator with ownership authority can change who owns a company.",
@@ -785,12 +784,6 @@
 			"forbidden": "You don't have permission to suspend people globally.",
 			"notFound": "This person was deleted or moved.",
 			"conflict": "This person is already globally suspended."
-		},
-		"markForDeletion": {
-			"failed": "Could not mark this tenant for deletion. Please try again.",
-			"forbidden": "You don't have permission to mark tenants for deletion.",
-			"notFound": "This tenant was deleted or moved.",
-			"conflict": "This tenant is already marked for deletion."
 		},
 		"suspendTenant": {
 			"failed": "Could not suspend this tenant. Please try again.",

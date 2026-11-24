@@ -1,37 +1,32 @@
 <script lang="ts">
 	import { Button, Card } from '$ui';
-	import { Pause, Play, Trash2, RotateCcw, Icon } from '$icons';
-	import { canSuspend, canActivate, canMarkForDeletion, canRestore } from '../view-models';
-	import { activateTenantMutation, restoreTenantMutation } from '../queries';
+	import { Pause, Play, Icon } from '$icons';
+	import { canSuspend, canActivate } from '../view-models';
+	import { activateTenantMutation } from '../queries';
 	import { P, session } from '$features/auth';
 	import type { TenantDto } from '../types';
 
 	type Props = {
 		tenant: TenantDto;
-		onAction: (action: 'suspend' | 'mark', tenant: TenantDto) => void;
+		onSuspend: (tenant: TenantDto) => void;
 	};
 
-	let { tenant, onAction }: Props = $props();
+	let { tenant, onSuspend }: Props = $props();
 
-	// One Go permission per lifecycle action (suspend / activate / delete = mark + restore).
+	// One Go permission per lifecycle action (suspend, activate).
 	const maySuspend = $derived(session.can(P.identityTenantsSuspend));
 	const mayActivate = $derived(session.can(P.identityTenantsActivate));
-	const mayDelete = $derived(session.can(P.identityTenantsDelete));
-	const canManage = $derived(maySuspend || mayActivate || mayDelete);
+	const canManage = $derived(maySuspend || mayActivate);
 	/** Platform tenant is immutable — backend rejects lifecycle mutations via
 	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
 	const isPlatformTenant = $derived(tenant.slug === 'platform');
 
 	const activateMutation = activateTenantMutation();
-	const restoreMutation = restoreTenantMutation();
 
-	const isPending = $derived(activateMutation.isPending || restoreMutation.isPending);
+	const isPending = $derived(activateMutation.isPending);
 
 	async function activate() {
 		activateMutation.mutate(tenant.id);
-	}
-	async function restore() {
-		restoreMutation.mutate(tenant.id);
 	}
 </script>
 
@@ -51,23 +46,13 @@
 			</p>
 		{:else}
 			{#if maySuspend && canSuspend(tenant)}
-				<Button variant="ghost" onclick={() => onAction('suspend', tenant)} disabled={isPending}>
+				<Button variant="ghost" onclick={() => onSuspend(tenant)} disabled={isPending}>
 					<Icon icon={Pause} size="sm" /> Suspend
 				</Button>
 			{/if}
 			{#if mayActivate && canActivate(tenant)}
 				<Button variant="ghost" onclick={activate} loading={isPending}>
 					<Icon icon={Play} size="sm" /> Activate
-				</Button>
-			{/if}
-			{#if mayDelete && canMarkForDeletion(tenant)}
-				<Button variant="destructive" onclick={() => onAction('mark', tenant)} disabled={isPending}>
-					<Icon icon={Trash2} size="sm" /> Mark for deletion
-				</Button>
-			{/if}
-			{#if mayDelete && canRestore(tenant)}
-				<Button variant="ghost" onclick={restore} loading={isPending}>
-					<Icon icon={RotateCcw} size="sm" /> Restore
 				</Button>
 			{/if}
 		{/if}

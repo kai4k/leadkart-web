@@ -23,7 +23,6 @@ const CODES = [
 	'tenant_scope_conflict',
 	'tenant_not_active',
 	'tenant_suspended',
-	'tenant_has_dependents',
 	// Authority
 	'forbidden',
 	'insufficient_rank',

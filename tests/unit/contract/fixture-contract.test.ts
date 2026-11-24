@@ -94,7 +94,7 @@ describe('validateFixture', () => {
 	});
 
 	it('accepts every tenant status Go can send', () => {
-		for (const status of ['pending_deletion', 'suspended', 'active']) {
+		for (const status of ['pending', 'suspended', 'active']) {
 			expect(
 				validateFixture(
 					fx({

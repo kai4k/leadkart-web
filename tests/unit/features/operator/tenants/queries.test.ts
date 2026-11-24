@@ -12,9 +12,7 @@ vi.mock('$ui', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.f
 const gw = vi.hoisted(() => ({
 	registerTenant: vi.fn(),
 	suspendTenant: vi.fn(),
-	activateTenant: vi.fn(),
-	restoreTenant: vi.fn(),
-	markForDeletion: vi.fn()
+	activateTenant: vi.fn()
 }));
 const nav = vi.hoisted(() => ({ refreshAll: vi.fn(() => Promise.resolve()) }));
 vi.mock('$app/navigation', () => nav);
@@ -23,9 +21,7 @@ vi.mock('#lib/features/operator/tenants/api', () => gw);
 
 import {
 	activateTenantMutation,
-	markForDeletionMutation,
 	registerTenantMutation,
-	restoreTenantMutation,
 	suspendTenantMutation
 } from '#lib/features/operator/tenants/queries.ts';
 
@@ -52,8 +48,6 @@ describe('tenant mutations', () => {
 			});
 			gw.suspendTenant.mockResolvedValue(undefined);
 			gw.activateTenant.mockResolvedValue(undefined);
-			gw.restoreTenant.mockResolvedValue(undefined);
-			gw.markForDeletion.mockResolvedValue(undefined);
 		});
 		const suspend = () =>
 			suspendTenantMutation() as unknown as MutationObserver<
@@ -81,13 +75,7 @@ describe('tenant mutations', () => {
 		});
 
 		it.each([
-			['activate', (vars: never) => (activateTenantMutation() as never as Run).mutate(vars), 't1'],
-			['restore', (vars: never) => (restoreTenantMutation() as never as Run).mutate(vars), 't1'],
-			[
-				'mark for deletion',
-				(vars: never) => (markForDeletionMutation() as never as Run).mutate(vars),
-				{ id: 't1', reason: 'x' }
-			]
+			['activate', (vars: never) => (activateTenantMutation() as never as Run).mutate(vars), 't1']
 		])(
 			'%s refreshes the server-loaded tenant inside the scope tree only',
 			async (_n, run, vars) => {

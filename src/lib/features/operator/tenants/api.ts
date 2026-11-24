@@ -5,7 +5,6 @@ import type {
 	RegisterTenantRequest,
 	RegisterTenantResponse,
 	SuspendTenantRequest,
-	MarkForDeletionRequest,
 	ListAllTenantsResponse
 } from './types';
 
@@ -23,17 +22,6 @@ export async function suspendTenant(tenantId: string, req: SuspendTenantRequest)
 
 export async function activateTenant(tenantId: string): Promise<void> {
 	await api.post(`/v1/tenants/${seg(tenantId)}/activate`, {});
-}
-
-export async function markForDeletion(
-	tenantId: string,
-	req: MarkForDeletionRequest
-): Promise<void> {
-	await api.post(`/v1/tenants/${seg(tenantId)}/mark-for-deletion`, req);
-}
-
-export async function restoreTenant(tenantId: string): Promise<void> {
-	await api.post(`/v1/tenants/${seg(tenantId)}/restore`, {});
 }
 
 /** List all tenants — operator-scoped (platform.tenants.view).

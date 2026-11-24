@@ -13,7 +13,6 @@ import { z } from 'zod';
 import {
 	RegisterTenantRequest,
 	SuspendTenantRequest,
-	MarkTenantForDeletionRequest,
 	RegisterTenantResponse
 } from '#lib/api/generated/index.ts';
 import {
@@ -53,10 +52,6 @@ export const registerTenantRequestSchema = RegisterTenantRequest.extend({
 export const registerTenantResponseSchema = RegisterTenantResponse;
 
 export const suspendTenantRequestSchema = SuspendTenantRequest.extend({
-	reason: reasonField
-}).strict();
-
-export const markForDeletionRequestSchema = MarkTenantForDeletionRequest.extend({
 	reason: reasonField
 }).strict();
 
