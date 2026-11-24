@@ -27,10 +27,10 @@ export default defineConfig({
 	timeout: 30_000,
 	expect: {
 		// Default per-snapshot strictness. Individual specs can tighten
-		// further via the SNAPSHOT_OPTIONS constant in tests/visual/fixtures. 0.02 because
-		// nearly every shot has a glass layer and backdrop-filter blur is GPU dependent.
+		// further via the SNAPSHOT_OPTIONS constant in tests/visual/fixtures. A shot that
+		// flakes on glass blur may take a higher ratio (<= 0.02) with a comment naming why.
 		toHaveScreenshot: {
-			maxDiffPixelRatio: 0.02,
+			maxDiffPixelRatio: 0.001,
 			threshold: 0.1,
 			animations: 'disabled',
 			caret: 'hide'

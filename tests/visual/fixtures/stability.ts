@@ -92,9 +92,9 @@ export async function stabilise(page: Page): Promise<void> {
 /**
  * Snapshot defaults for `expect(page).toHaveScreenshot(...)`, shared by every visual test.
  *
- *   maxDiffPixelRatio: 0.02  — 2% of the frame. Almost every shot has a glass layer (topbar, sidebar,
- *                              dialogs), and `backdrop-filter` blur is GPU/driver dependent, so a tighter
- *                              bound flakes on the blur edge. A layout regression moves far more pixels.
+ *   maxDiffPixelRatio: 0.001 — 0.1% of the frame. Held stable across repeated runs in the CI image.
+ *                              A single shot that flakes on `backdrop-filter` blur (GPU dependent) may pass a
+ *                              higher ratio (<= 0.02) with a comment naming the cause and the observed diff.
  *   threshold:          0.1  — per-pixel YIQ-distance threshold
  *   animations:        'disabled' — Playwright also pauses animations (belt and braces with the freeze)
  *   caret:             'hide'
@@ -102,7 +102,7 @@ export async function stabilise(page: Page): Promise<void> {
  * The freeze stylesheet above never touches `backdrop-filter`: the material is the thing under test.
  */
 export const SNAPSHOT_OPTIONS = {
-	maxDiffPixelRatio: 0.02,
+	maxDiffPixelRatio: 0.001,
 	threshold: 0.1,
 	animations: 'disabled',
 	caret: 'hide'
