@@ -49,6 +49,11 @@ const CHILD_ROLE = {
 };
 
 test.describe('Role hierarchy editor', () => {
+	// The 'Saved banner' test intercepts the PATCH with page.route. In WebKit a page.route misses the requests of a page
+	// a service worker controls (the PATCH reaches the mock untouched), so the worker is blocked in this spec. It is
+	// not blocked for the whole webkit project: other specs test the worker itself.
+	test.use({ serviceWorkers: 'block' });
+
 	test.beforeEach(async () => {
 		await resetMock();
 	});
