@@ -348,7 +348,7 @@ describe('NotFoundError copy', () => {
 		const r = new Response(null, { status: 404 });
 		Object.defineProperty(r, 'url', { value: 'http://host/api/v1/users/0b1c-uuid' });
 		const err = ApiError.fromResponse(r, null) as NotFoundError;
-		expect(err.message).toBe('This item no longer exists.');
+		expect(err.message).toBe('This item is no longer available.');
 		expect(err.message).not.toMatch(/http|uuid/);
 		expect(err.resource).toBe('http://host/api/v1/users/0b1c-uuid');
 	});
@@ -357,7 +357,7 @@ describe('NotFoundError copy', () => {
 			error: 'user_not_found',
 			message: 'User not found'
 		}) as NotFoundError;
-		expect(err.message).toBe('This item no longer exists.');
+		expect(err.message).toBe('This item is no longer available.');
 		expect(err.detail).toBe('User not found');
 	});
 });
