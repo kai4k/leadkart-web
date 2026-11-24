@@ -14,7 +14,6 @@ import {
 	sortFn_text,
 	tableFeatures,
 	type ColumnDef,
-	type Row,
 	type RowData
 } from '@tanstack/svelte-table';
 import type { DataTableColumn } from './types.ts';
@@ -29,7 +28,6 @@ export const dataTableFeatures = tableFeatures({
 });
 
 export type DataTableFeatures = typeof dataTableFeatures;
-export type DataTableRow<T extends RowData> = Row<DataTableFeatures, T>;
 
 /** The value the table sorts by: an explicit `sortValue`, else what the cell shows. A `null` is no value. */
 function sortKey<T>(col: DataTableColumn<T>, row: T): string | number | undefined {

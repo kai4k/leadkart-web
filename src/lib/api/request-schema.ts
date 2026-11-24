@@ -84,7 +84,7 @@ const EMAIL_SHAPE = new RegExp(
  * A slug (a tenant's address): trimmed as Go trims it, 3 to 63, lower-case letters, digits and single hyphens,
  * starting and ending with a letter or digit (`common/slug`). The input's `maxlength` is 63, never 60.
  */
-export const SLUG_MIN = 3;
+const SLUG_MIN = 3;
 export const SLUG_MAX = 63;
 const SLUG_SHAPE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
 const DOUBLE_HYPHEN = /--/;

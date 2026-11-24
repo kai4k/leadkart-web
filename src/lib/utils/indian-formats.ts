@@ -19,8 +19,8 @@
 export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/;
 export const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const PAN_ENTITY_TYPES = 'PFHCATBLJG';
-export const DRUG_LICENCE_CHARS = /^[A-Z0-9 /-]+$/;
-export const E164_PATTERN = /^\+[1-9][0-9]{7,14}$/;
+const DRUG_LICENCE_CHARS = /^[A-Z0-9 /-]+$/;
+const E164_PATTERN = /^\+[1-9][0-9]{7,14}$/;
 /** India Post: 6 digits, the first 1-9. */
 export const PIN_PATTERN = /^[1-9][0-9]{5}$/;
 
@@ -95,7 +95,7 @@ export function checkPhone(value: string): FieldCode | null {
 }
 
 /** The PAN inside a valid GSTIN is characters 3-12. */
-export const panInsideGstin = (gstin: string): string => gstin.slice(2, 12);
+const panInsideGstin = (gstin: string): string => gstin.slice(2, 12);
 
 /** The code for the pair, or null. Checked only when both are present and each is valid by itself. */
 export function checkGstinMatchesPan(gstin: string, pan: string): FieldCode | null {
@@ -161,10 +161,10 @@ export interface TextFormatSpec {
 }
 
 /** An address has no spaces, and no tab or line break: a paste with one at either end is the usual case. */
-export const tidyEmail = (text: string): string => text.trim();
+const tidyEmail = (text: string): string => text.trim();
 
 /** A code (slug, a confirm phrase, a permission name): trimmed, otherwise exactly as typed. */
-export const tidyCode = (text: string): string => text.trim();
+const tidyCode = (text: string): string => text.trim();
 
 /**
  * Per format: the attributes the browser and keyboard need, and the tidy. `tidy` for GSTIN, PAN, phone and pincode is

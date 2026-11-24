@@ -43,7 +43,7 @@ export type TokenPair = z.infer<typeof tokenPairSchema>;
  * indistinguishable, so anything that is not exactly one of these reads as `session_expired`.
  */
 const REFRESH_REJECTIONS = ['session_expired', 'tenant_suspended', 'tenant_not_active'] as const;
-export type RefreshRejection = (typeof REFRESH_REJECTIONS)[number];
+type RefreshRejection = (typeof REFRESH_REJECTIONS)[number];
 
 export type RefreshResult =
 	| { ok: true; tokens: TokenPair }

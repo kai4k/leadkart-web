@@ -22,7 +22,7 @@ export interface UnknownOutcomeOptions {
  * What a start came to. `not-started` needs a SUCCESSFUL read that does not list the session; when every read failed
  * nothing is known, and the answer is `unknown` (the session may exist).
  */
-export type StartAnswer = 'started' | 'not-started' | 'unknown';
+type StartAnswer = 'started' | 'not-started' | 'unknown';
 
 export interface UnknownOutcome {
 	/** A follow-up schedule is running: the status could not be settled yet. */

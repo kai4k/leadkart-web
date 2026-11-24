@@ -21,7 +21,7 @@ import { createSerialQueue, DeadlineError, withDeadline } from './serial-queue';
 
 export { DeadlineError } from './serial-queue';
 export { MUTATION_DEADLINE_MS } from './impersonation-types';
-export type { Impersonation, ImpersonationOptions, StartResult } from './impersonation-types';
+export type { Impersonation, ImpersonationOptions } from './impersonation-types';
 export {
 	AlreadyImpersonatingError,
 	ImpersonationRefusedError,
