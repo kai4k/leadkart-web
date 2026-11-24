@@ -59,3 +59,31 @@ test.fixme('PENDING: Cmd+K palette open + type + render hits', () => {
 	// portal. Reference operator-tenant-management.spec.ts for the
 	// canonical mock-server fixture pattern.
 });
+
+test.describe('Cmd+K palette under forced colours', () => {
+	test.beforeEach(async () => {
+		await resetMock();
+	});
+
+	test('only the highlighted item draws an outline; the others draw none (no overlap)', async ({
+		page
+	}) => {
+		await signInAsTier(page, { tier: 'tenant-user', permissions: ['crm.leads.read'] });
+		await page.emulateMedia({ forcedColors: 'active' });
+		await page.goto('/dashboard');
+		await page.locator('button[aria-label="Search (Cmd+K)"]').click();
+		const items = page.getByRole('dialog').locator('[data-slot="command-item"]');
+		await expect(items.first()).toBeVisible();
+		expect(await items.count()).toBeGreaterThan(1);
+		const outlines = await items.evaluateAll((els) =>
+			els.map((el) => ({
+				selected: el.hasAttribute('data-selected'),
+				style: getComputedStyle(el).outlineStyle
+			}))
+		);
+		expect(outlines.filter((o) => o.selected).map((o) => o.style)).toEqual(['solid']);
+		expect(new Set(outlines.filter((o) => !o.selected).map((o) => o.style))).toEqual(
+			new Set(['none'])
+		);
+	});
+});

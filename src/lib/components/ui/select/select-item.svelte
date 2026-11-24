@@ -19,7 +19,7 @@
 	{label}
 	data-slot="select-item"
 	class={cn(
-		"item-highlight focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-lg py-1 pe-8 ps-1.5 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 relative flex w-full cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		"item-highlight focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground gap-1.5 rounded-lg py-1 pe-8 ps-1.5 text-sm font-medium [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2 relative flex w-full cursor-default items-center outline-none forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-solid forced-colors:data-highlighted:outline-2 forced-colors:data-highlighted:outline-solid select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 		'data-highlighted:bg-accent data-highlighted:text-accent-foreground',
 		className
 	)}
