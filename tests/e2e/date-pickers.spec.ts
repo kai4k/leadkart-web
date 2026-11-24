@@ -415,8 +415,10 @@ test.describe('axe (serious or critical = fail)', () => {
 
 test.describe('Android: typed entry through the input method', () => {
 	test('insertText of a whole date lands in the three segments, and a composed digit is read back', async ({
-		browser
+		browser,
+		browserName
 	}) => {
+		test.skip(browserName === 'firefox', 'Firefox has no isMobile context option (Pixel 7 device)');
 		const context = await browser.newContext({ ...devices['Pixel 7'] });
 		const page = await context.newPage();
 		await setPrefs(page, { transparency: 'glass' });
