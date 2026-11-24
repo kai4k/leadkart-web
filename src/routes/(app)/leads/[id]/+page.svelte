@@ -63,7 +63,7 @@
 	const detailErrorCopy = $derived.by(() => {
 		const err = detail.error;
 		if (!err) return '';
-		return getListErrorMessage(err, 'this lead', 'This lead was deleted or moved.') ?? '';
+		return getListErrorMessage(err, 'this lead', 'This lead is no longer available.') ?? '';
 	});
 </script>
 

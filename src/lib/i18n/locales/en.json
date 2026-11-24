@@ -787,19 +787,19 @@
 		"globalSuspend": {
 			"failed": "Could not suspend this person. Please try again.",
 			"forbidden": "You don't have permission to suspend people globally.",
-			"notFound": "This person was deleted or moved.",
+			"notFound": "This person is no longer available.",
 			"conflict": "This person is already globally suspended."
 		},
 		"suspendTenant": {
 			"failed": "Could not suspend this tenant. Please try again.",
 			"forbidden": "You don't have permission to suspend tenants.",
-			"notFound": "This tenant was deleted or moved.",
+			"notFound": "This tenant is no longer available.",
 			"conflict": "This tenant is already suspended."
 		},
 		"deactivateUser": {
 			"failed": "Could not deactivate this user. Please try again.",
 			"forbidden": "You don't have permission to deactivate users.",
-			"notFound": "This user was deleted or moved.",
+			"notFound": "This user is no longer available.",
 			"conflict": "This user is already deactivated."
 		},
 		"deleteRole": {

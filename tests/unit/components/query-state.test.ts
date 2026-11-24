@@ -83,7 +83,7 @@ describe('QueryState', () => {
 		render(q({ isError: true, error: new NotFoundError('/v1/leads/1'), refetch }));
 		const alert = target.querySelector('[role="alert"]');
 		expect(alert?.textContent).toContain('Not found');
-		expect(alert?.textContent).toContain('This resource was deleted or moved.');
+		expect(alert?.textContent).toContain('This item is no longer available.');
 		expect(target.querySelector('button')).toBeNull();
 	});
 

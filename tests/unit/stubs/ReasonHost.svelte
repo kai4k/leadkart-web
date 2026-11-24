@@ -26,7 +26,7 @@
 	messages={{
 		failed: 'Could not suspend this tenant. Please try again.',
 		forbidden: "You don't have permission to suspend this tenant.",
-		notFound: 'This tenant was deleted or moved.',
+		notFound: 'This tenant is no longer available.',
 		conflict: 'This tenant is already suspended.'
 	}}
 	{onConfirm}

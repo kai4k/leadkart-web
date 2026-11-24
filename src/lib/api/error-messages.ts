@@ -23,7 +23,7 @@ import { describeError } from './errors';
  * and short-circuit when no error is present.
  *
  * `notFound` is the 404 line for pages whose missing thing is not the generic "resource" (a
- * product's batches: "This product was deleted or moved.").
+ * product's batches: "This product is no longer available.").
  *
  * `resourceNoun` should be a plural lower-cased noun ("tenants",
  * "team members", "orders") that fits in "You don't have permission
@@ -32,7 +32,7 @@ import { describeError } from './errors';
 export function getListErrorMessage(
 	err: unknown,
 	resourceNoun: string,
-	notFound = 'This resource was deleted or moved.'
+	notFound = 'This item is no longer available.'
 ): string | null {
 	if (!err) return null;
 	return describeError(err, {

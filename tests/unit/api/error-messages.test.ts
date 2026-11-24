@@ -34,14 +34,14 @@ describe('getListErrorMessage', () => {
 		expect(getListErrorMessage(err, 'batches', 'This product was deleted or moved.')).toBe(
 			'This product was deleted or moved.'
 		);
-		expect(getListErrorMessage(err, 'batches')).toBe('This resource was deleted or moved.');
+		expect(getListErrorMessage(err, 'batches')).toBe('This item is no longer available.');
 	});
 	it('401, 404 and unknown errors keep their list copy', () => {
 		expect(getListErrorMessage(ApiError.fromResponse(res(401), null), 'x')).toBe(
 			'Your session expired. Sign in again.'
 		);
 		expect(getListErrorMessage(ApiError.fromResponse(res(404), null), 'x')).toBe(
-			'This resource was deleted or moved.'
+			'This item is no longer available.'
 		);
 		expect(getListErrorMessage(new Error('boom'), 'x')).toBe(
 			'Something went wrong. Please try again.'

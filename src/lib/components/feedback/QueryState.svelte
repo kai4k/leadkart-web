@@ -21,7 +21,7 @@
 		query: QueryLike<T>;
 		/** What is being loaded, as it reads in a sentence: "member", "sessions", "this request". */
 		noun: string;
-		/** Body of the 404 alert; the shared "deleted or moved" line when omitted. */
+		/** Body of the 404 alert; the shared "no longer available" line when omitted. */
 		notFound?: string;
 		/** True when `data` has nothing to show; renders `empty` (or the default empty state). */
 		isEmpty?: (data: T) => boolean;
