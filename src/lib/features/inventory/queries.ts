@@ -111,7 +111,7 @@ export function updateProductMutation() {
 export function deleteProductMutation() {
 	const qc = useQueryClient();
 	return createMutation(() => ({
-		mutationFn: (id: string) => api.deleteProduct(id),
+		mutationFn: (id: string) => api.deactivateProduct(id),
 		onSuccess: (product) => {
 			qc.setQueryData(inventoryKeys.productDetail(product.id), product);
 			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });

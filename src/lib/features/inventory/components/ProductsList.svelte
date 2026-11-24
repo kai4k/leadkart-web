@@ -15,7 +15,7 @@
 		type ResourceListAction,
 		type BulkAction
 	} from '#lib/components/data/index.ts';
-	import { Icon, Plus, Package, UploadCloud, Pause, Check, Trash2 } from '#lib/icons/index.ts';
+	import { Icon, Plus, Package, UploadCloud, Pause, Check } from '#lib/icons/index.ts';
 	import {
 		createBulkSelection,
 		createKeyboardListNav,
@@ -161,22 +161,6 @@
 			onClick: () =>
 				bulkMut.mutate(
 					{ ids: Array.from(selection.selected), action: 'deactivate' },
-					{ onSuccess: () => selection.clear() }
-				)
-		},
-		{
-			id: 'delete',
-			label: 'Delete',
-			icon: Trash2 as never,
-			variant: 'danger',
-			confirm: {
-				title: 'Delete selected products?',
-				description: 'This soft-deletes (deactivates) the products. Stock + history is preserved.',
-				confirmLabel: 'Delete'
-			},
-			onClick: () =>
-				bulkMut.mutate(
-					{ ids: Array.from(selection.selected), action: 'delete' },
 					{ onSuccess: () => selection.clear() }
 				)
 		}

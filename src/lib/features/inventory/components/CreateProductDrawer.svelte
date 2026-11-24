@@ -61,8 +61,7 @@
 		gst_percentage: 12,
 		hsn_code: '',
 		storage_condition: '',
-		shelf_life_months: 24,
-		is_active: true
+		shelf_life_months: 24
 	};
 
 	const form = useForm(createProductRequestSchema, initialValues, {

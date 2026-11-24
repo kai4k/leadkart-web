@@ -205,9 +205,9 @@ describe('bulkProductActionRequestSchema', () => {
 		).toBe('deactivate');
 	});
 	it('rejects empty ids', () => {
-		expect(bulkProductActionRequestSchema.safeParse({ ids: [], action: 'delete' }).success).toBe(
-			false
-		);
+		expect(
+			bulkProductActionRequestSchema.safeParse({ ids: [], action: 'deactivate' }).success
+		).toBe(false);
 	});
 });
 

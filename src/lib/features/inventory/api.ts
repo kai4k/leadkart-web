@@ -76,7 +76,7 @@ function buildProductListQuery(params: ListProductsParams = {}): string {
 	for (const c of params.product_category ?? []) qs.append('product_category', c);
 	for (const t of params.product_type ?? []) qs.append('product_type', t);
 	for (const d of params.drug_schedule ?? []) qs.append('drug_schedule', d);
-	if (params.is_active != null) qs.set('is_active', String(params.is_active));
+	if (params.is_active != null) qs.set('status', params.is_active ? 'active' : 'inactive');
 	if (params.low_stock != null) qs.set('low_stock', String(params.low_stock));
 	if (params.expiring_within_days != null)
 		qs.set('expiring_within_days', String(params.expiring_within_days));
@@ -107,8 +107,9 @@ export async function updateProduct(id: string, body: UpdateProductRequest): Pro
 	return parseResponse(productDtoSchema, raw);
 }
 
-export async function deleteProduct(id: string): Promise<ProductDto> {
-	const raw = await apiLegacy.delete<unknown>(`/v1/inventory/products/${seg(id)}`);
+/** "Delete" on screen: the product goes inactive (ADR 0073, never deleted); 200 with the updated product. */
+export async function deactivateProduct(id: string): Promise<ProductDto> {
+	const raw = await apiLegacy.post<unknown>(`/v1/inventory/products/${seg(id)}/deactivate`, {});
 	return parseResponse(productDtoSchema, raw);
 }
 

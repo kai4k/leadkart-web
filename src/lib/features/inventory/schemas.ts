@@ -189,8 +189,7 @@ export const createProductRequestSchema = z
 
 		storage_condition: z.string().max(200).optional(),
 		shelf_life_months: z.number().int().min(1),
-		attributes: z.record(z.string(), z.unknown()).optional(),
-		is_active: z.boolean().optional()
+		attributes: z.record(z.string(), z.unknown()).optional()
 	})
 	.strict();
 export type CreateProductRequest = z.output<typeof createProductRequestSchema>;
@@ -261,7 +260,7 @@ export type ComputedPricesResponse = z.output<typeof computedPricesResponseSchem
 
 // ── Bulk ─────────────────────────────────────────────────────────────
 
-export const bulkProductActionSchema = z.enum(['activate', 'deactivate', 'delete']);
+export const bulkProductActionSchema = z.enum(['activate', 'deactivate']);
 export type BulkProductAction = z.output<typeof bulkProductActionSchema>;
 
 export const bulkProductActionRequestSchema = z
