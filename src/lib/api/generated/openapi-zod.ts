@@ -111,7 +111,8 @@ export const SessionDto = z
 		tenant_id: z.string().uuid(),
 		device_label: z.string(),
 		created_at: z.string().datetime({ offset: true }),
-		last_used_at: z.string().datetime({ offset: true })
+		last_used_at: z.string().datetime({ offset: true }),
+		is_current: z.boolean()
 	})
 	.passthrough();
 export const ListSessionsResponse = z.object({ sessions: z.array(SessionDto) }).passthrough();
@@ -4368,7 +4369,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `&#x60;invalid_status_transition&#x60; — the note is not &#x60;pending&#x60;. A &#x60;pending&#x60; note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: &#x60;order_not_invoiced&#x60; — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); &#x60;order_not_dispatchable&#x60; — the order has an invoice but is not &#x60;invoiced&#x60; (cancelled, or already past dispatch; an invoice is never removed); &#x60;order_stock_not_held&#x60; — the order holds no stock to ship (goods never leave without a deduction); &#x60;order_stock_mismatch&#x60; — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered); &#x60;order_stock_expired&#x60; — a batch the order holds is past its printed expiry month on the company&#x27;s business day (the goods are still in the warehouse until this call). The note stays &#x60;pending&#x60; and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past &#x60;pending&#x60; is not judged again. A step that cannot answer is a 500, never a dispatch. The order is &#x60;invoiced&#x60; while its note is &#x60;pending&#x60; and &#x60;dispatched&#x60; after this call; stock falls here, not at the pack.`,
+				description: `&#x60;invalid_status_transition&#x60; — the note is not &#x60;pending&#x60;. A &#x60;pending&#x60; note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: &#x60;order_not_invoiced&#x60; — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); &#x60;order_not_dispatchable&#x60; — the order has an invoice but is not &#x60;invoiced&#x60; (cancelled, or already past dispatch; an invoice is never removed); &#x60;order_stock_not_held&#x60; — the order holds no stock to ship (goods never leave without a deduction); &#x60;order_stock_mismatch&#x60; — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered), or the order has no confirmed items (nothing to ship); &#x60;order_stock_expired&#x60; — a batch the order holds is past its printed expiry month on the company&#x27;s business day (the goods are still in the warehouse until this call). The note stays &#x60;pending&#x60; and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past &#x60;pending&#x60; is not judged again. A step that cannot answer is a 500, never a dispatch. The order is &#x60;invoiced&#x60; while its note is &#x60;pending&#x60; and &#x60;dispatched&#x60; after this call; stock falls here, not at the pack.`,
 				schema: ErrorResponse
 			},
 			{

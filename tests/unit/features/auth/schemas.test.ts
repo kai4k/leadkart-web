@@ -64,9 +64,11 @@ describe('sessionDtoSchema', () => {
 			tenant_id: UUID(3),
 			device_label: 'Chrome on macOS',
 			created_at: '2026-05-10T12:00:00Z',
-			last_used_at: '2026-05-18T09:00:00Z'
+			last_used_at: '2026-05-18T09:00:00Z',
+			is_current: true
 		};
 		expect(sessionDtoSchema.parse(raw).family_id).toBe(UUID(4));
+		expect(sessionDtoSchema.parse(raw).is_current).toBe(true);
 	});
 });
 

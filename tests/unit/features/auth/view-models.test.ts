@@ -44,7 +44,8 @@ describe('isCurrentSession', () => {
 		tenant_id: 'ten_1',
 		device_label: 'Chrome on macOS',
 		created_at: '2026-05-10T00:00:00Z',
-		last_used_at: '2026-05-18T00:00:00Z'
+		last_used_at: '2026-05-18T00:00:00Z',
+		is_current: false
 	};
 	it('returns true when family_id matches the active token family', () => {
 		expect(isCurrentSession(sess, 'fam_active')).toBe(true);

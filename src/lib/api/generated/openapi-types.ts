@@ -10102,7 +10102,7 @@ export interface paths {
 				401: components['responses']['Unauthorized'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description `invalid_status_transition` — the note is not `pending`. A `pending` note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: `order_not_invoiced` — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); `order_not_dispatchable` — the order has an invoice but is not `invoiced` (cancelled, or already past dispatch; an invoice is never removed); `order_stock_not_held` — the order holds no stock to ship (goods never leave without a deduction); `order_stock_mismatch` — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered); `order_stock_expired` — a batch the order holds is past its printed expiry month on the company's business day (the goods are still in the warehouse until this call). The note stays `pending` and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past `pending` is not judged again. A step that cannot answer is a 500, never a dispatch. The order is `invoiced` while its note is `pending` and `dispatched` after this call; stock falls here, not at the pack. */
+				/** @description `invalid_status_transition` — the note is not `pending`. A `pending` note is dispatched in ONE transaction over the order, the stock and the note (ADR 0072), or nothing changes: `order_not_invoiced` — the order has no tax invoice (it was never invoiced, or the invoice was refused on expired stock); `order_not_dispatchable` — the order has an invoice but is not `invoiced` (cancelled, or already past dispatch; an invoice is never removed); `order_stock_not_held` — the order holds no stock to ship (goods never leave without a deduction); `order_stock_mismatch` — for some product the stock held for the order is not EQUAL to the quantity the order confirmed, less or more (goods leave only for what was ordered), or the order has no confirmed items (nothing to ship); `order_stock_expired` — a batch the order holds is past its printed expiry month on the company's business day (the goods are still in the warehouse until this call). The note stays `pending` and no stock, order or event changes on each. A note already dispatched with the same docket is a 204 that changes nothing (no second deduction); a note already past `pending` is not judged again. A step that cannot answer is a 500, never a dispatch. The order is `invoiced` while its note is `pending` and `dispatched` after this call; stock falls here, not at the pack. */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -14806,6 +14806,8 @@ export interface components {
 			created_at: string;
 			/** Format: date-time */
 			last_used_at: string;
+			/** @description True on the caller's own session, the one the access token was minted for (its `family_id` claim); false on every other row, and on every row when the token does not name a session. Label it "this device" and do not offer Revoke on it. */
+			is_current: boolean;
 		};
 		ListSessionsResponse: {
 			sessions: components['schemas']['SessionDto'][];
