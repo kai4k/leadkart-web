@@ -49,8 +49,12 @@ export async function revokeRolePermission(
 	await api.post(`/v1/roles/${seg(roleId)}/permissions/revoke`, req);
 }
 
-export async function deleteRole(roleId: string): Promise<void> {
-	await api.delete(`/v1/roles/${seg(roleId)}`);
+/**
+ * "Delete" on screen is `POST /v1/roles/{id}/deactivate` (ADR 0073: roles are never deleted, only made
+ * inactive). 200 with the updated role; 409 `role_in_use` while an active member holds it.
+ */
+export function deactivateRole(roleId: string): Promise<RoleDto> {
+	return api.postJson(`/v1/roles/${seg(roleId)}/deactivate`, {}, roleDtoSchema);
 }
 
 /**

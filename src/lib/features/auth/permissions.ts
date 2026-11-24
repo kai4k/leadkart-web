@@ -47,7 +47,7 @@ export const P = {
 	identityRolesView: 'identity.roles.view',
 	identityRolesCreate: 'identity.roles.create',
 	identityRolesUpdate: 'identity.roles.update',
-	identityRolesDelete: 'identity.roles.delete',
+	identityRolesManage: 'identity.roles.manage',
 	identityRolesAssign: 'identity.roles.assign',
 	identityRolesRevoke: 'identity.roles.revoke',
 	identityRolesApprove: 'identity.roles.approve',
@@ -174,7 +174,7 @@ export const ACTION = {
 	roleCreate: [P.identityRolesCreate, P.platformRolesManage],
 	/** Rename / re-level, permissions replace / grant / revoke, parent. */
 	roleUpdate: [P.identityRolesUpdate, P.platformRolesManage],
-	roleDelete: [P.identityRolesDelete, P.platformRolesManage],
+	roleDelete: [P.identityRolesManage, P.platformRolesManage],
 	/** Submit a permission request (own tenant only: Go refuses the route in tenant context). */
 	requestSubmit: [P.identityMetaRequestPermissionElevation],
 

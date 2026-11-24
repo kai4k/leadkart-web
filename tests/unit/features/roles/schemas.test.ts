@@ -17,6 +17,7 @@ describe('roleDtoSchema', () => {
 			id: '00000000-0000-4000-8000-000000000001',
 			tenant_id: '00000000-0000-4000-8000-000000000002',
 			name: 'SalesExecutive',
+			is_active: true,
 			is_system_default: false,
 			is_super_admin: false,
 			hierarchy_level: 3,

@@ -21,8 +21,8 @@
 <ReasonConfirmDialog
 	bind:open
 	{onOpenChange}
-	title="Delete {role?.name ?? 'role'}"
-	description="Removes the role and unassigns it from all members. Users keep their personal permission overrides. This is permanent."
+	title={`Delete role "${role?.name ?? ''}"?`}
+	description="It disappears from your lists and can't be assigned. A role that people still have can't be deleted: take it off them first."
 	confirmLabel="Delete role"
 	askReason={false}
 	confirmText={role?.name ?? ''}

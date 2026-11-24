@@ -149,7 +149,7 @@ describe('ACTION', () => {
 		]);
 		expect(ACTION.userDeactivate).toEqual(['identity.users.deactivate', 'platform.users.manage']);
 		expect(ACTION.roleAssign).toEqual(['identity.roles.assign', 'platform.roles.manage']);
-		expect(ACTION.roleDelete).toEqual(['identity.roles.delete', 'platform.roles.manage']);
+		expect(ACTION.roleDelete).toEqual(['identity.roles.manage', 'platform.roles.manage']);
 		expect(ACTION.requestSubmit).toEqual(['identity.meta.request_permission_elevation']);
 	});
 

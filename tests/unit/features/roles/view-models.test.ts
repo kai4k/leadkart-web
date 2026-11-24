@@ -12,6 +12,7 @@ const base: RoleDto = {
 	id: 'r1',
 	tenant_id: 't1',
 	name: 'SalesExecutive',
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: false,
 	hierarchy_level: 3,

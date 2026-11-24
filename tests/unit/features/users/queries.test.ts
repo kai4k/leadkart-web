@@ -21,7 +21,7 @@ vi.mock('#lib/features/users/api.ts', () => gw);
 vi.mock('#lib/features/users/api', () => gw);
 const roleGw = vi.hoisted(() => ({
 	updateRole: vi.fn(),
-	deleteRole: vi.fn(),
+	deactivateRole: vi.fn(),
 	setRoleParent: vi.fn()
 }));
 vi.mock('#lib/features/roles/api.ts', () => roleGw);
@@ -102,11 +102,23 @@ describe('roles mutations (real QueryClient)', () => {
 		await m.mutate({ id: 'r1', req: {} });
 		expect(invalidated).toEqual([['roles']]);
 	});
-	it('delete invalidates the whole users root (list and detail views show role names)', async () => {
-		roleGw.deleteRole.mockResolvedValue(undefined);
+	it('delete calls deactivate and writes the response into the list cache: no refetch', async () => {
+		const role = (id: string) => ({ id, name: id, is_active: true });
+		h.qc.setQueryData(['roles', 'list'], {
+			roles: [role('r1'), role('r2')],
+			status_counts: { active: 2, inactive: 0 }
+		});
+		h.qc.setQueryData(['roles', 'detail', 'r1'], role('r1'));
+		roleGw.deactivateRole.mockResolvedValue({ ...role('r1'), is_active: false });
 		const m = deleteRoleMutation() as unknown as M<string>;
 		await m.mutate('r1');
-		expect(invalidated).toEqual([['roles'], ['users']]);
+		expect(roleGw.deactivateRole).toHaveBeenCalledWith('r1');
+		expect(invalidated).toEqual([]);
+		expect(h.qc.getQueryData(['roles', 'list'])).toEqual({
+			roles: [role('r2')],
+			status_counts: { active: 1, inactive: 1 }
+		});
+		expect(h.qc.getQueryData(['roles', 'detail', 'r1'])).toBeUndefined();
 	});
 	it('set-parent invalidates the roles prefix', async () => {
 		roleGw.setRoleParent.mockResolvedValue(undefined);

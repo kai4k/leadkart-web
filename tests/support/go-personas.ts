@@ -68,7 +68,7 @@ export const PLATFORM_EQUIVALENTS: Readonly<Record<string, readonly string[]>> =
 		[
 			P.identityRolesCreate,
 			P.identityRolesUpdate,
-			P.identityRolesDelete,
+			P.identityRolesManage,
 			P.identityRolesAssign,
 			P.identityRolesRevoke
 		].map((n) => [n, [P.platformRolesManage]])

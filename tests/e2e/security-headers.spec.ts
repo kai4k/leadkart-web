@@ -71,7 +71,7 @@ const PERMS = [
 	'crm.inventory.view',
 	'identity.roles.view',
 	'identity.roles.update',
-	'identity.roles.delete',
+	'identity.roles.manage',
 	'identity.users.view'
 ];
 

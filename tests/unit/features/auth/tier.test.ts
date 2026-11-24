@@ -146,7 +146,7 @@ describe('tenant context (Go tenant_scope_read_only / tenant_scope_not_supported
 			P.identityRolesView,
 			P.identityRolesCreate,
 			P.identityRolesUpdate,
-			P.identityRolesDelete,
+			P.identityRolesManage,
 			P.identityRolesAssign,
 			P.identityRolesRevoke,
 			P.identityTenantsView,

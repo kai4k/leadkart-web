@@ -7,11 +7,11 @@
  *
  * Cache discipline: see `#lib/api/mutations.ts`.
  */
-import { createQuery } from '@tanstack/svelte-query';
+import { createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { createResourceMutation } from '#lib/api/mutations.ts';
 import { queryRoots } from '#lib/api/query-keys.ts';
 import * as api from './api';
-import type { UpdateRoleRequest } from './types';
+import type { ListRolesResponse, UpdateRoleRequest } from './types';
 
 const rolesKeys = {
 	all: queryRoots.roles,
@@ -59,13 +59,30 @@ export function replaceRolePermissionsMutation() {
 	});
 }
 
+/**
+ * "Delete" on screen; the server makes the role inactive (ADR 0073). The response is the updated role, so the
+ * cache is written from it: the role leaves the active list (no refetch) and its detail entry is dropped.
+ * Holders are untouched (Go refuses while an active member holds the role), so no users or capabilities refresh.
+ */
 export function deleteRoleMutation() {
+	const qc = useQueryClient();
 	return createResourceMutation({
-		fn: (id: string) => api.deleteRole(id),
-		// Deleting a role unassigns it from its members, so every users view changes too
-		// (list and detail both show role names): the whole users root.
-		refreshesCapabilities: true,
-		invalidate: () => [rolesKeys.all, queryRoots.users],
+		fn: (id: string) => api.deactivateRole(id),
+		invalidate: () => [],
+		onSuccess: (_id, role) => {
+			qc.setQueryData<ListRolesResponse>(rolesKeys.list(), (list) => {
+				if (!list) return list;
+				const counts = list.status_counts;
+				return {
+					...list,
+					roles: list.roles.filter((r) => r.id !== role.id),
+					status_counts: counts
+						? { active: Math.max(0, counts.active - 1), inactive: counts.inactive + 1 }
+						: counts
+				};
+			});
+			qc.removeQueries({ queryKey: rolesKeys.detail(role.id) });
+		},
 		successToast: 'Role deleted',
 		inlineErrors: true
 	});

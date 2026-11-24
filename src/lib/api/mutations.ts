@@ -1,7 +1,7 @@
 /**
- * Shared mutation helper. Go mutations return 204 (or an id-only body), so
- * the query layer invalidates and refetches; it never writes a response DTO
- * into the cache.
+ * Shared mutation helper. A mutation that answers 204 (or an id-only body) invalidates and
+ * refetches. One that answers the updated DTO (ADR 0038; deactivate, reactivate) writes it into
+ * the cache from `onSuccess` and invalidates nothing: the response IS the refetch.
  *
  * ONE vocabulary (also used by `useOptimisticMutation`, which is built on
  * `resourceMutationOptions`): `fn`, `invalidate(vars, data)`, `successToast(vars, data)`,
@@ -17,7 +17,7 @@
  *  1. A mutation invalidates the detail key of every entity it changes, plus
  *     every list prefix that shows that entity. Invalidation is awaited, so
  *     the mutation resolves after the refetch.
- *  2. No `setQueryData` from mutation responses. Go returns no DTO.
+ *  2. `setQueryData` from a response only where Go returns the updated DTO (never an id-only body).
  *  3. Optimistic updates (lead stage and temperature, session revoke) use
  *     `useOptimisticMutation`, which snapshots, projects, rolls back and
  *     reuses this helper for invalidation, toast and meta.

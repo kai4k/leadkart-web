@@ -124,7 +124,7 @@ export const PERMISSION_CATALOGUE: ReadonlyArray<PermissionCatalogueEntry> = [
 		description: 'Edit role names + permissions',
 		group: 'identity'
 	},
-	{ name: 'identity.roles.delete', description: 'Remove custom roles', group: 'identity' },
+	{ name: 'identity.roles.manage', description: 'Delete roles', group: 'identity' },
 	{ name: 'identity.roles.assign', description: 'Assign a role to a user', group: 'identity' },
 	{ name: 'identity.roles.revoke', description: 'Remove a role from a user', group: 'identity' },
 	{

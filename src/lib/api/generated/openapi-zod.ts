@@ -303,6 +303,7 @@ export const RoleDto = z
 		id: z.string().uuid(),
 		tenant_id: z.string().uuid(),
 		name: z.string(),
+		is_active: z.boolean(),
 		is_system_default: z.boolean(),
 		is_super_admin: z.boolean(),
 		hierarchy_level: z.number().int(),
@@ -311,7 +312,12 @@ export const RoleDto = z
 		parent_role_id: z.string().uuid().optional()
 	})
 	.passthrough();
-export const ListRolesResponse = z.object({ roles: z.array(RoleDto) }).passthrough();
+export const StatusCounts = z
+	.object({ active: z.number().int(), inactive: z.number().int() })
+	.passthrough();
+export const ListRolesResponse = z
+	.object({ roles: z.array(RoleDto), status_counts: StatusCounts.optional() })
+	.passthrough();
 export const CreateRoleRequest = z
 	.object({
 		name: z.string().min(2).max(100),
@@ -644,13 +650,17 @@ export const ProductDto = z
 	})
 	.passthrough();
 export const ListProductsResponse = z
-	.object({ items: z.array(ProductDto), has_more: z.boolean(), next_cursor: z.string().optional() })
+	.object({
+		items: z.array(ProductDto),
+		has_more: z.boolean(),
+		next_cursor: z.string().optional(),
+		status_counts: StatusCounts.optional()
+	})
 	.passthrough();
 export const UpdateProductRequest = z
 	.object({
 		name: z.string().min(1).max(200),
 		gst_rate_id: z.string().uuid(),
-		is_active: z.boolean(),
 		manufacturer: z.string().max(200),
 		generic_name: z.string().max(200),
 		composition: z.string().max(1000),
@@ -1147,7 +1157,7 @@ export const CompanyGstRateDto = z
 	})
 	.passthrough();
 export const CompanyScheduleClassDto = z
-	.object({ id: z.string().uuid(), label: z.string().max(40) })
+	.object({ id: z.string().uuid(), label: z.string().max(40), active: z.boolean() })
 	.passthrough();
 export const CompanyCommercePolicy = z
 	.object({
@@ -1298,7 +1308,8 @@ export const CompanyScheduleClassesDto = z
 		policy_version: z.number().int(),
 		mode: z.enum(['off', 'optional', 'required']).optional(),
 		items: z.array(CompanyScheduleClassDto),
-		class: CompanyScheduleClassDto.optional()
+		class: CompanyScheduleClassDto.optional(),
+		status_counts: StatusCounts.optional()
 	})
 	.passthrough();
 export const CreateCompanyScheduleClassRequest = z
@@ -1307,7 +1318,7 @@ export const CreateCompanyScheduleClassRequest = z
 export const PatchCompanyScheduleClassRequest = z
 	.object({ label: z.string().max(40), reason: z.string().max(500) })
 	.passthrough();
-export const DeleteCompanyScheduleClassRequest = z
+export const CompanyScheduleClassStatusRequest = z
 	.object({ reason: z.string().max(500) })
 	.passthrough();
 
@@ -1359,6 +1370,7 @@ export const schemas = {
 	ReplaceUserPermissionOverridesRequest,
 	AssignUserManagerRequest,
 	RoleDto,
+	StatusCounts,
 	ListRolesResponse,
 	CreateRoleRequest,
 	CreateRoleResponse,
@@ -1481,7 +1493,7 @@ export const schemas = {
 	CompanyScheduleClassesDto,
 	CreateCompanyScheduleClassRequest,
 	PatchCompanyScheduleClassRequest,
-	DeleteCompanyScheduleClassRequest
+	CompanyScheduleClassStatusRequest
 };
 
 /** One operation in api/openapi.yaml. `path` uses `:param` segments; `response` is the main 2xx schema (z.void() for 204). */
@@ -2398,12 +2410,19 @@ minute, burst 5, whichever address the requests come from).
 &#x60;inventory.catalog.manage&#x60; (the picker a product form reads). The company&#x27;s own
 list of classes a product may carry, in label order. It starts from the
 defaults of the market the company is created in and is the company&#x27;s to add
-to, rename or remove: nothing in the API is tied to a particular class. &#x60;mode&#x60;
+to, rename or make inactive (never delete): nothing in the API is tied to a
+particular class. &#x60;?status&#x3D;active|inactive|all&#x60; (default &#x60;active&#x60;) picks the
+listing, and &#x60;status_counts&#x60; carries the whole list per status. &#x60;mode&#x60;
 is the current &#x60;drug_schedule.mode&#x60;; &#x60;policy_version&#x60; is the policy version the
 list was read at.
 `,
 		requestFormat: 'json',
 		parameters: [
+			{
+				name: 'status',
+				type: 'Query',
+				schema: z.enum(['active', 'inactive', 'all']).optional().default('active')
+			},
 			{
 				name: 'X-Tenant-Id',
 				type: 'Header',
@@ -2606,14 +2625,15 @@ minute, burst 5, whichever address the requests come from).
 		]
 	},
 	{
-		method: 'delete',
-		path: '/api/v1/company/drug-schedule-classes/:classId',
-		alias: 'deleteApiv1companydrugScheduleClassesClassId',
-		description: `Requires &#x60;company_settings.tax.manage&#x60;. The body carries the &#x60;reason&#x60; (required).
-A class a product still carries cannot be removed: &#x60;409
-drug_schedule_class_in_use&#x60; and nothing changes; clear it from those products
-first. A removal moves the policy to a new version and is kept in the history.
-Returns &#x60;200&#x60; with the updated list.
+		method: 'post',
+		path: '/api/v1/company/drug-schedule-classes/:classId/deactivate',
+		alias: 'postApiv1companydrugScheduleClassesClassIddeactivate',
+		description: `Requires &#x60;company_settings.tax.manage&#x60;. A class is never deleted (ADR 0073): it goes
+inactive. An inactive class cannot be newly set on a product (&#x60;errors.drug_schedule:
+[inactive]&#x60;); a product that already carries it keeps it, and its label still resolves.
+The body carries the &#x60;reason&#x60; (required, kept in the settings history). Idempotent: an
+inactive class answers 200 and the policy version stays. Returns &#x60;200&#x60; with the list and the
+class in &#x60;class&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
@@ -2668,8 +2688,83 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 				schema: ErrorResponse
 			},
 			{
-				status: 409,
-				description: `&#x60;drug_schedule_class_in_use&#x60;: a product still carries the class`,
+				status: 422,
+				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/company/drug-schedule-classes/:classId/reactivate',
+		alias: 'postApiv1companydrugScheduleClassesClassIdreactivate',
+		description: `Requires &#x60;company_settings.tax.manage&#x60;. The body carries the &#x60;reason&#x60; (required).
+Idempotent: an active class answers 200 and the policy version stays. Returns &#x60;200&#x60; with the
+list and the class in &#x60;class&#x60;.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'body',
+				type: 'Body',
+				schema: z.object({ reason: z.string().max(500) }).passthrough()
+			},
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'classId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: CompanyScheduleClassesDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{
@@ -4978,7 +5073,9 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/inventory/products',
 		alias: 'getApiv1inventoryproducts',
 		description: `Requires &#x60;inventory.catalog.read&#x60; OR &#x60;inventory.catalog.manage&#x60;.
-Returns the live (non-deleted) products for the caller&#x27;s tenant.
+Returns the caller&#x27;s company products: the ACTIVE ones by default, &#x60;?status&#x3D;inactive&#x60; for the
+inactive ones and &#x60;?status&#x3D;all&#x60; for both (products are never deleted, ADR 0073). The first page
+(no &#x60;cursor&#x60;) also carries &#x60;status_counts&#x60;.
 The order is fixed: newest first, (created_at, id) DESC, keyset
 paginated with &#x60;cursor&#x60; and &#x60;page_size&#x60;; there is no &#x60;sort&#x60;
 parameter. Every item carries its stock totals and earliest expiry
@@ -5000,9 +5097,9 @@ earlier.
 				schema: z.number().int().gte(1).lte(200).optional().default(50)
 			},
 			{
-				name: 'active',
+				name: 'status',
 				type: 'Query',
-				schema: z.enum(['true', 'false']).optional()
+				schema: z.enum(['active', 'inactive', 'all']).optional().default('active')
 			},
 			{
 				name: 'dosage_form',
@@ -5044,7 +5141,7 @@ earlier.
 		errors: [
 			{
 				status: 400,
-				description: `&#x60;invalid_query&#x60; — a malformed cursor, or a &#x60;search&#x60;, &#x60;dosage_form&#x60; or &#x60;manufacturer&#x60; filter holding the NUL character (&#x60;%00&#x60;; it used to be a 500); or a &#x60;category&#x60;, &#x60;low_stock&#x60; or &#x60;expiring_within_days&#x60; value the server cannot read, named in &#x60;errors{&lt;param&gt;: [&lt;rule&gt;]}&#x60; (rules on each parameter)`,
+				description: `&#x60;invalid_status_filter&#x60; — &#x60;status&#x60; is not active, inactive or all; &#x60;invalid_query&#x60; — a malformed cursor, or a &#x60;search&#x60;, &#x60;dosage_form&#x60; or &#x60;manufacturer&#x60; filter holding the NUL character (&#x60;%00&#x60;; it used to be a 500); or a &#x60;category&#x60;, &#x60;low_stock&#x60; or &#x60;expiring_within_days&#x60; value the server cannot read, named in &#x60;errors{&lt;param&gt;: [&lt;rule&gt;]}&#x60; (rules on each parameter)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5223,86 +5320,6 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 				schema: ErrorResponse
 			},
 			{
-				status: 409,
-				description: `Product is deleted`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 429,
-				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
-EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
-runs in front of the whole API, and its key map is capped (a new client is refused while
-the cap is full). The bucket is the client address (the end client the BFF forwards in
-&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
-request-password-reset, reset-password, confirm-email-change and tenant registration also
-carry their own tighter per-client limit. change-password is limited per PERSON (5 per
-minute, burst 5, whichever address the requests come from).
-`,
-				schema: ErrorResponse
-			}
-		]
-	},
-	{
-		method: 'delete',
-		path: '/api/v1/inventory/products/:productId',
-		alias: 'deleteApiv1inventoryproductsProductId',
-		description: `Requires &#x60;inventory.catalog.manage&#x60;. Idempotent — repeat calls
-return 204. REJECTED with 409 &#x60;product_has_live_stock&#x60; if any
-live batch with quantity_on_hand &gt; 0 exists.
-`,
-		requestFormat: 'json',
-		parameters: [
-			{
-				name: 'productId',
-				type: 'Path',
-				schema: z.string().uuid()
-			},
-			{
-				name: 'X-Tenant-Id',
-				type: 'Header',
-				schema: z.string().uuid().optional()
-			}
-		],
-		response: z.void(),
-		errors: [
-			{
-				status: 400,
-				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
-differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
-member (is_platform with the platform slug anchor, not an impersonation token) can
-see it, whether or not they hold scope authority; every other caller has the header
-ignored. The same 400 also covers an invalid list filter or cursor on routes that
-take them.
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 403,
-				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
-&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
-tenant, and this route is not one of the identity writes operators may perform
-under scope. Writes to crm, orders, tasks, dispatch and inventory are never
-accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
-(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
-`,
-				schema: ErrorResponse
-			},
-			{
-				status: 404,
-				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 409,
-				description: `Product has live batches with non-zero stock`,
-				schema: ErrorResponse
-			},
-			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
 				schema: ErrorResponse
@@ -5394,7 +5411,7 @@ accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the t
 			},
 			{
 				status: 409,
-				description: `&#x60;already_exists&#x60; — batch_number already exists for this product; &#x60;batch_expired&#x60; — &#x60;initial_quantity&#x60; above 0 for a batch whose expiry date has passed (nothing is written)`,
+				description: `&#x60;product_inactive&#x60; — the product is inactive and takes no new batch (reactivate it first; ADR 0073); &#x60;already_exists&#x60; — batch_number already exists for this product; &#x60;batch_expired&#x60; — &#x60;initial_quantity&#x60; above 0 for a batch whose expiry date has passed (nothing is written)`,
 				schema: ErrorResponse
 			},
 			{
@@ -5503,6 +5520,78 @@ minute, burst 5, whichever address the requests come from).
 		]
 	},
 	{
+		method: 'post',
+		path: '/api/v1/inventory/products/:productId/deactivate',
+		alias: 'postApiv1inventoryproductsProductIddeactivate',
+		description: `Requires &#x60;inventory.catalog.manage&#x60;. A product is never deleted (ADR 0073): it goes inactive.
+The product stays readable and editable, and its existing orders, batches and stock are
+untouched; an inactive product takes no new batch (&#x60;POST .../batches&#x60; is 409
+&#x60;product_inactive&#x60;). Idempotent: an inactive product answers 200 the same, with no event.
+Answers the updated product.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'productId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ProductDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
 		method: 'get',
 		path: '/api/v1/inventory/products/:productId/fefo-batches',
 		alias: 'getApiv1inventoryproductsProductIdfefoBatches',
@@ -5550,6 +5639,75 @@ the lifecycle routes) a header equal to the path tenant is not a scope request, 
 decides, with &#x60;forbidden&#x60;. &#x60;tenant_scope_forbidden&#x60; is decided before any tenant
 lookup and is identical for existing, unknown and suspended tenants, so it cannot
 be used to probe which tenants exist.
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/inventory/products/:productId/reactivate',
+		alias: 'postApiv1inventoryproductsProductIdreactivate',
+		description: `Requires &#x60;inventory.catalog.manage&#x60;. Idempotent: an active product answers 200 the same, with
+no event. Answers the updated product.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'productId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: ProductDto,
+		errors: [
+			{
+				status: 400,
+				description: `&#x60;X-Tenant-Id&#x60; is malformed or supplied more than once (&#x60;invalid_tenant_scope&#x60;), or
+differs from the tenant in the URL (&#x60;tenant_scope_conflict&#x60;). Every platform-tenant
+member (is_platform with the platform slug anchor, not an impersonation token) can
+see it, whether or not they hold scope authority; every other caller has the header
+ignored. The same 400 also covers an invalid list filter or cursor on routes that
+take them.
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. As &#x60;TenantScopeForbidden&#x60; (&#x60;forbidden&#x60;, &#x60;tenant_scope_forbidden&#x60;), plus
+&#x60;tenant_scope_read_only&#x60;: the request is not a read, &#x60;X-Tenant-Id&#x60; names another
+tenant, and this route is not one of the identity writes operators may perform
+under scope. Writes to crm, orders, tasks, dispatch and inventory are never
+accepted under a foreign &#x60;X-Tenant-Id&#x60;; call them as a member of the tenant.
 (Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
 `,
 				schema: ErrorResponse
@@ -8973,9 +9131,17 @@ minute, burst 5, whichever address the requests come from).
 		path: '/api/v1/roles',
 		alias: 'getApiv1roles',
 		description: `Requires &#x60;identity.roles.view&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
+&#x60;?status&#x3D;active|inactive|all&#x60; (default &#x60;active&#x60;) picks the listing; roles are never deleted (ADR 0073),
+so an inactive role is listed with &#x60;?status&#x3D;inactive&#x60;. &#x60;status_counts&#x60; carries the company&#x27;s roles per
+status, whatever &#x60;status&#x60; is. Anything else is 400 &#x60;invalid_status_filter&#x60;.
 `,
 		requestFormat: 'json',
 		parameters: [
+			{
+				name: 'status',
+				type: 'Query',
+				schema: z.enum(['active', 'inactive', 'all']).optional().default('active')
+			},
 			{
 				name: 'X-Tenant-Id',
 				type: 'Header',
@@ -8984,6 +9150,11 @@ minute, burst 5, whichever address the requests come from).
 		],
 		response: ListRolesResponse,
 		errors: [
+			{
+				status: 400,
+				description: `&#x60;invalid_status_filter&#x60; - &#x60;status&#x60; is not active, inactive or all`,
+				schema: ErrorResponse
+			},
 			{
 				status: 403,
 				description: `Forbidden. &#x60;error&#x60; is &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in the
@@ -9269,18 +9440,20 @@ minute, burst 5, whichever address the requests come from).
 		]
 	},
 	{
-		method: 'delete',
-		path: '/api/v1/roles/:roleId',
-		alias: 'deleteApiv1rolesRoleId',
-		description: `Requires &#x60;identity.roles.delete&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068).
-The caller must hold every permission the role carries (deleting removes them from every holder) and must
-be allowed to act on every holder, active or not (answered before &#x60;role_in_use&#x60;).
-A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the
-count); a role held only by inactive members is deleted and their assignments are removed in the same
-transaction.
+		method: 'post',
+		path: '/api/v1/roles/:roleId/deactivate',
+		alias: 'postApiv1rolesRoleIddeactivate',
+		description: `Requires &#x60;identity.roles.manage&#x60; (satisfied by &#x60;tenant.admin&#x60; in the caller&#x27;s own tenant, or by &#x60;platform.*&#x60; equivalents for platform operators; ADR 0068). A role is never deleted (ADR 0073): it goes inactive.
+The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before &#x60;role_in_use&#x60;). A role still held by an ACTIVE member is refused with 409 &#x60;role_in_use&#x60; (&#x60;errors.active_holders&#x60; is the count). A system-default role is 409 &#x60;role_system_default&#x60;.
+An inactive role confers nothing (no permission, no rank), takes no new holder (&#x60;role_inactive&#x60; on assign), cannot be edited or be a parent, and is hidden from the default list. The assignments of its INACTIVE holders are kept (nothing is deleted); a holder reactivated while the role is inactive receives nothing from it. Idempotent: an inactive role answers 200. Answers the updated role.
 `,
 		requestFormat: 'json',
 		parameters: [
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
 			{
 				name: 'roleId',
 				type: 'Path',
@@ -9292,7 +9465,7 @@ transaction.
 				schema: z.string().uuid().optional()
 			}
 		],
-		response: z.void(),
+		response: RoleDto,
 		errors: [
 			{
 				status: 400,
@@ -9327,12 +9500,7 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			},
 			{
 				status: 409,
-				description: `&#x60;role_in_use&#x60; (an active member holds the role) or &#x60;role_system_default&#x60; (system-default roles cannot be deleted)`,
-				schema: ErrorResponse
-			},
-			{
-				status: 422,
-				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				description: `&#x60;role_in_use&#x60; (an active member holds the role) or &#x60;role_system_default&#x60; (system-default roles cannot be made inactive)`,
 				schema: ErrorResponse
 			},
 			{
@@ -9729,6 +9897,78 @@ tier or above (&#x60;grant_exceeds_authority&#x60;).
 			{
 				status: 422,
 				description: `Validation failure (RFC 9457 with field-level errors map)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 429,
+				description: `Rate limit exceeded; &#x60;Retry-After&#x60; carries the whole seconds to wait (rounded up).
+EVERY operation can answer this: a global per-client limiter (10 requests/s, burst 60)
+runs in front of the whole API, and its key map is capped (a new client is refused while
+the cap is full). The bucket is the client address (the end client the BFF forwards in
+&#x60;X-Forwarded-For&#x60;, never the BFF; IPv6 clients share a bucket per /64). Login, refresh,
+request-password-reset, reset-password, confirm-email-change and tenant registration also
+carry their own tighter per-client limit. change-password is limited per PERSON (5 per
+minute, burst 5, whichever address the requests come from).
+`,
+				schema: ErrorResponse
+			}
+		]
+	},
+	{
+		method: 'post',
+		path: '/api/v1/roles/:roleId/reactivate',
+		alias: 'postApiv1rolesRoleIdreactivate',
+		description: `Requires &#x60;identity.roles.manage&#x60;. Reactivating gives the role&#x27;s permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 &#x60;grant_exceeds_authority&#x60;). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role.
+`,
+		requestFormat: 'json',
+		parameters: [
+			{
+				name: 'X-Command-Id',
+				type: 'Header',
+				schema: z.string().min(36).max(36).uuid().optional()
+			},
+			{
+				name: 'roleId',
+				type: 'Path',
+				schema: z.string().uuid()
+			},
+			{
+				name: 'X-Tenant-Id',
+				type: 'Header',
+				schema: z.string().uuid().optional()
+			}
+		],
+		response: RoleDto,
+		errors: [
+			{
+				status: 400,
+				description: `Malformed request (invalid body, bad param shape)`,
+				schema: ErrorResponse
+			},
+			{
+				status: 403,
+				description: `Forbidden. &#x60;error&#x60; is one of: &#x60;forbidden&#x60; (the caller lacks the route&#x27;s permission in
+the effective tenant, or is not a valid actor), &#x60;tenant_scope_forbidden&#x60; (see
+TenantScopeForbidden), &#x60;self_modification_forbidden&#x60; (the caller targeted themself),
+&#x60;insufficient_rank&#x60; (the caller does not strictly outrank the target member or role,
+ADR 0069), &#x60;grant_exceeds_authority&#x60; (the change confers or removes a permission the
+caller does not hold, or &#x60;tenant.admin&#x60; as a non-owner), &#x60;admin_tier_required&#x60; (the change would give
+&#x60;identity.users.create&#x60; to a role or a member below the Administrator tier: a role below the tier cannot
+contain it, it cannot be an override of a member below the tier, and it cannot be requested or approved
+below the tier; owner ruling 2026-11-21), &#x60;ownership_authority_required&#x60;
+(a platform operator acting under &#x60;X-Tenant-Id&#x60; tried to change who OWNS the tenant:
+assign or revoke Company Owner, confer or remove &#x60;tenant.admin&#x60; by role or override, or
+deactivate or reactivate an owner, without &#x60;platform.tenants.ownership&#x60;; super users are unaffected).
+Editing a role acts on its active holders (&#x60;insufficient_rank&#x60;, &#x60;self_modification_forbidden&#x60;); lifting a
+member&#x27;s explicit revoke (an overrides change, or approving a request for a revoked name) needs the Admin
+tier or above (&#x60;grant_exceeds_authority&#x60;).
+(Like every authenticated operation, also &#x60;403 password_change_required&#x60; while the token carries &#x60;must_change_password&#x60;.)
+`,
+				schema: ErrorResponse
+			},
+			{
+				status: 404,
+				description: `Resource not found (per ADR 0044, enumeration-safe — may also mean &quot;exists but no access&quot;)`,
 				schema: ErrorResponse
 			},
 			{

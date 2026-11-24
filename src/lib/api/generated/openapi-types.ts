@@ -3417,10 +3417,16 @@ export interface paths {
 		/**
 		 * List roles in the caller's tenant
 		 * @description Requires `identity.roles.view` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
+		 *     `?status=active|inactive|all` (default `active`) picks the listing; roles are never deleted (ADR 0073),
+		 *     so an inactive role is listed with `?status=inactive`. `status_counts` carries the company's roles per
+		 *     status, whatever `status` is. Anything else is 400 `invalid_status_filter`.
 		 */
 		get: {
 			parameters: {
-				query?: never;
+				query?: {
+					/** @description Which records the list returns (ADR 0073: records are made inactive, never deleted). Default `active`; anything else than `active`, `inactive` or `all` is 400 `invalid_status_filter`. */
+					status?: components['parameters']['StatusFilter'];
+				};
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
@@ -3485,6 +3491,15 @@ export interface paths {
 					};
 					content: {
 						'application/json': components['schemas']['ListRolesResponse'];
+					};
+				};
+				/** @description `invalid_status_filter` - `status` is not active, inactive or all */
+				400: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
 					};
 				};
 				403: components['responses']['TenantScopeForbidden'];
@@ -3725,100 +3740,7 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Soft-delete a role
-		 * @description Requires `identity.roles.delete` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068).
-		 *     The caller must hold every permission the role carries (deleting removes them from every holder) and must
-		 *     be allowed to act on every holder, active or not (answered before `role_in_use`).
-		 *     A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the
-		 *     count); a role held only by inactive members is deleted and their assignments are removed in the same
-		 *     transaction.
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
-					 *     a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					roleId: components['parameters']['RoleId'];
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Role deleted */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['BadRequest'];
-				403: components['responses']['AuthorityForbidden'];
-				404: components['responses']['NotFound'];
-				/** @description `role_in_use` (an active member holds the role) or `role_system_default` (system-default roles cannot be deleted) */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
+		delete?: never;
 		options?: never;
 		head?: never;
 		/**
@@ -3959,6 +3881,239 @@ export interface paths {
 				429: components['responses']['TooManyRequests'];
 			};
 		};
+		trace?: never;
+	};
+	'/api/v1/roles/{roleId}/deactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make a role inactive
+		 * @description Requires `identity.roles.manage` (satisfied by `tenant.admin` in the caller's own tenant, or by `platform.*` equivalents for platform operators; ADR 0068). A role is never deleted (ADR 0073): it goes inactive.
+		 *     The decision is exactly what deleting a role used to ask. The caller must hold every permission the role carries (deactivating removes them from every holder) and must be allowed to act on every holder, active or not (answered before `role_in_use`). A role still held by an ACTIVE member is refused with 409 `role_in_use` (`errors.active_holders` is the count). A system-default role is 409 `role_system_default`.
+		 *     An inactive role confers nothing (no permission, no rank), takes no new holder (`role_inactive` on assign), cannot be edited or be a parent, and is hidden from the default list. The assignments of its INACTIVE holders are kept (nothing is deleted); a holder reactivated while the role is inactive receives nothing from it. Idempotent: an inactive role answers 200. Answers the updated role.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					roleId: components['parameters']['RoleId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The role, now inactive */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['RoleDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				/** @description `role_in_use` (an active member holds the role) or `role_system_default` (system-default roles cannot be made inactive) */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ErrorResponse'];
+					};
+				};
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/roles/{roleId}/reactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make an inactive role active again
+		 * @description Requires `identity.roles.manage`. Reactivating gives the role's permissions back to every holder, so it asks the deactivate authority (the caller holds every permission the role carries and may act on every holder) PLUS a durable hold of each of those permissions: a permission held only until a date cannot be conferred this way (403 `grant_exceeds_authority`). The security stamp of every ACTIVE holder rotates (their tokens are refreshed). Idempotent: an active role answers 200. Answers the updated role.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					roleId: components['parameters']['RoleId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The role, now active */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['RoleDto'];
+					};
+				};
+				400: components['responses']['BadRequest'];
+				403: components['responses']['AuthorityForbidden'];
+				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	'/api/v1/roles/{roleId}/parent': {
@@ -6573,7 +6728,9 @@ export interface paths {
 		/**
 		 * List Products (cursor-paginated)
 		 * @description Requires `inventory.catalog.read` OR `inventory.catalog.manage`.
-		 *     Returns the live (non-deleted) products for the caller's tenant.
+		 *     Returns the caller's company products: the ACTIVE ones by default, `?status=inactive` for the
+		 *     inactive ones and `?status=all` for both (products are never deleted, ADR 0073). The first page
+		 *     (no `cursor`) also carries `status_counts`.
 		 *     The order is fixed: newest first, (created_at, id) DESC, keyset
 		 *     paginated with `cursor` and `page_size`; there is no `sort`
 		 *     parameter. Every item carries its stock totals and earliest expiry
@@ -6588,8 +6745,8 @@ export interface paths {
 					/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 					cursor?: components['parameters']['Cursor'];
 					page_size?: components['parameters']['PageSize'];
-					/** @description When 'true', restricts to is_active products. Any other value is no filter (there is no "inactive only" filter). */
-					active?: 'true' | 'false';
+					/** @description Which records the list returns (ADR 0073: records are made inactive, never deleted). Default `active`; anything else than `active`, `inactive` or `all` is 400 `invalid_status_filter`. */
+					status?: components['parameters']['StatusFilter'];
 					/** @description Exact match on `dosage_form`, case-insensitive, trimmed. */
 					dosage_form?: string;
 					/** @description Exact match on `manufacturer`, case-insensitive, trimmed. */
@@ -6669,7 +6826,7 @@ export interface paths {
 						'application/json': components['schemas']['ListProductsResponse'];
 					};
 				};
-				/** @description `invalid_query` — a malformed cursor, or a `search`, `dosage_form` or `manufacturer` filter holding the NUL character (`%00`; it used to be a 500); or a `category`, `low_stock` or `expiring_within_days` value the server cannot read, named in `errors{<param>: [<rule>]}` (rules on each parameter) */
+				/** @description `invalid_status_filter` — `status` is not active, inactive or all; `invalid_query` — a malformed cursor, or a `search`, `dosage_form` or `manufacturer` filter holding the NUL character (`%00`; it used to be a 500); or a `category`, `low_stock` or `expiring_within_days` value the server cannot read, named in `errors{<param>: [<rule>]}` (rules on each parameter) */
 				400: {
 					headers: {
 						[name: string]: unknown;
@@ -6897,97 +7054,7 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Soft-delete a Product
-		 * @description Requires `inventory.catalog.manage`. Idempotent — repeat calls
-		 *     return 204. REJECTED with 409 `product_has_live_stock` if any
-		 *     live batch with quantity_on_hand > 0 exists.
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
-					 *     a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					productId: components['parameters']['ProductId'];
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Deleted (or already deleted) */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				400: components['responses']['TenantScopeInvalid'];
-				403: components['responses']['TenantScopeReadOnly'];
-				404: components['responses']['NotFound'];
-				/** @description Product has live batches with non-zero stock */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
+		delete?: never;
 		options?: never;
 		head?: never;
 		/**
@@ -7094,19 +7161,237 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description Product is deleted */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
 				422: components['responses']['Unprocessable'];
 				429: components['responses']['TooManyRequests'];
 			};
 		};
+		trace?: never;
+	};
+	'/api/v1/inventory/products/{productId}/deactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make a Product inactive
+		 * @description Requires `inventory.catalog.manage`. A product is never deleted (ADR 0073): it goes inactive.
+		 *     The product stays readable and editable, and its existing orders, batches and stock are
+		 *     untouched; an inactive product takes no new batch (`POST .../batches` is 409
+		 *     `product_inactive`). Idempotent: an inactive product answers 200 the same, with no event.
+		 *     Answers the updated product.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The product, now inactive */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ProductDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/inventory/products/{productId}/reactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make an inactive Product active again
+		 * @description Requires `inventory.catalog.manage`. Idempotent: an active product answers 200 the same, with
+		 *     no event. Answers the updated product.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					productId: components['parameters']['ProductId'];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description The product, now active */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['ProductDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	'/api/v1/inventory/product-categories': {
@@ -7414,7 +7699,7 @@ export interface paths {
 				400: components['responses']['TenantScopeInvalid'];
 				403: components['responses']['TenantScopeReadOnly'];
 				404: components['responses']['NotFound'];
-				/** @description `already_exists` — batch_number already exists for this product; `batch_expired` — `initial_quantity` above 0 for a batch whose expiry date has passed (nothing is written) */
+				/** @description `product_inactive` — the product is inactive and takes no new batch (reactivate it first; ADR 0073); `already_exists` — batch_number already exists for this product; `batch_expired` — `initial_quantity` above 0 for a batch whose expiry date has passed (nothing is written) */
 				409: {
 					headers: {
 						[name: string]: unknown;
@@ -13976,13 +14261,18 @@ export interface paths {
 		 *     `inventory.catalog.manage` (the picker a product form reads). The company's own
 		 *     list of classes a product may carry, in label order. It starts from the
 		 *     defaults of the market the company is created in and is the company's to add
-		 *     to, rename or remove: nothing in the API is tied to a particular class. `mode`
+		 *     to, rename or make inactive (never delete): nothing in the API is tied to a
+		 *     particular class. `?status=active|inactive|all` (default `active`) picks the
+		 *     listing, and `status_counts` carries the whole list per status. `mode`
 		 *     is the current `drug_schedule.mode`; `policy_version` is the policy version the
 		 *     list was read at.
 		 */
 		get: {
 			parameters: {
-				query?: never;
+				query?: {
+					/** @description Which records the list returns (ADR 0073: records are made inactive, never deleted). Default `active`; anything else than `active`, `inactive` or `all` is 400 `invalid_status_filter`. */
+					status?: components['parameters']['StatusFilter'];
+				};
 				header?: {
 					/**
 					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
@@ -14173,120 +14463,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * Remove a drug schedule class
-		 * @description Requires `company_settings.tax.manage`. The body carries the `reason` (required).
-		 *     A class a product still carries cannot be removed: `409
-		 *     drug_schedule_class_in_use` and nothing changes; clear it from those products
-		 *     first. A removal moves the policy to a new version and is kept in the history.
-		 *     Returns `200` with the updated list.
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: {
-					/**
-					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
-					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
-					 *     within the retention window (24h, Stripe canon). The scope is the verified
-					 *     tenant + person + membership + impersonation session + acted-on tenant
-					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
-					 *     route, tenant or session is a different command. Only 2xx answers are stored.
-					 *
-					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
-					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
-					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
-					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
-					 *     operations. Per ADR 0031 and ADR 0068 D11.
-					 */
-					'X-Command-Id'?: components['parameters']['XCommandId'];
-					/**
-					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
-					 *     slug-anchored, non-impersonation platform operators whose token and
-					 *     security stamp are valid AND who may select a foreign tenant: a super
-					 *     user, or an operator holding `platform.tenants.view`. The request then
-					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
-					 *     there via the `platform.*` equivalents. A platform-tenant member without
-					 *     that authority who names a foreign tenant gets 403
-					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
-					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
-					 *     validation, no lookup, no audit) for every other caller (tenant members,
-					 *     impersonation tokens) and on routes where it cannot apply: all
-					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
-					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
-					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
-					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
-					 *
-					 *     Writes are read-only under a foreign header by default: a non-read
-					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
-					 *     identity writes the operator scope tree uses (users, roles, role
-					 *     permissions, permission overrides, manager changes) or a
-					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
-					 *     dispatch and inventory mutations are never accepted under a foreign
-					 *     header.
-					 *
-					 *     A scoped request, or a write to another tenant through the URL alone, is
-					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
-					 *     (the operator) with reason `tenant-via-header` (header) or
-					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
-					 *     neither (header-less lifecycle calls, platform person
-					 *     operations, platform-module writes) use reason `platform-route`.
-					 *
-					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
-					 *     a header equal to the path tenant selects nothing: no scope
-					 *     authority is needed and no tenant is looked up, so the answer is the
-					 *     route's own permission gate whether or not the header is sent.
-					 *
-					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
-					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
-					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
-					 *     wins), 403
-					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
-					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
-					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
-					 *     suspended tenant on a non-path route; reads and
-					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
-					 *     (routes that act on the caller's own tenant only: permission requests
-					 *     and the marketplace lead purchase).
-					 */
-					'X-Tenant-Id'?: components['parameters']['XTenantId'];
-				};
-				path: {
-					classId: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					'application/json': components['schemas']['DeleteCompanyScheduleClassRequest'];
-				};
-			};
-			responses: {
-				/** @description The list after the removal */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['CompanyScheduleClassesDto'];
-					};
-				};
-				400: components['responses']['TenantScopeInvalid'];
-				403: components['responses']['TenantScopeReadOnly'];
-				404: components['responses']['NotFound'];
-				/** @description `drug_schedule_class_in_use`: a product still carries the class */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						'application/json': components['schemas']['ErrorResponse'];
-					};
-				};
-				422: components['responses']['Unprocessable'];
-				429: components['responses']['TooManyRequests'];
-			};
-		};
+		delete?: never;
 		options?: never;
 		head?: never;
 		/**
@@ -14394,10 +14571,254 @@ export interface paths {
 		};
 		trace?: never;
 	};
+	'/api/v1/company/drug-schedule-classes/{classId}/deactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make a drug schedule class inactive
+		 * @description Requires `company_settings.tax.manage`. A class is never deleted (ADR 0073): it goes
+		 *     inactive. An inactive class cannot be newly set on a product (`errors.drug_schedule:
+		 *     [inactive]`); a product that already carries it keeps it, and its label still resolves.
+		 *     The body carries the `reason` (required, kept in the settings history). Idempotent: an
+		 *     inactive class answers 200 and the policy version stays. Returns `200` with the list and the
+		 *     class in `class`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					classId: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CompanyScheduleClassStatusRequest'];
+				};
+			};
+			responses: {
+				/** @description The list after the change */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	'/api/v1/company/drug-schedule-classes/{classId}/reactivate': {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Make an inactive drug schedule class active again
+		 * @description Requires `company_settings.tax.manage`. The body carries the `reason` (required).
+		 *     Idempotent: an active class answers 200 and the policy version stays. Returns `200` with the
+		 *     list and the class in `class`.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					/**
+					 * @description Per-caller idempotency key (UUID). When supplied on an authenticated, state-changing
+					 *     request (POST / PUT / PATCH / DELETE) the server replays the original 2xx response
+					 *     within the retention window (24h, Stripe canon). The scope is the verified
+					 *     tenant + person + membership + impersonation session + acted-on tenant
+					 *     (`X-Tenant-Id`, operators only) + method and path, so the same key on another
+					 *     route, tenant or session is a different command. Only 2xx answers are stored.
+					 *
+					 *     The header is IGNORED (not rejected, nothing stored or replayed) on every
+					 *     operation under `/api/v1/auth/` (login and refresh answers carry plaintext refresh
+					 *     tokens and their request bodies carry passwords), on anonymous requests, and on
+					 *     safe methods (GET, HEAD, OPTIONS, TRACE); it is therefore not declared on those
+					 *     operations. Per ADR 0031 and ADR 0068 D11.
+					 */
+					'X-Command-Id'?: components['parameters']['XCommandId'];
+					/**
+					 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
+					 *     slug-anchored, non-impersonation platform operators whose token and
+					 *     security stamp are valid AND who may select a foreign tenant: a super
+					 *     user, or an operator holding `platform.tenants.view`. The request then
+					 *     runs in that tenant (RLS `app.tenant_id`) and permissions are evaluated
+					 *     there via the `platform.*` equivalents. A platform-tenant member without
+					 *     that authority who names a foreign tenant gets 403
+					 *     `tenant_scope_forbidden`, decided before any tenant lookup and identical
+					 *     for existing, unknown and suspended tenants. The header is IGNORED (no
+					 *     validation, no lookup, no audit) for every other caller (tenant members,
+					 *     impersonation tokens) and on routes where it cannot apply: all
+					 *     `/api/v1/auth/*` routes, `/api/v1/notifications*` (the caller's own
+					 *     inbox), `/api/v1/platform/*` routes other than the lead-credit balance
+					 *     read, `POST /api/v1/tenants`, `GET /api/v1/tenants`, the by-slug lookup
+					 *     and `GET /api/v1/search`. Without it, operators act in their own tenant.
+					 *
+					 *     Writes are read-only under a foreign header by default: a non-read
+					 *     request is 403 `tenant_scope_read_only` unless the route is one of the
+					 *     identity writes the operator scope tree uses (users, roles, role
+					 *     permissions, permission overrides, manager changes) or a
+					 *     `/api/v1/tenants/{tenantId}/...` path-tenant route. crm, orders, tasks,
+					 *     dispatch and inventory mutations are never accepted under a foreign
+					 *     header.
+					 *
+					 *     A scoped request, or a write to another tenant through the URL alone, is
+					 *     attributed durably: its outbox and audit rows carry `act_operator_id`
+					 *     (the operator) with reason `tenant-via-header` (header) or
+					 *     `tenant-via-path` (URL path only). Platform-gated routes that carry
+					 *     neither (header-less lifecycle calls, platform person
+					 *     operations, platform-module writes) use reason `platform-route`.
+					 *
+					 *     On a path-tenant route (`/api/v1/tenants/{tenantId}/...`, lifecycle)
+					 *     a header equal to the path tenant selects nothing: no scope
+					 *     authority is needed and no tenant is looked up, so the answer is the
+					 *     route's own permission gate whether or not the header is sent.
+					 *
+					 *     Errors for an honoured header: 400 `invalid_tenant_scope` (not a UUID,
+					 *     or supplied more than once), 400 `tenant_scope_conflict` (differs from
+					 *     the path tenant on `/api/v1/tenants/{tenantId}` routes, where the path
+					 *     wins), 403
+					 *     `tenant_scope_forbidden` (caller lacks scope authority), 403
+					 *     `tenant_scope_read_only` (see above), 404 `tenant_scope_not_found`
+					 *     (unknown tenant), 409 `tenant_not_active` (a write into a
+					 *     suspended tenant on a non-path route; reads and
+					 *     path-tenant routes are allowed), 403 `tenant_scope_not_supported`
+					 *     (routes that act on the caller's own tenant only: permission requests
+					 *     and the marketplace lead purchase).
+					 */
+					'X-Tenant-Id'?: components['parameters']['XTenantId'];
+				};
+				path: {
+					classId: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					'application/json': components['schemas']['CompanyScheduleClassStatusRequest'];
+				};
+			};
+			responses: {
+				/** @description The list after the change */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						'application/json': components['schemas']['CompanyScheduleClassesDto'];
+					};
+				};
+				400: components['responses']['TenantScopeInvalid'];
+				403: components['responses']['TenantScopeReadOnly'];
+				404: components['responses']['NotFound'];
+				422: components['responses']['Unprocessable'];
+				429: components['responses']['TooManyRequests'];
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description First page only (no cursor). The whole company's records per status, whatever the `status` filter is, for the status chips. */
+		StatusCounts: {
+			active: number;
+			inactive: number;
+		};
 		/**
 		 * @description RFC 9457 Problem Details + LeadKart legacy fields. Legacy `error`/
 		 *     `message` stay populated for backward compat. Validation failures
@@ -14602,6 +15023,8 @@ export interface components {
 			 */
 			id: string;
 			label: string;
+			/** @description false: the class cannot be newly set on a product; a product that already carries it keeps it (ADR 0073). */
+			active: boolean;
 		};
 		CompanyScheduleClassesDto: {
 			/** Format: int64 */
@@ -14610,6 +15033,7 @@ export interface components {
 			mode?: 'off' | 'optional' | 'required';
 			items: components['schemas']['CompanyScheduleClassDto'][];
 			class?: components['schemas']['CompanyScheduleClassDto'];
+			status_counts?: components['schemas']['StatusCounts'];
 		};
 		/**
 		 * @description Refusals: `errors.label` (`required`, `too_long`, `invalid_characters`,
@@ -14624,7 +15048,7 @@ export interface components {
 			label: string;
 			reason: string;
 		};
-		DeleteCompanyScheduleClassRequest: {
+		CompanyScheduleClassStatusRequest: {
 			reason: string;
 		};
 		CompanyGstRateDto: {
@@ -15059,6 +15483,8 @@ export interface components {
 			/** Format: uuid */
 			tenant_id: string;
 			name: string;
+			/** @description false: the role is inactive (ADR 0073). It confers nothing, takes no new holder and cannot be edited until it is reactivated; it is never deleted. */
+			is_active: boolean;
 			is_system_default: boolean;
 			is_super_admin: boolean;
 			hierarchy_level: number;
@@ -15077,6 +15503,7 @@ export interface components {
 		};
 		ListRolesResponse: {
 			roles: components['schemas']['RoleDto'][];
+			status_counts?: components['schemas']['StatusCounts'];
 		};
 		CreateRoleRequest: {
 			name: string;
@@ -15739,7 +16166,7 @@ export interface components {
 			default_sale_rate_paise?: number;
 			/**
 			 * Format: uuid
-			 * @description Optional. The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`); nothing in the API is tied to a particular class. Nullable at every `drug_schedule.mode` except where the company chose `required` (then it is needed: `errors.drug_schedule: [required]`). Under mode `off` a class is refused (`schedule_off`). A class that is not in the list is `not_in_list`.
+			 * @description Optional. The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`); nothing in the API is tied to a particular class. Nullable at every `drug_schedule.mode` except where the company chose `required` (then it is needed: `errors.drug_schedule: [required]`). Under mode `off` a class is refused (`schedule_off`). A class that is not in the list is `not_in_list`; an INACTIVE class is `inactive` (ADR 0073).
 			 */
 			drug_schedule?: string;
 			/** @description Optional. Absent or blank: `General`. Trimmed; at most 64 characters. */
@@ -15767,7 +16194,6 @@ export interface components {
 			 * @description Moves the product to another entry of the company GST list (the entry must be active; keeping the current one is always allowed). Blank is `required`.
 			 */
 			gst_rate_id?: string;
-			is_active?: boolean;
 			manufacturer?: string;
 			/** @description Optional free text. */
 			generic_name?: string;
@@ -15780,7 +16206,7 @@ export interface components {
 			 * @description Optional. The rate offered on a quotation line, in paise (Rs 100 crore cap). 0 or absent: none.
 			 */
 			default_sale_rate_paise?: number;
-			/** @description The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`). A blank string clears it. Clearing is refused only where the company chose mode `required` (`errors.drug_schedule: [required]`); a class is refused under mode `off` (`schedule_off`) and when not in the list (`not_in_list`). */
+			/** @description The id of a class of the COMPANY OWN list (`GET /company/drug-schedule-classes`). A blank string clears it. Clearing is refused only where the company chose mode `required` (`errors.drug_schedule: [required]`); a class is refused under mode `off` (`schedule_off`) when not in the list (`not_in_list`) and when the class is inactive (`inactive`) unless the product already carries it. */
 			drug_schedule?: string;
 			/** @description A blank value stores `General`. Changing the category never changes the GST rate. 422 `validation_failed`, `errors.product_category`: `too_long` (over 64 characters), `invalid_characters` (holds the NUL character). */
 			product_category?: string;
@@ -15799,6 +16225,7 @@ export interface components {
 			items: components['schemas']['ProductDto'][];
 			has_more: boolean;
 			next_cursor?: string;
+			status_counts?: components['schemas']['StatusCounts'];
 		};
 		BatchDto: {
 			/** Format: uuid */
@@ -16629,6 +17056,8 @@ export interface components {
 		/** @description Opaque base64-encoded keyset cursor. Omit for first page. */
 		Cursor: string;
 		PageSize: number;
+		/** @description Which records the list returns (ADR 0073: records are made inactive, never deleted). Default `active`; anything else than `active`, `inactive` or `all` is 400 `invalid_status_filter`. */
+		StatusFilter: 'active' | 'inactive' | 'all';
 		/**
 		 * @description Operator tenant scope (ADR 0039, ADR 0068 D7). Honoured ONLY for
 		 *     slug-anchored, non-impersonation platform operators whose token and

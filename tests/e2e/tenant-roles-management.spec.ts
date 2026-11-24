@@ -60,7 +60,7 @@ async function signInAsRoleManager(page: Page) {
 			'identity.roles.view',
 			'identity.roles.create',
 			'identity.roles.update',
-			'identity.roles.delete',
+			'identity.roles.manage',
 			'identity.users.view'
 		]
 	});
