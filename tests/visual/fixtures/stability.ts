@@ -18,33 +18,39 @@ import type { Page } from '@playwright/test';
  * transitions cause flake. Caret animation also disabled — `caret-color:
  * transparent` hides the input caret which blinks at the framerate.
  *
- * Applied via injected `<style>` in document head so it overrides
- * author CSS by source-order (added late).
+ * Applied as a same-origin stylesheet served by a Playwright route, added
+ * late so it overrides author CSS by source-order. The app's CSP refuses
+ * inline styles (`style-src-elem 'self'`) and these tests keep that CSP on,
+ * so an injected `<style>` is not an option.
  */
+const FREEZE_STYLESHEET = '/__visual-freeze.css';
+const FREEZE_CSS = `
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0ms !important;
+		animation-delay: 0ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0ms !important;
+		transition-delay: 0ms !important;
+		caret-color: transparent !important;
+	}
+	::selection {
+		background: transparent !important;
+	}
+	*::-webkit-scrollbar {
+		display: none !important;
+	}
+	html {
+		scrollbar-width: none !important;
+	}
+`;
+
 export async function freezeAnimations(page: Page): Promise<void> {
-	await page.addStyleTag({
-		content: `
-			*,
-			*::before,
-			*::after {
-				animation-duration: 0ms !important;
-				animation-delay: 0ms !important;
-				animation-iteration-count: 1 !important;
-				transition-duration: 0ms !important;
-				transition-delay: 0ms !important;
-				caret-color: transparent !important;
-			}
-			::selection {
-				background: transparent !important;
-			}
-			*::-webkit-scrollbar {
-				display: none !important;
-			}
-			html {
-				scrollbar-width: none !important;
-			}
-		`
-	});
+	await page.route(`**${FREEZE_STYLESHEET}`, (route) =>
+		route.fulfill({ contentType: 'text/css', body: FREEZE_CSS })
+	);
+	await page.addStyleTag({ url: FREEZE_STYLESHEET });
 }
 
 /**
