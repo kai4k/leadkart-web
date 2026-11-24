@@ -1,6 +1,6 @@
 {
 	"repo": "leadkart-go",
-	"commit": "a587c25089353b70f31f76a24c7d3ba7c19f4a3c",
+	"commit": "4171a06ed7f37f1f0a47415b27c7c7570c3e7c74",
 	"branch": "fix/commerce-integrity",
 	"spec": "api/openapi.yaml"
 }

@@ -13,6 +13,7 @@
 	import { displayName } from '#lib/features/auth/index.ts';
 	import { ConflictError, ValidationError } from '#lib/api/errors.ts';
 	import { formatDate } from '#lib/utils/format.ts';
+	import { PLATFORM_MANAGED_ROLE } from '#lib/features/roles/index.ts';
 
 	type Props = {
 		open: boolean;
@@ -22,7 +23,16 @@
 
 	let { open = $bindable(false), user, onOpenChange }: Props = $props();
 
-	const schema = z.object({ granted: z.array(z.string()), revoked: z.array(z.string()) });
+	// Go refuses (403 grant_exceeds_authority) any caller conferring a role-management name on a member override;
+	// removing one is always allowed, so only the grants list is checked.
+	const schema = z.object({
+		granted: z
+			.array(z.string())
+			.refine((names) => !names.some((n) => PLATFORM_MANAGED_ROLE.has(n)), {
+				message: 'form.errors.permissionNotGrantable'
+			}),
+		revoked: z.array(z.string())
+	});
 
 	const mutation = replacePermissionOverridesMutation();
 	// The component outlives the surface: detach the observer(s) when it opens or closes, so a late failure toasts.

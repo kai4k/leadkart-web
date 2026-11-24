@@ -348,6 +348,25 @@ describe('PermissionOverridesPanel', () => {
 		);
 	});
 
+	it('granting a role-management name is refused in the form (Go: 403 grant_exceeds_authority); revoking one is sent', async () => {
+		gw.replacePermissionOverrides.mockResolvedValue(undefined);
+		open();
+		const [grants, revokes] = tags();
+		addTag(grants!, 'identity.roles.update');
+		save();
+		await vi.waitFor(() =>
+			expect(document.body.textContent).toContain("can't be granted to a member")
+		);
+		expect(gw.replacePermissionOverrides).not.toHaveBeenCalled();
+		document
+			.querySelector<HTMLElement>('button[aria-label="Remove identity.roles.update"]')!
+			.click();
+		flushSync();
+		addTag(revokes!, 'identity.roles.manage');
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
+	});
+
 	it('a member with no overrides: empty lists are a valid submit and still carry the version', async () => {
 		gw.replacePermissionOverrides.mockResolvedValue(undefined);
 		open(

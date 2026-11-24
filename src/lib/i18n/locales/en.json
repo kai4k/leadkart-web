@@ -451,7 +451,8 @@
 			"slugDoubleHyphen": "Use single dashes only, never two in a row.",
 			"itemsRequired": "Add at least one line item.",
 			"selectOrder": "Select at least one order.",
-			"permissionNamesInvalid": "One or more permission names are invalid."
+			"permissionNamesInvalid": "One or more permission names are invalid.",
+			"permissionNotGrantable": "Role-management permissions are set by LeadKart and can't be granted to a member."
 		},
 		"passwordRule": {
 			"min_length": "The password is too short.",
