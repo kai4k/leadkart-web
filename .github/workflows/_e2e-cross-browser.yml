@@ -1,0 +1,65 @@
+name: _e2e-cross-browser
+# Reusable workflow — the e2e suite in Firefox and WebKit, push to main only (ci.yml gates the call).
+# Pull requests run Chromium alone (_e2e.yml); a browser-specific bug is caught here, on main, after merge.
+#
+# Same Playwright image, same build artifact, same sharding pattern as _e2e.yml.
+#
+# Sizing: 507 tests, `workers: 1`, ~3 s a test on Chromium; Firefox and WebKit run ~1.5x slower. 6 shards per
+# browser = ~85 tests a shard = ~6-8 min of tests + ~1.5 min of setup, well under the 15-minute job timeout.
+# 12 jobs run in parallel, so the expected wall-clock for the whole tier is ~9-10 min (the slowest shard), run
+# alongside the Chromium shards, not after them. These are estimates until the first push to main reports real
+# numbers; if a shard nears 12 min, raise `total` (one number, below).
+
+on:
+  workflow_call:
+    inputs:
+      playwright-image:
+        description: Official Playwright image for the locked version (browsers + system packages).
+        required: true
+        type: string
+
+jobs:
+  e2e:
+    name: E2E ${{ matrix.browser }} (shard ${{ matrix.shard }}/${{ matrix.total }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: ${{ inputs.playwright-image }}
+      options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+        shard: [1, 2, 3, 4, 5, 6]
+        total: [6]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: build/
+
+      - name: E2E ${{ matrix.browser }} — shard ${{ matrix.shard }}/${{ matrix.total }}
+        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/${{ matrix.total }}
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces-${{ matrix.browser }}-shard-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 14

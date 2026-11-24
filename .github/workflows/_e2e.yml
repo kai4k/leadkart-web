@@ -48,11 +48,8 @@ jobs:
           path: build/
 
       - name: E2E — shard ${{ matrix.shard }}/${{ matrix.total }}
-        # Chromium-only matrix per chore/ci-cost-reduction (~70% of
-        # browser usage is Chromium-based; Firefox + WebKit re-add when
-        # a browser-specific bug surfaces). The blob reporter writes
-        # per-shard results which a merge job could later combine into
-        # a single HTML report (Wave-2 follow-up).
+        # Pull requests run Chromium alone; Firefox and WebKit run on push to main
+        # (_e2e-cross-browser.yml, same image and sharding pattern).
         run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/${{ matrix.total }}
         env:
           CI: 'true'

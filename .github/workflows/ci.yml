@@ -103,6 +103,15 @@ jobs:
     with:
       playwright-image: ${{ needs.install.outputs.playwright-image }}
 
+  # ─── Firefox + WebKit e2e, push to main only (pull requests run Chromium alone) ───
+  e2e-cross-browser:
+    name: E2E cross-browser
+    needs: [install, build]
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/_e2e-cross-browser.yml
+    with:
+      playwright-image: ${{ needs.install.outputs.playwright-image }}
+
   # ─── Visual regression (chromium, depends on build artifact) ───
   visual:
     name: Visual
@@ -144,7 +153,7 @@ jobs:
   ci-pass:
     name: CI pass
     if: always()
-    needs: [install, lint, typecheck, test, build, e2e, visual, a11y]
+    needs: [install, lint, typecheck, test, build, e2e, e2e-cross-browser, visual, a11y]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
@@ -152,3 +161,5 @@ jobs:
         uses: re-actors/alls-green@release/v1
         with:
           jobs: ${{ toJSON(needs) }}
+          # e2e-cross-browser is skipped on pull requests by design; on push to main it is required.
+          allowed-skips: ${{ github.event_name == 'push' && '' || 'e2e-cross-browser' }}
