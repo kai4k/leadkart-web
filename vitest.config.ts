@@ -104,28 +104,16 @@ export default defineConfig({
 				'src/lib/hooks/index.ts',
 				'src/lib/icons/index.ts'
 			],
-			// Coverage thresholds — re-ratcheted 2026-05-25 to the measured
-			// floor after the CRM module rollout, primitive expansion, and
-			// Wave-1/Wave-2 architecture-test work. The denominator grew
-			// ~60% (8.8k → 13.2k source lines) without proportional unit-
-			// test growth because:
-			//   - Svelte components + TanStack query hooks require jsdom +
-			//     SvelteKit mock scaffolding (Phase F work).
-			//   - E2E suite (133 Playwright tests) covers the route-level
-			//     happy paths the unit suite would otherwise duplicate.
-			//
-			// Measured 2026-05-25: statements 5.38%, branches 8.87%,
-			//   functions 3.03%, lines 7.03%. Thresholds set 0.3-0.9 pp
-			//   below to absorb minor float drift without flake.
-			//
-			// Tracked: Phase F coverage push — scaffold SvelteKit mock +
-			//   add Storybook-backed test-storybook snapshot tests to
-			//   push statements/lines back to ≥9% / ≥6%.
+			// Coverage floors, set by the owner on 2026-11-24: "at least 50 percent"; set at 65/62/62/65, a few points
+			// under the measured 70/67/67/70 so float drift and a small untested change do not flake the build.
+			// They are enforced on the WHOLE suite by the merged-coverage job in .github/workflows/_test.yml (each
+			// shard switches its own off: a shard alone sees a fraction of the code). Raise them as coverage grows;
+			// never lower one to make a build pass.
 			thresholds: {
-				statements: 5,
-				branches: 8,
-				functions: 3,
-				lines: 6
+				statements: 65,
+				branches: 62,
+				functions: 62,
+				lines: 65
 			}
 		}
 	}
