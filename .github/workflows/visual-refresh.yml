@@ -12,6 +12,11 @@ name: visual-refresh
 # How to run:
 #   GitHub → Actions → visual-refresh → Run workflow → pick the branch.
 #
+# After it commits: the bot's commit-back does not start CI (GITHUB_TOKEN
+# pushes never do), so the new baselines are first compared on the next
+# push. That push must change a file: CI's push trigger has
+# `paths-ignore`, and an empty commit changes no paths, so it skips CI.
+#
 # Industry canon (Vercel Argos / Stripe Visual / Chromatic): visual
 # refresh is a deliberate human-triggered step, not an auto-pass on
 # every PR. The baselines committed by this workflow ARE the new
