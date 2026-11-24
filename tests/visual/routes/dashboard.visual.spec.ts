@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 import { signInForVisual } from '../fixtures/auth';
-import { SNAPSHOT_OPTIONS, stabilise } from '../fixtures/stability';
+import { expectShots, stabilise } from '../fixtures/stability';
 import { VIEWPORTS } from '../fixtures/viewports';
 
 /**
@@ -44,10 +44,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/dashboard');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`dashboard-platform-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `dashboard-platform`, vp.name);
 		});
 
 		test('tenant-admin', async ({ page }) => {
@@ -58,10 +55,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/dashboard');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`dashboard-tenant-admin-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `dashboard-tenant-admin`, vp.name);
 		});
 
 		test('tenant-user', async ({ page }) => {
@@ -72,10 +66,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/dashboard');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`dashboard-tenant-user-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `dashboard-tenant-user`, vp.name);
 		});
 	});
 }

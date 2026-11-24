@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 import { signInForVisual } from '../fixtures/auth';
-import { SNAPSHOT_OPTIONS, stabilise } from '../fixtures/stability';
+import { expectShots, stabilise } from '../fixtures/stability';
 import { VIEWPORTS } from '../fixtures/viewports';
 import { fakeTenantDto } from '../../e2e/helpers/fake-jwt';
 
@@ -70,10 +70,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/operator/tenants');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`operator-tenants-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `operator-tenants`, vp.name);
 		});
 
 		test('persons directory', async ({ page }) => {
@@ -93,10 +90,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/operator/persons');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`operator-persons-empty-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `operator-persons-empty`, vp.name);
 		});
 	});
 }

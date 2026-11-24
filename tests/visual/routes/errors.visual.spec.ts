@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { SNAPSHOT_OPTIONS, stabilise } from '../fixtures/stability';
+import { expectShots, stabilise } from '../fixtures/stability';
 import { VIEWPORTS } from '../fixtures/viewports';
 
 /**
@@ -25,10 +25,7 @@ for (const vp of VIEWPORTS) {
 			// SvelteKit returns 404 with the nearest +error.svelte rendered.
 			expect(response?.status()).toBe(404);
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`404-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `404`, vp.name);
 		});
 	});
 }

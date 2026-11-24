@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { SNAPSHOT_OPTIONS, stabilise } from '../fixtures/stability';
+import { test } from '@playwright/test';
+import { expectShots, stabilise } from '../fixtures/stability';
 import { VIEWPORTS } from '../fixtures/viewports';
 
 /**
@@ -26,46 +26,31 @@ for (const vp of VIEWPORTS) {
 		test('signin', async ({ page }) => {
 			await page.goto('/signin');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`signin-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `signin`, vp.name);
 		});
 
 		test('forgot-password', async ({ page }) => {
 			await page.goto('/forgot-password');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`forgot-password-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `forgot-password`, vp.name);
 		});
 
 		test('reset-password — with token', async ({ page }) => {
 			await page.goto('/reset-password?token=mock-token-for-visual');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`reset-password-with-token-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `reset-password-with-token`, vp.name);
 		});
 
 		test('reset-password — missing token', async ({ page }) => {
 			await page.goto('/reset-password');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`reset-password-missing-token-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `reset-password-missing-token`, vp.name);
 		});
 
 		test('verify-email — with token', async ({ page }) => {
 			await page.goto('/verify-email?token=mock-verify-token');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`verify-email-with-token-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `verify-email-with-token`, vp.name);
 		});
 	});
 }

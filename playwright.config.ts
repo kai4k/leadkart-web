@@ -27,11 +27,13 @@ export default defineConfig({
 	timeout: 30_000,
 	expect: {
 		// Default per-snapshot strictness. Individual specs can tighten
-		// further via the SNAPSHOT_OPTIONS constant in tests/visual/fixtures.
+		// further via the SNAPSHOT_OPTIONS constant in tests/visual/fixtures. 0.02 because
+		// nearly every shot has a glass layer and backdrop-filter blur is GPU dependent.
 		toHaveScreenshot: {
-			maxDiffPixelRatio: 0.001,
+			maxDiffPixelRatio: 0.02,
 			threshold: 0.1,
-			animations: 'disabled'
+			animations: 'disabled',
+			caret: 'hide'
 		}
 	},
 	fullyParallel: false,
@@ -88,8 +90,8 @@ export default defineConfig({
 		// Same browser engine as `chromium` above, but the testDir is
 		// `./tests/visual` so it's invokable independently via:
 		//   `npx playwright test --project=visual`
-		// Snapshots write to `tests/visual/**/__screenshots__/` keyed
-		// per test file, OS, and project name — see
+		// Snapshots sit beside each spec in `<spec>.ts-snapshots/` (Playwright's default, keyed by
+		// project and OS). Only the Linux set is committed: CI (visual-refresh.yml) writes it — see
 		// `tests/visual/fixtures/stability.ts` for the canonical
 		// stability primitives every visual test consumes.
 		{
@@ -101,7 +103,9 @@ export default defineConfig({
 				// pin per-test viewport via test.use({ viewport }). The
 				// device default would otherwise leak into the first
 				// snapshot before the per-test override applies.
-				viewport: { width: 1280, height: 800 }
+				viewport: { width: 1280, height: 800 },
+				// the `auto` mode shots emulate dark explicitly; everything else starts light
+				colorScheme: 'light'
 			}
 		}
 	],

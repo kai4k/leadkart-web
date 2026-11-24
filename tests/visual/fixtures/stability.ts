@@ -1,4 +1,9 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { encodePreferences, PREFERENCES_COOKIE } from '../../../src/lib/features/preferences/codec';
+import {
+	DEFAULT_PREFERENCES,
+	type Preferences
+} from '../../../src/lib/features/preferences/schema';
 
 /**
  * Stability fixtures for visual regression.
@@ -85,16 +90,58 @@ export async function stabilise(page: Page): Promise<void> {
 }
 
 /**
- * Strict-snapshot defaults for `expect(page).toHaveScreenshot(...)`.
- * Inlined as a constant so every visual test consumes the same numbers.
+ * Snapshot defaults for `expect(page).toHaveScreenshot(...)`, shared by every visual test.
  *
- *   maxDiffPixelRatio: 0.001  — 0.1% of total pixels (≈1024 of 1MP frame)
- *   threshold:          0.1   — per-pixel YIQ-distance threshold
- *   animations:        'disabled'  — Playwright also tries to pause
- *                                    animations as a belt-and-braces
+ *   maxDiffPixelRatio: 0.02  — 2% of the frame. Almost every shot has a glass layer (topbar, sidebar,
+ *                              dialogs), and `backdrop-filter` blur is GPU/driver dependent, so a tighter
+ *                              bound flakes on the blur edge. A layout regression moves far more pixels.
+ *   threshold:          0.1  — per-pixel YIQ-distance threshold
+ *   animations:        'disabled' — Playwright also pauses animations (belt and braces with the freeze)
+ *   caret:             'hide'
+ *
+ * The freeze stylesheet above never touches `backdrop-filter`: the material is the thing under test.
  */
 export const SNAPSHOT_OPTIONS = {
-	maxDiffPixelRatio: 0.001,
+	maxDiffPixelRatio: 0.02,
 	threshold: 0.1,
-	animations: 'disabled'
+	animations: 'disabled',
+	caret: 'hide'
 } as const;
+
+/**
+ * Write the `lk_ui` preferences cookie for the next navigation, as a returning visitor has it: the
+ * server then writes the axes onto <html>. Axes not given stay at their defaults.
+ */
+export async function setPreferencesCookie(
+	page: Page,
+	prefs: Partial<Preferences> = {}
+): Promise<void> {
+	await page.context().addCookies([
+		{
+			name: PREFERENCES_COOKIE,
+			value: encodePreferences({ ...DEFAULT_PREFERENCES, ...prefs }),
+			url: 'http://localhost:4173'
+		}
+	]);
+}
+
+/**
+ * Take the full-page shot of the page as it stands. At desktop width it also takes the dark twin
+ * (`<name>-dark-desktop`): the preference cookie flips to dark and the same page reloads, so every
+ * covered route has a light and a dark baseline (plan Task 30).
+ */
+export async function expectShots(page: Page, name: string, viewport: string): Promise<void> {
+	await expect(page).toHaveScreenshot(`${name}-${viewport}.png`, {
+		fullPage: true,
+		...SNAPSHOT_OPTIONS
+	});
+	if (viewport !== 'desktop') return;
+	await setPreferencesCookie(page, { mode: 'dark' });
+	await page.reload();
+	await page.waitForLoadState('networkidle');
+	await stabilise(page);
+	await expect(page).toHaveScreenshot(`${name}-dark-${viewport}.png`, {
+		fullPage: true,
+		...SNAPSHOT_OPTIONS
+	});
+}

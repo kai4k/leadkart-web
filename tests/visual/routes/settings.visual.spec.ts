@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { test } from '@playwright/test';
 import { signInForVisual } from '../fixtures/auth';
-import { SNAPSHOT_OPTIONS, stabilise } from '../fixtures/stability';
+import { expectShots, stabilise } from '../fixtures/stability';
 import { VIEWPORTS } from '../fixtures/viewports';
 import { fakeTenantDto, fakeUserDto, TEST_TENANT_ID } from '../../e2e/helpers/fake-jwt';
 
@@ -30,10 +30,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/account/profile');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-account-profile-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-account-profile`, vp.name);
 		});
 
 		test('account / security', async ({ page }) => {
@@ -44,10 +41,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/account/security');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-account-security-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-account-security`, vp.name);
 		});
 
 		test('account / sessions — empty', async ({ page }) => {
@@ -58,10 +52,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/account/sessions');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-account-sessions-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-account-sessions`, vp.name);
 		});
 
 		// ── Tenant ─────────────────────────────────────────────────
@@ -81,10 +72,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/tenant/profile');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-tenant-profile-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-tenant-profile`, vp.name);
 		});
 
 		test('tenant / statutory', async ({ page }) => {
@@ -103,10 +91,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/tenant/statutory');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-tenant-statutory-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-tenant-statutory`, vp.name);
 		});
 
 		test('tenant / contact', async ({ page }) => {
@@ -125,10 +110,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/tenant/contact');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-tenant-contact-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-tenant-contact`, vp.name);
 		});
 
 		test('tenant / preferences', async ({ page }) => {
@@ -147,10 +129,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/tenant/preferences');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-tenant-preferences-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-tenant-preferences`, vp.name);
 		});
 
 		// ── RBAC ───────────────────────────────────────────────────
@@ -171,10 +150,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/users');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-users-empty-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-users-empty`, vp.name);
 		});
 
 		test('users — populated', async ({ page }) => {
@@ -212,10 +188,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/users');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-users-populated-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-users-populated`, vp.name);
 		});
 
 		test('roles — empty', async ({ page }) => {
@@ -227,10 +200,7 @@ for (const vp of VIEWPORTS) {
 			await page.goto('/settings/roles');
 			await page.waitForLoadState('networkidle');
 			await stabilise(page);
-			await expect(page).toHaveScreenshot(`settings-roles-empty-${vp.name}.png`, {
-				fullPage: true,
-				...SNAPSHOT_OPTIONS
-			});
+			await expectShots(page, `settings-roles-empty`, vp.name);
 		});
 	});
 }
