@@ -24,6 +24,10 @@ import {
 	PLATFORM_RESERVED,
 	SEEDED
 } from '../../support/go-personas.ts';
+import {
+	isRequestable,
+	requestablePermissions
+} from '#lib/features/roles/permissions-catalogue.ts';
 
 const goDir = resolve(process.env.LEADKART_GO_DIR ?? '../leadkart-go');
 const haveGo = existsSync(join(goDir, '.git'));
@@ -194,6 +198,21 @@ describe.skipIf(!haveGo)('the persona builder equals Go at the pinned commit', (
 		expect(sorted(used)).toEqual(sorted(PLATFORM_MANAGED_ROLE));
 	});
 
+	it('IsRequestable is "implied by tenant.admin and not platform-managed", and the web list agrees name by name', () => {
+		const src = stripComments(goFile('internal/identity/domain/permission/implication.go'));
+		expect(src.replace(/\s+/g, ' ')).toContain(
+			'func IsRequestable(name string) bool { return ImpliedByTenantAdmin(name) && !IsPlatformManagedRole(name) }'
+		);
+		expect(src.replace(/\s+/g, ' ')).toContain(
+			'func ImpliedByTenantAdmin(name string) bool { return IsKnown(name) && !IsPlatformReserved(name) }'
+		);
+		const go = [...paths.values()].filter(
+			(n) => !PLATFORM_RESERVED.has(n) && !PLATFORM_MANAGED_ROLE.has(n)
+		);
+		expect(sorted(requestablePermissions().map((e) => e.name))).toEqual(sorted(go));
+		for (const n of PLATFORM_MANAGED_ROLE) expect(isRequestable(n), n).toBe(false);
+	});
+
 	it('the authorize.go clauses the persona rule models are still the ones Go has', () => {
 		const src = stripComments(goFile('internal/identity/ports/authn/authorize.go'));
 		const squash = (s: string) => s.replace(/\s+/g, ' ');
@@ -202,9 +221,9 @@ describe.skipIf(!haveGo)('the persona builder equals Go at the pinned commit', (
 		expect(text).toContain(
 			'return c.IsSuperUser && (!permission.IsPlatformManagedRole(required) || c.TenantSlug == PlatformTenantSlug)'
 		);
-		// only an impersonation session holds them through the tenant plane
+		// only an impersonation session or a platform operator holds them through the tenant plane
 		expect(text).toMatch(
-			/func tenantPlaneMayHold\(c \*jwt\.Claims, required string\) bool \{ if permission\.IsPlatformManagedRole\(required\) \{ return c\.IsImpersonation\(\) \}/
+			/func tenantPlaneMayHold\(c \*jwt\.Claims, required string\) bool \{ if permission\.IsPlatformManagedRole\(required\) \{ return c\.IsImpersonation\(\) \|\| IsPlatformOperator\(c\) \}/
 		);
 		// an impersonation token is not a platform operator
 		expect(text).toContain(

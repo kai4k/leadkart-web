@@ -266,9 +266,32 @@ export const ADMIN_TIER_ONLY: ReadonlySet<string> = new Set([
 	'company_settings.tax.manage'
 ]);
 
-/** The names a member may ask for in a permission request: the catalogue minus the platform-reserved ones. */
+/**
+ * Go's `permission.IsPlatformManagedRole` (implication.go): `identity.roles.create`, `update` and `manage` are LeadKart
+ * platform authority (owner ruling 2026-11-25, ADR 0073 addendum). A company never holds, is granted or requests them:
+ * Go answers 422 `permission_not_requestable` to a request and 403 `grant_exceeds_authority` to an override, a role
+ * grant, an assign or an approval; only a platform operator (and an impersonation session) holds them. Held against
+ * Go in `tests/unit/features/auth/permissions.test.ts`.
+ */
+export const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
+	'identity.roles.create',
+	'identity.roles.update',
+	'identity.roles.manage'
+]);
+
+/**
+ * Go's `permission.IsRequestable`: exactly what `tenant.admin` implies (every catalogue name that is not
+ * platform-reserved) minus the platform-managed role names. The one list behind every picker of names a company may
+ * ask for or be given; the Go comparison in `permissions.test.ts` holds it to Go's own rule.
+ */
+export const isRequestable = (name: string): boolean =>
+	PERMISSION_CATALOGUE.some((entry) => entry.name === name) &&
+	!PLATFORM_RESERVED.has(name) &&
+	!PLATFORM_MANAGED_ROLE.has(name);
+
+/** The names a member may ask for in a permission request (Go's `IsRequestable`). */
 export const requestablePermissions = (): PermissionCatalogueEntry[] =>
-	PERMISSION_CATALOGUE.filter((entry) => !PLATFORM_RESERVED.has(entry.name));
+	PERMISSION_CATALOGUE.filter((entry) => isRequestable(entry.name));
 
 /**
  * The names of a role's permission tree the caller may not change, by name -> why. Go decides per CHANGED name

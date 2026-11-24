@@ -154,6 +154,37 @@ describe('go-personas: the seeded roles are their real grants', () => {
 		expect(both.effective_permissions).toContain(P.ordersQuotationsManage);
 	});
 
+	it('no company member holds the three role-management names (tenantPlaneMayHold); an operator and an impersonation session do', () => {
+		const three = ['identity.roles.create', 'identity.roles.update', 'identity.roles.manage'];
+		const asked = [...three, 'identity.roles.assign'];
+		// owner (tenant.admin), and a company member with the names granted outright
+		expect(OWNER.effective_permissions).not.toContain(three[0]);
+		const granted = effectivePermissions({ permissions: three });
+		for (const n of three) expect(granted).not.toContain(n);
+		// a company super user
+		const companySuper = effectivePermissions({ permissions: [], isSuperUser: true });
+		for (const n of three) expect(companySuper).not.toContain(n);
+		// assign / revoke are unchanged
+		expect(OWNER.effective_permissions).toContain('identity.roles.assign');
+		// platform-tenant staff keep them, through the platform equivalent or a super user
+		const operator = effectivePermissions({
+			permissions: [P.platformRolesManage],
+			isPlatform: true
+		});
+		for (const n of asked) expect(operator).toContain(n);
+		const platformStaffGrant = effectivePermissions({ permissions: three, isPlatform: true });
+		for (const n of three) expect(platformStaffGrant).toContain(n);
+		for (const n of three) expect(SUPER_USER.effective_permissions).toContain(n);
+		// an impersonation session acts with the company's own grants and is not an operator
+		const session = effectivePermissions({
+			permissions: ['tenant.admin'],
+			isPlatform: true,
+			isImpersonation: true
+		});
+		for (const n of three) expect(session).toContain(n);
+		expect(session).not.toContain(P.platformTenantsView);
+	});
+
 	it('Go Rank.Tier bands', () => {
 		expect([0, 1, 10, 11, 20, 21, 30, 31, 99].map(tierOfRank)).toEqual([
 			'owner',

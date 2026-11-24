@@ -1,5 +1,5 @@
 /**
- * The web follows the Go API as pinned in `src/lib/api/generated/SOURCE.json` (leadkart-go c1db07e3, BFF_API_CHANGES.md):
+ * The web follows the Go API as pinned in `src/lib/api/generated/SOURCE.json` (leadkart-go a587c250,BFF_API_CHANGES.md):
  * one named test per row the web acts on at the feature layer.
  */
 import { readFileSync } from 'node:fs';
@@ -96,8 +96,8 @@ describe('row 54: the company name comes from the server', () => {
 });
 
 describe('the pin', () => {
-	it('SOURCE.json records leadkart-go c1db07e3 (main)', () => {
+	it('SOURCE.json records leadkart-go a587c250 (G2l)', () => {
 		const pin = JSON.parse(readFileSync('src/lib/api/generated/SOURCE.json', 'utf8'));
-		expect(pin.commit.startsWith('c1db07e3')).toBe(true);
+		expect(pin.commit.startsWith('a587c250')).toBe(true);
 	});
 });

@@ -24,7 +24,13 @@
  */
 import type { Capabilities } from '../../src/lib/features/auth/capabilities.ts';
 import { P } from '../../src/lib/features/auth/permissions.ts';
-import { PERMISSION_CATALOGUE } from '../../src/lib/features/roles/permissions-catalogue.ts';
+import {
+	PERMISSION_CATALOGUE,
+	PLATFORM_MANAGED_ROLE
+} from '../../src/lib/features/roles/permissions-catalogue.ts';
+
+/** Go `IsPlatformManagedRole`: the web's one copy lives in the catalogue (the pinned test holds it to Go). */
+export { PLATFORM_MANAGED_ROLE };
 
 const TENANT_ADMIN = 'tenant.admin';
 
@@ -89,17 +95,6 @@ export interface Claims {
 }
 
 /**
- * Go `IsPlatformManagedRole` (owner ruling 2026-11-25, ADR 0073 addendum): a company never creates, edits or
- * deletes its own roles. No tenant-plane grant (explicit, implied by tenant.admin, a company super-admin role)
- * satisfies these three; only the platform.roles.manage equivalent of an operator does.
- */
-export const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
-	P.identityRolesCreate,
-	P.identityRolesUpdate,
-	P.identityRolesManage
-]);
-
-/**
  * Go `satisfiesIn` for the caller's own tenant, with `superUserHolds` and `tenantPlaneMayHold` (the pinned test
  * compares the three role names and the clauses below to Go's source).
  */
@@ -111,9 +106,10 @@ function satisfies(c: Claims, required: string): boolean {
 	const operator = c.isPlatform === true && !impersonating;
 	// superUserHolds
 	if (c.isSuperUser && (!platformManaged || c.isPlatform === true)) return true;
-	// tenantPlaneMayHold: the three role-management names are held only by an impersonation session (the
-	// admin-tier rank rule is not modelled here, as before).
-	const tenantPlane = platformManaged ? impersonating : true;
+	// tenantPlaneMayHold: the three role-management names are held through the tenant plane only by an impersonation
+	// session or a slug-anchored platform operator (LeadKart staff in the platform tenant); no company member holds
+	// them (the admin-tier rank rule is not modelled here, as before).
+	const tenantPlane = platformManaged ? impersonating || operator : true;
 	if (c.permissions.includes(required)) {
 		if (PLATFORM_RESERVED.has(required) && required !== TENANT_ADMIN) return operator;
 		if (tenantPlane) return true;

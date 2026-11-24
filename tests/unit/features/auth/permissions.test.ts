@@ -12,6 +12,7 @@ import SOURCE from '#lib/api/generated/SOURCE.json';
 import { ACTION, P } from '#lib/features/auth/permissions.ts';
 import {
 	PERMISSION_CATALOGUE,
+	PLATFORM_MANAGED_ROLE,
 	PLATFORM_RESERVED,
 	requestablePermissions,
 	unchangeablePermissions
@@ -108,7 +109,18 @@ describe("PLATFORM_RESERVED (Go's platformReserved)", () => {
 		expect(offered).toContain('crm.leads.assign');
 		expect(offered).toContain('identity.users.create');
 		for (const name of PLATFORM_RESERVED) expect(offered).not.toContain(name);
-		expect(offered.length).toBe(names.length - PLATFORM_RESERVED.size);
+		expect(offered.length).toBe(names.length - PLATFORM_RESERVED.size - PLATFORM_MANAGED_ROLE.size);
+		// owner ruling 2026-11-25: a company can neither ask for nor be given the role-management names
+		for (const name of [
+			'identity.roles.create',
+			'identity.roles.update',
+			'identity.roles.manage'
+		]) {
+			expect(offered, name).not.toContain(name);
+			expect(PLATFORM_MANAGED_ROLE.has(name), name).toBe(true);
+		}
+		expect(offered).toContain('identity.roles.assign');
+		expect(offered).toContain('identity.roles.view');
 		// the examples the forms used to show are not permissions at all
 		expect(names).not.toContain('crm.leads.reassign');
 		expect(names).not.toContain('crm.leads.delete');
