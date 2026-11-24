@@ -197,6 +197,10 @@ test.describe('Register tenant — form validation', () => {
 });
 
 test.describe('Loading + feedback canon', () => {
+	// The skeleton test holds a request open with page.route. In WebKit a page.route misses the requests of a page a
+	// service worker controls, so the worker is blocked in this describe (the other describes keep it).
+	test.use({ serviceWorkers: 'block' });
+
 	test.beforeEach(async () => {
 		await resetMock();
 	});
