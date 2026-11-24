@@ -105,13 +105,10 @@ test.describe('proxy redirects on writes', () => {
 });
 
 test.describe('server-side Go calls never follow redirects', () => {
-	// ROOT CAUSE of the old "two identical tenant GETs 10 ms apart" (seen only after earlier specs, reproduced with
-	// --trace=on): the app issues ONE load per document request (proved: `page.request.get` of the same URL makes one
-	// tenant GET), but a SERVICE-WORKER-controlled navigation can reach the server twice in Chrome: the trace shows two
-	// requests for the document at the same instant, one made by the service worker (cookies, no frame) and the
-	// navigation's own. With `serviceWorkers: 'block'` the pair never appears (same sequence, same tracing: 25 of 26
-	// passed, this test among them). A document GET is idempotent, so the product is unharmed; "exactly one" is only
-	// guaranteed without a service worker in the path, which is what this test (the server's call, not the browser's) needs.
+	// The old "two identical tenant GETs 10 ms apart" was ONE request listed twice by Playwright (a service-worker
+	// controlled navigation shows up as two network events), not a second server hit: the server saw one document request
+	// and made one Go call (proved in round B1). The service worker is blocked here only so the test's request list is
+	// unambiguous; the product's call count is the same with it on.
 	test.use({ serviceWorkers: 'block' });
 
 	test.beforeEach(async () => {
