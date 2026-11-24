@@ -138,7 +138,7 @@
 				<div class="cluster cluster-spread">
 					<span class="caption text-muted-foreground">Tenant ID</span>
 					<div class="cluster cluster-tight">
-						<code class="caption text-subtle-foreground">{credentials.tenantId}</code>
+						<code class="caption text-muted-foreground">{credentials.tenantId}</code>
 						<CopyButton value={credentials.tenantId} label="Copy tenant ID" />
 					</div>
 				</div>

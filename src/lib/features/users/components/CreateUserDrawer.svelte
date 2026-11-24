@@ -90,7 +90,7 @@
 			{hint}
 			error={form.errors.password}
 		/>
-		<p class="caption text-subtle-foreground">
+		<p class="caption text-muted-foreground">
 			The user will be prompted to change this on first sign-in.
 		</p>
 	{/snippet}

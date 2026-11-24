@@ -122,7 +122,8 @@
 	   Color stays SEPARATE (Apple HIG splits typographic style from
 	   color hierarchy — .primaryLabel vs .secondaryLabel use the same
 	   text-style + different tokens). Compose with text-muted-foreground /
-	   text-subtle-foreground utilities for hierarchy.
+	   text-subtle-foreground utilities for hierarchy (three levels, Apple style:
+	   primary / secondary / tertiary; tertiary is for timestamps, hints and metadata only).
 
 	   Two tiers:
 	     .label        text-sm  + medium 500 + body tracking
