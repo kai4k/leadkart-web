@@ -162,4 +162,4 @@ jobs:
         with:
           jobs: ${{ toJSON(needs) }}
           # e2e-cross-browser is skipped on pull requests by design; on push to main it is required.
-          allowed-skips: ${{ github.event_name == 'push' && '' || 'e2e-cross-browser' }}
+          allowed-skips: ${{ github.event_name != 'push' && 'e2e-cross-browser' || '' }}
