@@ -87,6 +87,26 @@ export async function waitForFonts(page: Page): Promise<void> {
 export async function stabilise(page: Page): Promise<void> {
 	await waitForFonts(page);
 	await freezeAnimations(page);
+	await pinFooterYear(page);
+}
+
+/** The year the baselines were taken in. The footer prints the server's current year; a shot must not change on 1 January. */
+const BASELINE_YEAR = '2026';
+
+/**
+ * Pin the copyright year in every footer to the baseline year. The year is server-rendered from the real clock
+ * (`page.clock` cannot reach it), so the text is rewritten in the DOM before the shot; the pixels are exactly those of a
+ * footer printed in the baseline year, so no baseline changes. (A mask would paint a box over every app shot.)
+ */
+async function pinFooterYear(page: Page): Promise<void> {
+	await page.evaluate((year) => {
+		for (const footer of document.querySelectorAll('footer')) {
+			const walker = document.createTreeWalker(footer, NodeFilter.SHOW_TEXT);
+			for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+				node.textContent = (node.textContent ?? '').replace(/\b20\d\d\b/, year);
+			}
+		}
+	}, BASELINE_YEAR);
 }
 
 /**
