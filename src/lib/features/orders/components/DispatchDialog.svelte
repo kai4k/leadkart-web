@@ -1,7 +1,7 @@
 <!--
 	DispatchDialog — captures carrier + tracking number for the
-	dispatched transition. Dispatch is a cross-module placeholder; the
-	endpoint creates a consignment in the Dispatch service via outbox.
+	consignment note. An order becomes dispatched only when the goods leave
+	(Go ADR 0072), not when the note is created.
 -->
 <script lang="ts">
 	import { useResetOnChange } from '#lib/hooks/use-reset-on-change.svelte.ts';
@@ -46,7 +46,8 @@
 		<Dialog.Header>
 			<Dialog.Title class="h5 text-base">Dispatch order</Dialog.Title>
 			<p class="body-sm text-muted-foreground">
-				Creates a consignment note in Dispatch and flips the order to dispatched.
+				Creates a consignment note in Dispatch. The order shows as dispatched only once the goods
+				have left.
 			</p>
 		</Dialog.Header>
 		<form id="dispatch-form" onsubmit={handleSubmit}>

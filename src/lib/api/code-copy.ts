@@ -64,6 +64,12 @@ const CODES = [
 	'insufficient_stock',
 	'batch_expired',
 	'product_has_live_stock',
+	// Dispatch gate (orders/ports/errcodes.go, dispatch/ports/errcodes.go; Go ADR 0072)
+	'order_not_invoiced',
+	'order_not_dispatchable',
+	'order_stock_expired',
+	'order_stock_not_held',
+	'order_stock_mismatch',
 	// Account and search
 	'incorrect_current_password',
 	// authn/session_policy.go: every route but change-password and capabilities while the flag is set

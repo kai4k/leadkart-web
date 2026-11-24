@@ -116,6 +116,38 @@ describe('the code table', () => {
 		expect(describeError(err)).toBe('Set a new password to continue.');
 	});
 
+	// Go ADR 0072: dispatching a consignment note is judged on the order (409 each); goods leave only for an
+	// invoiced order whose held stock matches what was ordered and is not past its printed expiry.
+	it.each([
+		['order_not_invoiced', "This order has no invoice yet, so it can't be dispatched."],
+		[
+			'order_not_dispatchable',
+			"This order can't be dispatched in its current state. It may be cancelled or already dispatched."
+		],
+		[
+			'order_stock_expired',
+			"Some of the stock held for this order is past its expiry date, so it can't be sold or dispatched."
+		],
+		['order_stock_not_held', 'No stock is held for this order, so there is nothing to dispatch.'],
+		[
+			'order_stock_mismatch',
+			"The stock held for this order doesn't match the quantities ordered, so it can't be dispatched."
+		]
+	])(
+		'dispatch refusal %s says what is wrong, to the client and to a server action alike',
+		(code, copy) => {
+			expect(goCodeKey(code)).toBe(`errors.code.${code}`);
+			expect(goFailureKey(409, code)).toBe(`errors.code.${code}`);
+			expect(dig(en, `errors.code.${code}`)).toBe(copy);
+			const err = ApiError.fromResponse(new Response(null, { status: 409 }), {
+				error: code,
+				message: 'raw Go text'
+			});
+			expect(err.message).toBe(copy);
+			expect(describeError(err)).toBe(copy);
+		}
+	);
+
 	it('the server helper and the client describer say the same thing for a code', () => {
 		for (const code of ['insufficient_rank', 'role_name_taken', 'grant_exceeds_authority']) {
 			const key = goFailureKey(403, code);
