@@ -12,7 +12,7 @@
 
 	/**
 	 * ReasonConfirmDialog: a confirmation that needs a typed reason (audited), and optionally the user typing a name to
-	 * confirm (delete a role, mark a tenant for deletion). It is the `ConfirmDialog` (an alert dialog: focus starts on
+	 * confirm (delete a role, suspend a tenant). It is the `ConfirmDialog` (an alert dialog: focus starts on
 	 * Cancel, an outside press does not dismiss it) with a reason field, an optional type-to-confirm field and one banner.
 	 *
 	 *   - Everything (reason, typed text, errors) is reset every time it opens.
