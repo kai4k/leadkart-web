@@ -294,7 +294,13 @@ test.describe('Operator scope flow', () => {
 		await page.waitForURL(/\/operator\/scope\/profile$/);
 		await page.getByRole('link', { name: 'Members' }).click();
 		await page.waitForURL(/\/operator\/scope\/members$/);
-		await expect(page.getByRole('heading', { level: 2, name: 'Team' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Team', exact: true })).toBeVisible();
+		// The heading renders before the list's own client query reaches Go: wait for that call, do not race it.
+		await expect
+			.poll(async () =>
+				(await listMockCalls()).some((c) => c.path === '/api/v1/users' && c.method === 'GET')
+			)
+			.toBe(true);
 
 		const calls = await listMockCalls();
 		const usersCall = calls.find((c) => c.path === '/api/v1/users' && c.method === 'GET');
@@ -389,6 +395,9 @@ test.describe('Operator scope flow', () => {
 		const listed = page.waitForResponse((r) => r.url().includes('/api/v1/platform/tenants'));
 		await page.reload();
 		await listed;
+		// A client navigation just after the list response re-fires the page's own calls; let it finish, or an expiring
+		// cookie meets it and the page navigates away under the probe (Firefox: "NetworkError when attempting to fetch").
+		await page.waitForLoadState('networkidle');
 		expect(await probe()).toBe(200);
 		expect((await listMockCalls()).at(-1)?.['x-tenant-id']).toBe(ACME.id);
 
@@ -420,8 +429,13 @@ test.describe('Operator scope flow', () => {
 		await page.waitForURL(/\/operator\/scope\/profile$/);
 		await page.getByRole('link', { name: 'Members' }).click();
 		await page.waitForURL(/\/operator\/scope\/members$/);
-		await expect(page.getByRole('heading', { level: 2, name: 'Team' })).toBeVisible();
+		await expect(page.getByRole('heading', { level: 2, name: 'Team', exact: true })).toBeVisible();
 
+		// Wait for the list's own data first: clearCookies({ name }) clears ALL cookies and re-adds the rest, so a list
+		// call still in flight would leave without cookies, get a 401 and bounce the app to /signin.
+		await expect(
+			page.getByRole('heading', { level: 2, name: 'No team members yet' })
+		).toBeVisible();
 		await context.clearCookies({ name: 'lk_op_tenant' });
 		const before = (await listMockCalls()).length;
 
