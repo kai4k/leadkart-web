@@ -35,3 +35,7 @@ storybook-static
 
 # Superpowers SDD scratch (briefs/reports/ledger)
 .superpowers/
+
+# Visual baselines are Linux-only (CI image); a local win32/darwin run must never add one
+*-visual-win32.png
+*-visual-darwin.png

@@ -24,6 +24,9 @@ import { defineConfig, devices } from '@playwright/test';
  * server for fast iteration; CI always starts fresh.
  */
 export default defineConfig({
+	// A local run never writes a baseline (it would be a win32/darwin PNG next to the spec): a missing one fails.
+	// New baselines come from the Linux CI image (`CI` set) or an explicit `--update-snapshots`.
+	updateSnapshots: process.env.CI ? 'missing' : 'none',
 	timeout: 30_000,
 	expect: {
 		// Default per-snapshot strictness. Individual specs can tighten
