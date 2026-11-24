@@ -89,6 +89,17 @@ export function formatDateTime(value: string | null | undefined): string {
 	return date ? dateTimeFmt.format(date) : EMPTY;
 }
 
+/**
+ * The calendar year of `now` in UTC, for text the SERVER renders (the footer's copyright year).
+ * `getFullYear()` reads the machine's zone: a UTC server and an IST browser disagree for 5.5 hours
+ * every 1 January, and hydration then keeps the server's wrong year. UTC reads the same on both.
+ * Timestamps (`formatDate`, `formatDateTime`, `relativeTime`) use the viewer's zone and so belong
+ * only in client-rendered output (query results, after hydration), never in a server render.
+ */
+export function currentYear(now: Date = new Date()): number {
+	return now.getUTCFullYear();
+}
+
 const MINUTE = 60;
 const HOUR = 3600;
 const DAY = 86_400;

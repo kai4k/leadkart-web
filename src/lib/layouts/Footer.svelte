@@ -6,7 +6,10 @@
 	 */
 	import { _ } from 'svelte-i18n';
 
-	const year = new Date().getFullYear();
+	import { currentYear } from '#lib/utils/format.ts';
+
+	// UTC, not the machine's zone: the server renders this and the browser hydrates it.
+	const year = currentYear();
 </script>
 
 <div

@@ -8,7 +8,9 @@
 	import { BrandIcon, BrandWordmark } from '#lib/components/ui/index.ts';
 	import { Icon, ShieldCheck, TrendingUp, Truck } from '#lib/icons/index.ts';
 
-	const year = new Date().getFullYear();
+	import { currentYear } from '#lib/utils/format.ts';
+
+	const year = currentYear();
 	const FEATURES = [
 		{ icon: ShieldCheck, key: 'security' },
 		{ icon: TrendingUp, key: 'tracking' },
