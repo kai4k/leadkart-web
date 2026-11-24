@@ -250,9 +250,9 @@ export interface SessionDto {
 	family_id: string;
 	tenant_id: string;
 	device_label: string;
+	created_at: string;
 	last_used_at: string;
 	is_current: boolean;
-	last_used_at: string;
 }
 
 export function fakeSessionDto(overrides?: Partial<SessionDto>): SessionDto {
