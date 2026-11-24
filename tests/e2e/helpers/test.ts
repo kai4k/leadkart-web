@@ -103,14 +103,33 @@ function waitsForHydration(page: Page): void {
 	}) as Page['goto'];
 }
 
-export const test = base.extend<{
-	allowUnregistered: boolean;
-	waitForHydration: boolean;
-	hydrationAwareGoto: void;
-	specFetch: void;
-	noUnregisteredCalls: void;
-	noHoverPreload: void;
-}>({
+export const test = base.extend<
+	{
+		allowUnregistered: boolean;
+		waitForHydration: boolean;
+		hydrationAwareGoto: void;
+		specFetch: void;
+		noUnregisteredCalls: void;
+		noHoverPreload: void;
+	},
+	{ singleWorker: void }
+>({
+	// The suite shares ONE mock Go API (:9999) and ONE BFF (:4173): every test resets and fills the mock's global
+	// fixtures and call list. A second worker would wipe the first one's fixtures mid-test and fail it for calls it never
+	// made, so a second worker is refused with this message, not left to show up as ~80 confusing flakes. CI runs
+	// `workers: 1` per shard (each shard has its own servers).
+	singleWorker: [
+		// eslint-disable-next-line no-empty-pattern -- Playwright reads the fixture dependencies from the first parameter
+		async ({}, use, workerInfo) => {
+			if (workerInfo.parallelIndex > 0) {
+				throw new Error(
+					'The e2e suite shares one mock Go API (:9999) and one BFF (:4173), so it needs `workers: 1`; run it with --workers=1 and shard it (--shard=n/m) to go faster.'
+				);
+			}
+			await use();
+		},
+		{ scope: 'worker', auto: true }
+	],
 	allowUnregistered: [false, { option: true }],
 	waitForHydration: [true, { option: true }],
 	hydrationAwareGoto: [
