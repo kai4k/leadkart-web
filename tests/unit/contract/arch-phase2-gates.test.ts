@@ -5,7 +5,11 @@ import {
 	findLegacyTokens,
 	findPaletteUtilities
 } from '../../../scripts/arch/check-tokens.mjs';
-import { checkRawElements, findRawElements } from '../../../scripts/arch/check-raw-elements.mjs';
+import {
+	checkAllowlistAreas,
+	checkRawElements,
+	findRawElements
+} from '../../../scripts/arch/check-raw-elements.mjs';
 import {
 	checkLegacyImports,
 	findLegacyImports
@@ -121,6 +125,41 @@ describe('check-tokens: raw palette utilities', () => {
 			expect(existsSync(f), f).toBe(true);
 		}
 		expect(new Set(GENERATED_UI_FILES).size).toBe(GENERATED_UI_FILES.length);
+	});
+});
+
+describe('check-raw-elements: the allowlist holds only rebuild-pending areas (Task 29 step 3)', () => {
+	const ok = [
+		'src/lib/features/leads/components/A.svelte',
+		'src/lib/features/orders/components/B.svelte',
+		'src/lib/features/inventory/components/C.svelte',
+		'src/routes/(app)/leads/+page.svelte',
+		'src/routes/(app)/orders/x/+page.svelte',
+		'src/routes/(app)/inventory/+page.svelte',
+		'src/lib/components/data/BulkUploadDrawer.svelte'
+	];
+	it('accepts every pending area in each list', () => {
+		expect(
+			checkAllowlistAreas({ rawElements: ok, drawer: ok, legacyDataTable: ok, notes: {} })
+		).toEqual([]);
+	});
+	it.each([
+		'src/lib/features/settings/components/A.svelte',
+		'src/routes/(app)/settings/users/+page.svelte',
+		'src/lib/components/data/DataTable.svelte',
+		'src/lib/components/ui/input/input.svelte',
+		'src/lib/features/leadsx/components/A.svelte'
+	])('refuses %s in any list', (path) => {
+		for (const list of ['rawElements', 'drawer', 'legacyDataTable']) {
+			const v = checkAllowlistAreas({
+				rawElements: [],
+				drawer: [],
+				legacyDataTable: [],
+				[list]: [path]
+			});
+			expect(v, list).toHaveLength(1);
+			expect(v[0]).toContain(path);
+		}
 	});
 });
 

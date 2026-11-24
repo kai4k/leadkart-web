@@ -65,6 +65,30 @@ export function findRawElements(rel, src) {
 }
 
 /**
+ * (Task 29 step 3) The allowlist is for the leads / orders / inventory rebuild ONLY. Every entry of
+ * `rawElements`, `drawer` and `legacyDataTable` must sit in one of these areas; a stable file (settings,
+ * auth, dashboard, shared primitives) never waits on the list: it is fixed, not listed.
+ */
+export const PENDING_AREAS = [
+	/^src\/lib\/features\/(?:leads|orders|inventory)\//,
+	/^src\/routes\/\(app\)\/(?:leads|orders|inventory)\//,
+	/^src\/lib\/components\/data\/BulkUploadDrawer\.svelte$/
+];
+const LISTS = ['rawElements', 'drawer', 'legacyDataTable'];
+
+/** @returns {string[]} one message per listed path outside the pending areas */
+export function checkAllowlistAreas(allowlist) {
+	const out = [];
+	for (const list of LISTS)
+		for (const p of allowlist[list] ?? [])
+			if (!PENDING_AREAS.some((re) => re.test(p)))
+				out.push(
+					`${p}: listed in ${list} but is not a leads/orders/inventory rebuild-pending file; fix the file instead of listing it`
+				);
+	return out;
+}
+
+/**
  * @param {{ rawElements: string[], counts?: { rawElements?: Record<string, number> } }} allowlist
  * @param {Map<string, string>} files path -> source (the scanned files)
  * @returns {{ violations: string[], stale: string[] }}
@@ -105,6 +129,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 	const files = new Map(paths.map((p) => [p, readFileSync(join(ROOT, p), 'utf8')]));
 	for (const p of allowlist.rawElements) if (!existsSync(join(ROOT, p))) files.delete(p);
 	const { violations, stale } = checkRawElements(allowlist, files);
+	violations.push(...checkAllowlistAreas(allowlist));
 	if (violations.length + stale.length === 0) {
 		console.log(
 			`✓ check-raw-elements: ${files.size} feature/route file(s); no raw <table>/<textarea>/<select>/<input> outside the ${allowlist.rawElements.length} rebuild-pending file(s).`
