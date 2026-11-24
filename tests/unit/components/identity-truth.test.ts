@@ -44,8 +44,20 @@ vi.mock('$app/state', () => ({
 vi.mock('#lib/features/auth/queries.ts', () => ({
 	mySessionsQuery: () => ({
 		data: [
-			{ family_id: 'f1', device_label: 'Chrome', last_used_at: null, created_at: null },
-			{ family_id: 'f2', device_label: 'Phone', last_used_at: null, created_at: null }
+			{
+				family_id: 'f1',
+				device_label: 'Chrome',
+				last_used_at: null,
+				created_at: null,
+				is_current: true
+			},
+			{
+				family_id: 'f2',
+				device_label: 'Phone',
+				last_used_at: null,
+				created_at: null,
+				is_current: false
+			}
 		],
 		isPending: false
 	}),
@@ -93,12 +105,14 @@ describe('SessionsList', () => {
 		expect(h.revokeOthers).toHaveBeenCalledTimes(1);
 	});
 
-	it('the sessions are a table named "Active sessions", one row per device, each with its own named Revoke', () => {
+	it('the sessions are a table named "Active sessions", one row per device; this device is badged and has no Revoke, the other has its own named Revoke', () => {
 		component = mount(SessionsList, { target });
 		flushSync();
 		expect(target.querySelector('table caption')?.textContent).toContain('Active sessions');
 		expect(target.querySelectorAll('tbody tr')).toHaveLength(2);
-		expect(target.querySelector('button[aria-label="Revoke session Chrome"]')).not.toBeNull();
+		expect(target.querySelector('button[aria-label="Revoke session Chrome"]')).toBeNull();
+		expect(target.querySelectorAll('tbody tr')[0]!.textContent).toContain('This device');
+		expect(target.querySelectorAll('tbody tr')[1]!.textContent).not.toContain('This device');
 		expect(target.querySelector('button[aria-label="Revoke session Phone"]')).not.toBeNull();
 	});
 });

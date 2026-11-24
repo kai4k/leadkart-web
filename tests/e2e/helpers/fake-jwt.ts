@@ -261,6 +261,7 @@ export function fakeSessionDto(overrides?: Partial<SessionDto>): SessionDto {
 		device_label: 'Test Browser',
 		created_at: '2026-05-01T10:00:00Z',
 		last_used_at: '2026-05-18T10:00:00Z',
+		is_current: true,
 		...overrides
 	};
 }

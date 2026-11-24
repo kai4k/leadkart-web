@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMock, listMockCalls } from './helpers/mock';
-import { fakeUserDto, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
+import { fakeSessionDto, fakeUserDto, TEST_MEMBERSHIP_ID } from './helpers/fake-jwt';
 
 /**
  * Account self-service e2e — /settings/account/{profile,security,sessions,activity}
@@ -220,6 +220,35 @@ test.describe('Account sessions', () => {
 		await page.goto('/settings/account/sessions');
 		// The session list shows device labels — fakeSessionDto label is 'Test Browser'
 		await expect(page.getByText(/test browser/i)).toBeVisible();
+	});
+
+	test('this device is badged and has no Revoke; another device keeps its Revoke', async ({
+		page
+	}) => {
+		await signInForAccount(page);
+		await registerMock({
+			method: 'GET',
+			path: '/api/v1/auth/sessions',
+			status: 200,
+			body: {
+				sessions: [
+					fakeSessionDto(),
+					fakeSessionDto({
+						family_id: '00000000-0000-4000-8000-000000000f02',
+						device_label: 'Office Laptop',
+						is_current: false
+					})
+				]
+			}
+		});
+		await page.goto('/settings/account/sessions');
+		const here = page.getByRole('row', { name: /test browser/i });
+		await expect(here.getByText('This device')).toBeVisible();
+		await expect(here.getByRole('button', { name: /revoke/i })).toHaveCount(0);
+		const other = page.getByRole('row', { name: /office laptop/i });
+		await expect(other.getByText('This device')).toHaveCount(0);
+		await expect(other.getByRole('button', { name: 'Revoke session Office Laptop' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Sign out other devices' })).toBeVisible();
 	});
 
 	test('sessions list 500: error alert', async ({ page }) => {

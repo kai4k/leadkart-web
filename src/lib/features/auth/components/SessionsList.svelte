@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, EmptyState } from '#lib/components/ui/index.ts';
+	import { Badge, Button, EmptyState } from '#lib/components/ui/index.ts';
 	import { Trash2, LogOut, Icon } from '#lib/icons/index.ts';
 	import type { DataTableColumn } from '#lib/components/data/index.ts';
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
@@ -14,7 +14,7 @@
 	/**
 	 * SessionsList — the person's signed-in devices as a table, one row per session family.
 	 * "Sign out other devices" asks Go for `except_current`: the session of this access token stays.
-	 * The list cannot say which row is this device (Go's list carries no marker), so no row is badged.
+	 * Go marks the caller's own row `is_current`: it gets a "This device" badge and no Revoke (Sign out covers it).
 	 */
 	const sessionsQuery = mySessionsQuery();
 	const revokeMutation = revokeSessionMutation();
@@ -36,7 +36,13 @@
 	const deviceName = (s: SessionDto) => s.device_label || 'Unknown device';
 
 	const columns: DataTableColumn<SessionDto>[] = [
-		{ id: 'device', header: 'Device', accessor: deviceName, class: 'font-medium' },
+		{
+			id: 'device',
+			header: 'Device',
+			accessor: deviceName,
+			cell: deviceCell,
+			class: 'font-medium'
+		},
 		{
 			id: 'last',
 			header: 'Last active',
@@ -53,17 +59,26 @@
 	];
 </script>
 
+{#snippet deviceCell(sess: SessionDto)}
+	<span class="inline-flex flex-wrap items-center gap-2">
+		{deviceName(sess)}
+		{#if sess.is_current}<Badge variant="brand" size="sm">This device</Badge>{/if}
+	</span>
+{/snippet}
+
 {#snippet rowActions(sess: SessionDto)}
-	<Button
-		variant="ghost"
-		size="sm"
-		aria-label="Revoke session {deviceName(sess)}"
-		loading={revokingFamilyId === sess.family_id}
-		disabled={revokingFamilyId !== null}
-		onclick={() => onRevoke(sess.family_id)}
-	>
-		<Icon icon={Trash2} size="sm" /> Revoke
-	</Button>
+	{#if !sess.is_current}
+		<Button
+			variant="ghost"
+			size="sm"
+			aria-label="Revoke session {deviceName(sess)}"
+			loading={revokingFamilyId === sess.family_id}
+			disabled={revokingFamilyId !== null}
+			onclick={() => onRevoke(sess.family_id)}
+		>
+			<Icon icon={Trash2} size="sm" /> Revoke
+		</Button>
+	{/if}
 {/snippet}
 
 {#snippet empty()}

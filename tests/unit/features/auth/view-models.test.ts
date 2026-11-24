@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, isCurrentSession, userStatus } from '#lib/features/auth/view-models.ts';
-import type { UserDto, SessionDto } from '#lib/features/auth/types.ts';
+import { displayName, userStatus } from '#lib/features/auth/view-models.ts';
+import type { UserDto } from '#lib/features/auth/types.ts';
 
 const baseUser: UserDto = {
 	membership_id: 'mem_1',
@@ -35,25 +35,5 @@ describe('userStatus', () => {
 	});
 	it('inactive → neutral', () => {
 		expect(userStatus('inactive')).toEqual({ label: 'Inactive', variant: 'neutral' });
-	});
-});
-
-describe('isCurrentSession', () => {
-	const sess: SessionDto = {
-		family_id: 'fam_active',
-		tenant_id: 'ten_1',
-		device_label: 'Chrome on macOS',
-		created_at: '2026-05-10T00:00:00Z',
-		last_used_at: '2026-05-18T00:00:00Z',
-		is_current: false
-	};
-	it('returns true when family_id matches the active token family', () => {
-		expect(isCurrentSession(sess, 'fam_active')).toBe(true);
-	});
-	it('returns false otherwise', () => {
-		expect(isCurrentSession(sess, 'fam_other')).toBe(false);
-	});
-	it('returns false when no active family known', () => {
-		expect(isCurrentSession(sess, null)).toBe(false);
 	});
 });
