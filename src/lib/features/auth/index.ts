@@ -27,7 +27,7 @@ export {
 
 export { displayName, initials, userStatus } from './view-models';
 export { can, canAny, dashboardVariant, type DashboardVariant, type Tier } from './capabilities';
-export { ACTION, P, type Permission } from './permissions';
+export { ACTION, P, isBelowAdminTier, type Permission } from './permissions';
 
 export type {
 	LoginResponse,

@@ -42,6 +42,8 @@
 		onConfirm: (reason: string) => Promise<void>;
 		/** More content above the reason field (what will happen, a warning). */
 		extra?: Snippet;
+		/** More lines INSIDE the banner (who holds the role): announced with it, in reading order. Shown only with a banner. */
+		bannerDetail?: Snippet;
 	};
 
 	let {
@@ -58,7 +60,8 @@
 		confirmText,
 		messages,
 		onConfirm,
-		extra
+		extra,
+		bannerDetail
 	}: Props = $props();
 
 	let reason = $state('');
@@ -166,7 +169,12 @@
 					error={mismatch ? $_('form.errors.nameMismatch') : undefined}
 				/>
 			{/if}
-			{#if banner}<Alert variant="destructive">{banner}</Alert>{/if}
+			{#if banner}
+				<Alert variant="destructive">
+					{banner}
+					{@render bannerDetail?.()}
+				</Alert>
+			{/if}
 		</div>
 	{/snippet}
 </ConfirmDialog>

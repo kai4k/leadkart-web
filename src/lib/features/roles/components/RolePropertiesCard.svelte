@@ -26,7 +26,6 @@
 	 */
 	type Props = {
 		role: RoleDto;
-		canUpdate: boolean;
 		/** A save of this page is running (any of its three). */
 		busy: boolean;
 		mutation: ReturnType<typeof updateRoleMutation>;
@@ -38,7 +37,7 @@
 		/** A refusal on something this card does not render. */
 		onBanner: (line: string | null) => void;
 	};
-	let { role, canUpdate, busy, mutation, onStart, onSaved, onFailed, onBanner }: Props = $props();
+	let { role, busy, mutation, onStart, onSaved, onFailed, onBanner }: Props = $props();
 
 	let name = $state('');
 	let hierarchyLevel = $state<number | null>(0);
@@ -60,7 +59,7 @@
 
 	function save(e: SubmitEvent) {
 		e.preventDefault();
-		if (!canUpdate || busy) return;
+		if (busy) return;
 		onStart();
 		fieldErrors = {};
 		const form = formEl ?? null;
@@ -121,7 +120,6 @@
 				required
 				minlength={ROLE_NAME_MIN}
 				maxlength={ROLE_NAME_MAX}
-				disabled={!canUpdate}
 				error={fieldErrors.name}
 			/>
 			<NumberInput
@@ -131,17 +129,14 @@
 				required
 				min={ROLE_LEVEL_MIN}
 				max={ROLE_LEVEL_MAX}
-				disabled={!canUpdate}
 				error={fieldErrors.hierarchy_level}
 			/>
 		</form>
 	</Card.Content>
 	<Card.Footer>
 		<!-- the card footer of this page (the same as its two sibling cards), so the form is submitted from here -->
-		<Button
-			disabled={!canUpdate || !dirty || busy}
-			loading={busy}
-			onclick={() => formEl?.requestSubmit()}>Save properties</Button
+		<Button disabled={!dirty || busy} loading={busy} onclick={() => formEl?.requestSubmit()}
+			>Save properties</Button
 		>
 	</Card.Footer>
 </Card.Root>

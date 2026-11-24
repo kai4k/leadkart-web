@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { _, addMessages, init } from 'svelte-i18n';
+import { get } from 'svelte/store';
+import en from '#lib/i18n/locales/en.json';
 import {
 	isProtectedRole,
 	roleKind,
 	roleKindKey,
 	rolePermissionSet,
 	roleMemberCount,
-	roleHoldersLine
+	roleHoldersMessage
 } from '#lib/features/roles/view-models.ts';
 import type { RoleDto } from '#lib/features/roles/types.ts';
 
@@ -113,23 +116,33 @@ describe('roleMemberCount', () => {
 	});
 });
 
-describe('roleHoldersLine (409 role_in_use)', () => {
+describe('roleHoldersMessage (409 role_in_use)', () => {
+	beforeAll(async () => {
+		addMessages('en', en);
+		await init({ fallbackLocale: 'en', initialLocale: 'en' });
+	});
+	const say = (holders: number | undefined, names: string[]): string | null => {
+		const m = roleHoldersMessage(holders, names);
+		return m === null ? null : get(_)(m.key, { values: m.values });
+	};
+
 	it('says nothing when Go sent no count', () => {
-		expect(roleHoldersLine(undefined, ['A'])).toBeNull();
-		expect(roleHoldersLine(0, [])).toBeNull();
+		expect(roleHoldersMessage(undefined, ['A'])).toBeNull();
+		expect(roleHoldersMessage(0, [])).toBeNull();
 	});
 	it('one person', () => {
-		expect(roleHoldersLine(1, ['Asha'])).toBe('1 person holds this role: Asha.');
+		expect(say(1, ['Asha'])).toBe('1 person holds this role: Asha.');
 	});
 	it('names without a rest', () => {
-		expect(roleHoldersLine(2, ['Asha', 'Ravi'])).toBe('2 people hold this role: Asha, Ravi.');
+		expect(say(2, ['Asha', 'Ravi'])).toBe('2 people hold this role: Asha, Ravi.');
 	});
 	it('up to 5 names and the rest as a count', () => {
-		expect(roleHoldersLine(8, ['A', 'B', 'C', 'D', 'E'])).toBe(
+		expect(say(8, ['A', 'B', 'C', 'D', 'E'])).toBe(
 			'8 people hold this role: A, B, C, D, E and 3 more.'
 		);
 	});
 	it('a count without names', () => {
-		expect(roleHoldersLine(3, [])).toBe('3 people hold this role.');
+		expect(say(3, [])).toBe('3 people hold this role.');
+		expect(say(1, [])).toBe('1 person holds this role.');
 	});
 });

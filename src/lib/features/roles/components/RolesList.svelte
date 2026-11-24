@@ -21,6 +21,7 @@
 	import { resolve } from '$app/paths';
 	import DeleteRoleDialog from './DeleteRoleDialog.svelte';
 	import { createRolePermissions } from '../role-permissions.svelte.ts';
+	import { session } from '#lib/features/auth/index.ts';
 
 	/** `null` = the caller may not list members: no count is shown rather than a false 0. */
 	let { roster }: { roster: ReadonlyArray<{ role_ids: string[]; status: string }> | null } =
@@ -30,6 +31,12 @@
 	const may = createRolePermissions();
 
 	const rolesQuery = rolesListQuery();
+
+	/** An operator acting in a company opens a role on the scope tree (the own-tenant page is closed there). */
+	const roleHref = (id: string): string =>
+		session.inTenantContext
+			? resolve('/(app)/operator/scope/roles/[id]', { id })
+			: resolve('/(app)/settings/roles/[id]', { id });
 
 	const roleList = $derived(rolesQuery.data?.roles ?? []);
 	const pagination = createListPagination(() => roleList);
@@ -78,7 +85,7 @@
 				id: 'edit',
 				label: may.update ? 'Edit' : 'View',
 				icon: Edit,
-				href: resolve('/(app)/settings/roles/[id]', { id: role.id })
+				href: roleHref(role.id)
 			}
 		];
 		if (may.delete && !isProtectedRole(role))
@@ -132,7 +139,7 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if !may.create && !may.update && !may.delete}
+	{#if !may.create && !may.update && !may.delete && !session.inTenantContext}
 		<p class="caption text-muted-foreground">{$_('pages.roles.readOnly')}</p>
 	{/if}
 
@@ -140,7 +147,7 @@
 		{columns}
 		data={pagination.paged}
 		getRowId={(r) => r.id}
-		rowHref={(r) => resolve('/(app)/settings/roles/[id]', { id: r.id })}
+		rowHref={(r) => roleHref(r.id)}
 		noun="roles"
 		caption="Roles"
 		query={rolesQuery}

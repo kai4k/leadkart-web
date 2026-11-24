@@ -38,18 +38,26 @@ export function roleMemberCount(
 	return roster.filter((u) => u.status === 'active' && u.role_ids.includes(role.id)).length;
 }
 
+export interface RoleHoldersMessage {
+	/** An en.json key (ICU: plural on `count`, and on `more` for the names). */
+	key: 'reasonConfirm.deleteRole.holders' | 'reasonConfirm.deleteRole.holdersNamed';
+	values: { count: number; names?: string; more?: number };
+}
+
 /**
- * The line under a refused role delete (409 `role_in_use`): how many people hold the role and the first
- * names Go sent (up to 5). `null` when Go sent no count, so the dialog says nothing it was not told.
+ * The detail under a refused role delete (409 `role_in_use`): how many people hold the role and the first
+ * names Go sent (up to 5), as an i18n key and its values. `null` when Go sent no count, so the dialog says
+ * nothing it was not told.
  */
-export function roleHoldersLine(
+export function roleHoldersMessage(
 	holders: number | undefined,
 	names: readonly string[]
-): string | null {
+): RoleHoldersMessage | null {
 	if (holders === undefined || holders <= 0) return null;
-	const count = holders === 1 ? '1 person holds' : `${holders} people hold`;
-	if (names.length === 0) return `${count} this role.`;
-	const more = holders - names.length;
-	const list = names.join(', ') + (more > 0 ? ` and ${more} more` : '');
-	return `${count} this role: ${list}.`;
+	if (names.length === 0)
+		return { key: 'reasonConfirm.deleteRole.holders', values: { count: holders } };
+	return {
+		key: 'reasonConfirm.deleteRole.holdersNamed',
+		values: { count: holders, names: names.join(', '), more: Math.max(0, holders - names.length) }
+	};
 }

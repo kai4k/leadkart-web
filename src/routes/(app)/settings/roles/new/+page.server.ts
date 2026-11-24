@@ -64,9 +64,9 @@ export const actions: Actions = {
 			}
 			if (!body?.role_id)
 				return failForm(502, { values: payload, formErrorKey: 'auth.errors.unexpected' });
-			// An operator creating in a tenant context has no role detail page there: back to the tenant's roles.
+			// An operator creating in a tenant context lands on the role's page in the scope tree, not the own-tenant one.
 			if (readOperatorScope(cookies).state === 'valid')
-				throw redirect(303, '/operator/scope/roles');
+				throw redirect(303, `/operator/scope/roles/${encodeURIComponent(body.role_id)}`);
 			throw redirect(303, `/settings/roles/${encodeURIComponent(body.role_id)}`);
 		}
 

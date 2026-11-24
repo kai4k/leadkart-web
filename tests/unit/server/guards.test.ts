@@ -50,6 +50,20 @@ describe('requireRouteAccess', () => {
 			location: '/dashboard'
 		});
 	});
+	it("an operator's role page in the scope tree is guarded by the scope roles entry (by prefix)", () => {
+		const roleViewer = caps([P.platformRolesView]);
+		const memberViewer = caps([P.platformUsersView]);
+		expect(
+			thrown(() => requireRouteAccess(roleViewer, '/operator/scope/roles/[id]', true))
+		).toBeNull();
+		// no platform.roles.* : refused like the list; and outside a tenant context the scope tree is closed
+		expect(
+			thrown(() => requireRouteAccess(memberViewer, '/operator/scope/roles/[id]', true))
+		).toMatchObject({ status: 303 });
+		expect(
+			thrown(() => requireRouteAccess(roleViewer, '/operator/scope/roles/[id]', false))
+		).toMatchObject({ status: 303 });
+	});
 	it('a route the nav does not know is a 404, never open', () => {
 		expect(thrown(() => requireRouteAccess(SUPER_USER, '/nowhere', false))).toMatchObject({
 			status: 404

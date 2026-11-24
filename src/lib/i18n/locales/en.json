@@ -809,7 +809,9 @@
 			"failed": "Could not delete this role. Please try again.",
 			"forbidden": "You don't have permission to delete roles.",
 			"notFound": "This role was deleted or moved.",
-			"conflict": "People still hold this role. Remove it from them first."
+			"conflict": "People still hold this role. Remove it from them first.",
+			"holders": "{count, plural, one {# person holds} other {# people hold}} this role.",
+			"holdersNamed": "{count, plural, one {# person holds} other {# people hold}} this role: {names}{more, plural, =0 {} other { and # more}}."
 		}
 	}
 }
