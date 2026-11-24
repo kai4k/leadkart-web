@@ -6,7 +6,7 @@ import { leads, opaque, overlay, paint, setPrefs } from './helpers/materials';
 
 /**
  * Every condition under which glass must degrade to an opaque surface (plan section 4, G9), asserted on COMPUTED styles
- * of the built app, Chromium only (CDP media emulation). The default preference is Glass in every test: the setting
+ * of the built app (the CDP media-emulation tests run in Chromium only; the touch ones skip Firefox, which has no isMobile). The default preference is Glass in every test: the setting
  * under test must override it.
  *
  *   1  prefers-reduced-transparency: reduce  topbar, an open dialog and the sidebar: no backdrop filter, alpha 1
@@ -59,8 +59,10 @@ test.describe('glass degrades to opaque', () => {
 	});
 
 	test('1. prefers-reduced-transparency: topbar, dialog and sidebar are opaque', async ({
-		page
+		page,
+		browserName
 	}) => {
+		test.skip(browserName !== 'chromium', 'CDP media emulation exists in Chromium only');
 		await leads(page, {});
 		await setFeature(page, 'prefers-reduced-transparency', 'reduce');
 		for (const [name, sel] of Object.entries(SHELL)) opaque(await paint(page.locator(sel)), name);
@@ -68,8 +70,10 @@ test.describe('glass degrades to opaque', () => {
 	});
 
 	test('2. prefers-contrast: more is opaque too, and the dialog edge is the 3:1 --input colour', async ({
-		page
+		page,
+		browserName
 	}) => {
+		test.skip(browserName !== 'chromium', 'CDP media emulation exists in Chromium only');
 		await leads(page, {});
 		await setFeature(page, 'prefers-contrast', 'more');
 		for (const [name, sel] of Object.entries(SHELL)) opaque(await paint(page.locator(sel)), name);
@@ -149,7 +153,11 @@ test.describe('glass degrades to opaque', () => {
 		}
 	});
 
-	test('5. touch: an open sheet has no filter and the topbar blurs 12px', async ({ browser }) => {
+	test('5. touch: an open sheet has no filter and the topbar blurs 12px', async ({
+		browser,
+		browserName
+	}) => {
+		test.skip(browserName === 'firefox', 'Firefox has no isMobile context option');
 		const context = await browser.newContext({
 			viewport: { width: 390, height: 844 },
 			hasTouch: true,

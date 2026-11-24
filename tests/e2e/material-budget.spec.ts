@@ -120,6 +120,10 @@ test.describe('filtered-layer budget, fine pointer 1280 x 800', () => {
 });
 
 test.describe('filtered-layer budget, coarse pointer 390 x 844', () => {
+	test.skip(
+		({ browserName }) => browserName === 'firefox',
+		'Firefox has no isMobile context option'
+	);
 	test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 	test.beforeEach(async () => {
 		await resetMock();
@@ -199,6 +203,10 @@ test.describe('filtered-layer budget, /signin', () => {
 	});
 
 	test.describe('touch', () => {
+		test.skip(
+			({ browserName }) => browserName === 'firefox',
+			'Firefox has no isMobile context option'
+		);
 		test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 		test('the card is opaque on a coarse pointer: no filtered layer', async ({ page }) => {
 			await setPrefs(page, { transparency: 'glass' });

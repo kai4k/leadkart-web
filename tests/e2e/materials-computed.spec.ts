@@ -68,7 +68,8 @@ test.describe('materials: computed styles on the built app', () => {
 		await everySurface(page, opaque, 'solid');
 	});
 
-	test('OS Reduce Transparency overrides the Glass preference', async ({ page }) => {
+	test('OS Reduce Transparency overrides the Glass preference', async ({ page, browserName }) => {
+		test.skip(browserName !== 'chromium', 'CDP media emulation exists in Chromium only');
 		await leads(page, {});
 		const cdp = await page.context().newCDPSession(page);
 		await cdp.send('Emulation.setEmulatedMedia', {
