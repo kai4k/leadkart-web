@@ -7,18 +7,21 @@ name: _visual
 # - Single chromium runner (cross-browser visual diffs are noise; the
 #   canonical industry pattern is to pin one engine — Playwright docs +
 #   Vercel Argos-CI + Chromatic all do this).
-# - Reuses node_modules cache + downloads build/ artifact + reuses the
-#   Playwright chromium cache (keyed on @playwright/test version).
+# - Runs in the official Playwright image for the locked version, so the
+#   browser and its system packages come with the image; downloads the
+#   build/ artifact.
 # - Uploads HTML report + traces on failure for human review.
 #
 # Baseline policy
 # ───────────────
-# Snapshot baselines live in `tests/visual/**/__screenshots__/` and are
-# committed to git. First-PR fail-mode: if the diff fails, the failure
-# HTML report makes the pixel delta obvious and the engineer either:
+# Snapshot baselines live in `tests/visual/**/*.spec.ts-snapshots/` as
+# `*-visual-linux.png` and are committed to git. If the diff fails, the
+# failure HTML report makes the pixel delta obvious and the engineer either:
 #   1. Fixes the regression, OR
-#   2. Re-runs `npm run test:visual:update` locally and commits the new
-#      baselines as a deliberate visual change.
+#   2. Regenerates the baselines as a deliberate visual change: push a
+#      commit whose message contains `[regen-visuals]`, or run the
+#      visual-refresh workflow by hand. Baselines made on Windows or macOS
+#      are `-win32` / `-darwin` files that CI never compares against.
 #
 # This is the standard canon for visual-regression-in-CI (Vercel,
 # Stripe, Linear all ship this pattern).

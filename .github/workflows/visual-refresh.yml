@@ -74,6 +74,7 @@ jobs:
       - name: Commit baselines back
         env:
           ACTOR: ${{ github.actor }}
+          EVENT: ${{ github.event_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TARGET_REF: ${{ github.ref_name }}
         run: |
@@ -85,7 +86,7 @@ jobs:
             exit 0
           fi
           {
-            printf 'test(visual): regenerate baselines via workflow_dispatch\n\n'
+            printf 'test(visual): regenerate baselines in CI (%s)\n\n' "$EVENT"
             printf 'Auto-regenerated against the current branch HEAD after a deliberate\n'
             printf 'visual change. Review the diff before merging.\n\n'
             printf 'Triggered by: %s\n' "$ACTOR"
