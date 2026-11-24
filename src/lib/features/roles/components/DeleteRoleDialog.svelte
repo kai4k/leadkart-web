@@ -22,7 +22,7 @@
 	bind:open
 	{onOpenChange}
 	title={`Delete role "${role?.name ?? ''}"?`}
-	description="It disappears from your lists and can't be assigned. A role that people still have can't be deleted: take it off them first."
+	description="It disappears from your lists and can't be assigned. A role that people still hold can't be deleted."
 	confirmLabel="Delete role"
 	askReason={false}
 	confirmText={role?.name ?? ''}

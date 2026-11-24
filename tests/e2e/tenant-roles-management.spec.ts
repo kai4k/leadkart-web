@@ -27,6 +27,7 @@ const SUPER_ADMIN_ROLE = {
 	name: 'SuperAdmin',
 	hierarchy_level: 0,
 	permissions: ['*'],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: true,
 	created_at: '2026-01-01T00:00:00Z'
@@ -37,6 +38,7 @@ const SYSTEM_ROLE = {
 	name: 'CompanyOwner',
 	hierarchy_level: 1,
 	permissions: ['tenant.admin'],
+	is_active: true,
 	is_system_default: true,
 	is_super_admin: false,
 	created_at: '2026-01-01T00:00:00Z'
@@ -47,6 +49,7 @@ const CUSTOM_ROLE = {
 	name: 'Sales Lead',
 	hierarchy_level: 5,
 	permissions: ['crm.leads.view', 'crm.leads.create'],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: false,
 	created_at: '2026-01-01T00:00:00Z'

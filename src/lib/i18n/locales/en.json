@@ -806,7 +806,7 @@
 			"failed": "Could not delete this role. Please try again.",
 			"forbidden": "You don't have permission to delete roles.",
 			"notFound": "This role was deleted or moved.",
-			"conflict": "People still have this role, or it is a built-in role. Take the role off its people first; built-in roles can't be deleted."
+			"conflict": "People still hold this role. Remove it from them first."
 		}
 	}
 }

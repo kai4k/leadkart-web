@@ -58,6 +58,7 @@ const ROLE = {
 	name: 'Sales Lead',
 	hierarchy_level: 5,
 	permissions: ['crm.leads.view'],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: false,
 	created_at: '2026-01-01T00:00:00Z'

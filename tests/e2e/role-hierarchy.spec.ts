@@ -21,6 +21,7 @@ const PARENT_ROLE = {
 	name: 'Senior Manager',
 	hierarchy_level: 2,
 	permissions: [],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: false,
 	created_at: '2026-01-01T00:00:00Z'
@@ -32,6 +33,7 @@ const PROTECTED_ROLE = {
 	name: 'SuperAdmin',
 	hierarchy_level: 0,
 	permissions: ['*'],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: true,
 	created_at: '2026-01-01T00:00:00Z'
@@ -43,6 +45,7 @@ const CHILD_ROLE = {
 	name: 'Sales Lead',
 	hierarchy_level: 5,
 	permissions: ['crm.leads.view'],
+	is_active: true,
 	is_system_default: false,
 	is_super_admin: false,
 	created_at: '2026-01-01T00:00:00Z'
