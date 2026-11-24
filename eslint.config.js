@@ -80,7 +80,8 @@ const RESTRICTED_PATHS = [
 
 const RESTRICTED_PATTERNS = [
 	{
-		group: ['#lib/features/*/*/*'],
+		// `#` opens a gitignore comment, so it is escaped; the operator sub-barrels are legal (operator/<area>/index.ts)
+		group: ['\\#lib/features/*/*/*', '!\\#lib/features/operator/*/index.ts'],
 		message:
 			'Deep imports into feature internals are forbidden — import from the feature barrel (#lib/features/<name>/index.ts) only.'
 	}
@@ -390,6 +391,14 @@ export default ts.config(
 			'@typescript-eslint/no-floating-promises': 'off'
 		}
 	},
+	// Unit tests exercise a feature's own modules (queries, schemas, view-models), so the deep-import pattern does
+	// not apply to them; the banned-package paths still do. Production code under src/ keeps the pattern.
+	{
+		files: ['tests/unit/**/*.{ts,js}'],
+		rules: {
+			'no-restricted-imports': ['error', { paths: RESTRICTED_PATHS }]
+		}
+	},
 	// ─── Config files (vite, vitest, playwright, svelte, eslint) ──
 	// Build/tool configs aren't in the TS project graph; type-aware
 	// rules can't resolve them. Also: `Boolean(process.env.CI)` vs
@@ -495,7 +504,7 @@ export default ts.config(
 					patterns: [
 						...RESTRICTED_PATTERNS,
 						{
-							group: ['#lib/api/client*'],
+							group: ['\\#lib/api/client*'],
 							message:
 								'Components must not import #lib/api/client directly. Use a feature gateway in #lib/features/<name>/api.ts (CLAUDE.md layering rule 1).'
 						}
