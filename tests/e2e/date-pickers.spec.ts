@@ -1,10 +1,10 @@
 import AxeBuilder from '@axe-core/playwright';
 import { devices, expect, test, type Page } from '@playwright/test';
-import { glass, opaque, paint, setPrefs } from './helpers/materials';
+import { milk, paint, setPrefs } from './helpers/materials';
 
 /**
  * DatePicker and DateRangePicker on the REAL components (the styleguide's Fields and Overlays demos): typed entry and the
- * calendar agree, the popover is a pane (glass at rest, opaque inside a sheet: no glass on glass), a picked or typed date
+ * calendar agree, the popover is milk (near-opaque, no blur), at rest and inside a sheet, a picked or typed date
  * is the same calendar date in every browser time zone, and axe finds nothing serious in any state.
  */
 
@@ -334,8 +334,8 @@ test.describe('typed entry and calendar agree', () => {
 	});
 });
 
-test.describe('the popover is a pane; inside a sheet it is opaque (no glass on glass)', () => {
-	test('at rest the calendar popover is glass; over an open sheet it is opaque while the sheet stays glass', async ({
+test.describe('the popover is milk, at rest and inside a sheet', () => {
+	test('at rest the calendar popover is milk; over an open sheet it is still milk and the sheet stays milk', async ({
 		page
 	}) => {
 		await guide(page);
@@ -346,17 +346,17 @@ test.describe('the popover is a pane; inside a sheet it is opaque (no glass on g
 		const pop = page.locator('[data-slot="popover-content"]');
 		await expect(pop).toBeVisible();
 		await page.waitForTimeout(300);
-		glass(await paint(pop), 'date popover at rest');
+		milk(await paint(pop), 'date popover at rest');
 		await page.keyboard.press('Escape');
 		await expect(pop).toBeHidden();
 
 		const sheet = await openSheetPicker(page);
-		glass(await paint(sheet), 'sheet');
+		milk(await paint(sheet), 'sheet');
 		await sheet.getByRole('button', { name: /Open calendar/ }).click();
 		await expect(pop).toBeVisible();
 		await page.waitForTimeout(300);
-		opaque(await paint(pop), 'date popover inside a sheet');
-		glass(await paint(sheet), 'the sheet beneath keeps its material');
+		milk(await paint(pop), 'date popover inside a sheet');
+		milk(await paint(sheet), 'the sheet beneath keeps its material');
 	});
 });
 
