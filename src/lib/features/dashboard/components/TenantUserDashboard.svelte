@@ -24,30 +24,35 @@
 	const tiles: Array<{
 		label: string;
 		hint: string;
+		timeframe: string;
 		icon: typeof UserPlus;
 		accent: StatCardAccent;
 	}> = [
 		{
 			label: 'dashboard.tile.myActiveLeads.label',
 			hint: 'dashboard.tile.myActiveLeads.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: UserPlus,
 			accent: 'primary'
 		},
 		{
 			label: 'dashboard.tile.callbacksToday.label',
 			hint: 'dashboard.tile.callbacksToday.hint',
+			timeframe: 'dashboard.timeframe.today',
 			icon: PhoneCall,
 			accent: 'success'
 		},
 		{
 			label: 'dashboard.tile.overdueReminders.label',
 			hint: 'dashboard.tile.overdueReminders.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: AlarmClock,
 			accent: 'warning'
 		},
 		{
 			label: 'dashboard.tile.myOpenTasks.label',
 			hint: 'dashboard.tile.myOpenTasks.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: ClipboardList,
 			accent: 'primary'
 		}
@@ -65,6 +70,7 @@
 			<StatCard
 				label={$_(tile.label)}
 				hint={$_(tile.hint)}
+				timeframe={$_(tile.timeframe)}
 				value="—"
 				icon={tile.icon}
 				accent={tile.accent}

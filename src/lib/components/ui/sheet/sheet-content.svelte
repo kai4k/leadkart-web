@@ -27,6 +27,7 @@
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
 	import { assertOverlayName } from '../overlay-name.ts';
+	import { createFocusReturn } from '../overlay-focus.ts';
 	import SheetHeader from './sheet-header.svelte';
 	import SheetTitle from './sheet-title.svelte';
 	import SheetOverlay from './sheet-overlay.svelte';
@@ -44,6 +45,8 @@
 		closeLabel,
 		portalProps,
 		children,
+		onOpenAutoFocus,
+		onCloseAutoFocus,
 		...restProps
 	}: WithoutChildrenOrChild<SheetPrimitive.ContentProps> & {
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof SheetPortal>>;
@@ -62,6 +65,9 @@
 		children: Snippet;
 	} = $props();
 
+	// WebKit never focuses a clicked button, so bits-ui has nothing to restore: return focus to the invoker.
+	const focusReturn = createFocusReturn();
+
 	$effect(() => {
 		void assertOverlayName(ref, 'Sheet');
 	});
@@ -78,6 +84,8 @@
 			sheetSizes({ size }),
 			className
 		)}
+		onOpenAutoFocus={focusReturn.open(onOpenAutoFocus)}
+		onCloseAutoFocus={focusReturn.close(onCloseAutoFocus)}
 		{...restProps}
 	>
 		{#if title && titleHidden}

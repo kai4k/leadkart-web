@@ -26,6 +26,7 @@
 	import { Button } from '#lib/components/ui/button/index.ts';
 	import { cn, type WithoutChildrenOrChild } from '#lib/utils/cn.ts';
 	import { assertOverlayName } from '../overlay-name.ts';
+	import { createFocusReturn } from '../overlay-focus.ts';
 	import DialogHeader from './dialog-header.svelte';
 	import DialogOverlay from './dialog-overlay.svelte';
 	import DialogPortal from './dialog-portal.svelte';
@@ -42,6 +43,8 @@
 		children,
 		showCloseButton = true,
 		closeLabel,
+		onOpenAutoFocus,
+		onCloseAutoFocus,
 		...restProps
 	}: WithoutChildrenOrChild<DialogPrimitive.ContentProps> & {
 		portalProps?: WithoutChildrenOrChild<ComponentProps<typeof DialogPortal>>;
@@ -59,6 +62,9 @@
 		closeLabel?: string;
 	} = $props();
 
+	// WebKit never focuses a clicked button, so bits-ui has nothing to restore: return focus to the invoker.
+	const focusReturn = createFocusReturn();
+
 	$effect(() => {
 		void assertOverlayName(ref, 'Dialog');
 	});
@@ -74,6 +80,8 @@
 			dialogSizes({ size }),
 			className
 		)}
+		onOpenAutoFocus={focusReturn.open(onOpenAutoFocus)}
+		onCloseAutoFocus={focusReturn.close(onCloseAutoFocus)}
 		{...restProps}
 	>
 		{#if title && titleHidden}

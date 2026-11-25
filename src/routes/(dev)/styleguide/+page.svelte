@@ -47,7 +47,7 @@
 		<h2 id="buttons-heading" class="h2">Buttons</h2>
 
 		{#each buttonVariants as variant (variant)}
-			<Card.Root padding="lg" elevation="sm">
+			<Card.Root padding="lg">
 				<Card.Header>
 					<Card.Title>variant="{variant}"</Card.Title>
 					<Card.Description>
@@ -81,17 +81,17 @@
 		<h2 id="cards-heading" class="h2">Cards</h2>
 
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-			<Card.Root padding="md" elevation="sm">
+			<Card.Root padding="md">
 				<Card.Header>
-					<Card.Title>Default</Card.Title>
-					<Card.Description>elevation="sm" padding="md"</Card.Description>
+					<Card.Title>Clay</Card.Title>
+					<Card.Description>surface="clay" (the default) padding="md"</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<p class="body-sm text-muted-foreground">Standard surface for most content.</p>
 				</Card.Content>
 			</Card.Root>
 
-			<Card.Root padding="md" elevation="md" interactive>
+			<Card.Root padding="md" interactive>
 				<Card.Header>
 					<Card.Title>Interactive</Card.Title>
 					<Card.Description>Spring lift on hover · scale on press</Card.Description>
@@ -101,13 +101,25 @@
 				</Card.Content>
 			</Card.Root>
 
-			<Card.Root padding="md">
+			<Card.Root padding="md" surface="sheet">
 				<Card.Header>
-					<Card.Title>Glass</Card.Title>
-					<Card.Description>Frosted iOS-style surface</Card.Description>
+					<Card.Title>Sheet</Card.Title>
+					<Card.Description>surface="sheet"</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<p class="body-sm text-muted-foreground">For overlays + popovers + customiser panels.</p>
+					<p class="body-sm text-muted-foreground">A working surface a table or a form sits on.</p>
+				</Card.Content>
+			</Card.Root>
+
+			<Card.Root padding="md" surface="tray">
+				<Card.Header>
+					<Card.Title>Tray</Card.Title>
+					<Card.Description>surface="tray"</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<p class="body-sm text-muted-foreground">
+						A recessed holder for a group of related things.
+					</p>
 				</Card.Content>
 			</Card.Root>
 		</div>
@@ -121,6 +133,10 @@
 			<Alert variant="success" title="Success">An action completed successfully.</Alert>
 			<Alert variant="warning" title="Warning">Heads-up — the user should know.</Alert>
 			<Alert variant="destructive" title="Danger">Something failed and needs attention.</Alert>
+			<Alert variant="tray" tone="warning">Two batches are in quarantine.</Alert>
+			<Alert variant="tray" tone="danger">Three customers are overdue.</Alert>
+			<Alert variant="tray" tone="info">Prices update at midnight.</Alert>
+			<Alert variant="tray" tone="neutral">Nothing needs doing.</Alert>
 		</div>
 	</section>
 

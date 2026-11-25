@@ -57,6 +57,7 @@
 	type StatTile = {
 		label: string;
 		hint: string;
+		timeframe: string;
 		icon: typeof Building2;
 		accent: StatCardAccent;
 		value: () => string | number;
@@ -66,6 +67,7 @@
 		{
 			label: 'dashboard.tile.tenantsTotal.label',
 			hint: 'dashboard.tile.tenantsTotal.hint',
+			timeframe: 'dashboard.timeframe.allTime',
 			icon: Building2,
 			accent: 'primary',
 			value: () => (stats ? stats.tenants_total : '—')
@@ -73,6 +75,7 @@
 		{
 			label: 'dashboard.tile.tenantsActive.label',
 			hint: 'dashboard.tile.tenantsActive.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: Activity,
 			accent: 'success',
 			value: () => (stats ? stats.tenants_active : '—')
@@ -80,6 +83,7 @@
 		{
 			label: 'dashboard.tile.tenantsSuspended.label',
 			hint: 'dashboard.tile.tenantsSuspended.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: Ban,
 			accent: 'warning',
 			value: () => (stats ? stats.tenants_suspended : '—')
@@ -87,6 +91,7 @@
 		{
 			label: 'dashboard.tile.personsTotal.label',
 			hint: 'dashboard.tile.personsTotal.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: Users,
 			accent: 'primary',
 			value: () => (stats ? stats.persons_total : '—')
@@ -94,6 +99,7 @@
 		{
 			label: 'dashboard.tile.membershipsActive.label',
 			hint: 'dashboard.tile.membershipsActive.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: UserCheck,
 			accent: 'success',
 			value: () => (stats ? stats.memberships_active : '—')
@@ -104,24 +110,28 @@
 	const placeholderTiles: Array<{
 		label: string;
 		hint: string;
+		timeframe: string;
 		icon: typeof Building2;
 		accent: StatCardAccent;
 	}> = [
 		{
 			label: 'dashboard.tile.verificationQueue.label',
 			hint: 'dashboard.tile.verificationQueue.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: ClipboardCheck,
 			accent: 'warning'
 		},
 		{
 			label: 'dashboard.tile.marketplaceInventory.label',
 			hint: 'dashboard.tile.marketplaceInventory.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: ShoppingBag,
 			accent: 'primary'
 		},
 		{
 			label: 'dashboard.tile.impersonationSessions.label',
 			hint: 'dashboard.tile.impersonationSessions.hint',
+			timeframe: 'dashboard.timeframe.now',
 			icon: UserCog,
 			accent: 'danger'
 		}
@@ -164,6 +174,7 @@
 			<StatCard
 				label={$_(tile.label)}
 				hint={$_(tile.hint)}
+				timeframe={$_(tile.timeframe)}
 				value={tile.value()}
 				icon={tile.icon}
 				accent={tile.accent}
@@ -175,6 +186,7 @@
 			<StatCard
 				label={$_(tile.label)}
 				hint={$_(tile.hint)}
+				timeframe={$_(tile.timeframe)}
 				value="—"
 				icon={tile.icon}
 				accent={tile.accent}

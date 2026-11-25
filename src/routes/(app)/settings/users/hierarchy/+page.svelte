@@ -47,7 +47,7 @@
 			<Skeleton class="h-32 w-full rounded-md" />
 		{/snippet}
 		{#snippet empty()}
-			<Card.Root padding="md" elevation="sm">
+			<Card.Root padding="md">
 				<EmptyState
 					icon={Users}
 					title="No members yet"
@@ -55,7 +55,7 @@
 				/>
 			</Card.Root>
 		{/snippet}
-		<Card.Root padding="md" elevation="sm">
+		<Card.Root padding="md">
 			<Card.Header>
 				<Card.Title>{tree.totalMembers} members</Card.Title>
 				<Card.Description>

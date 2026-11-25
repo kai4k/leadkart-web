@@ -50,7 +50,7 @@
 	successMessage={$_('pages.tenant.form.saved.security')}
 >
 	{#snippet children({ fieldError })}
-		<Card.Root padding="md" elevation="sm">
+		<Card.Root padding="md">
 			<Card.Header>
 				<Card.Title>Password complexity</Card.Title>
 				<Card.Description>

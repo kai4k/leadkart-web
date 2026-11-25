@@ -51,7 +51,7 @@
 		{crumbs}
 	/>
 
-	<Card.Root padding="md" elevation="sm">
+	<Card.Root padding="md">
 		<Card.Content>
 			<ActionForm
 				id="role-new-form"

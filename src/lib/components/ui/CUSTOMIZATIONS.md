@@ -118,7 +118,7 @@ English defaults ("Previous", "Select a month", pagination labels) are overridde
 
 Regenerated: `button`, `badge`, `alert` (root only), `tabs`, `pagination` (parts), `table`,
 `accordion`, `collapsible`, `toggle`, `toggle-group`. Kept as LeadKart composites, with their
-alphas fixed: `card` (padding/elevation/surface props, 40+ call sites), `avatar` (initials +
+alphas fixed: `card` (padding and `surface` clay|sheet|tray props, 40+ call sites), `avatar` (initials +
 group), `skeleton` (shapes), `progress`, `slider`, `breadcrumb` (items array).
 
 - `button/button.svelte`: focus ring offset is `ring-offset-background` (the default offset colour is white:

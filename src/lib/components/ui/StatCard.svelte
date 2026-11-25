@@ -1,12 +1,10 @@
 <script lang="ts" module>
 	/**
-	 * StatCard — KPI tile with optional trend chip.
-	 *
-	 * Industry refs: Stripe Dashboard MRR card, Linear analytics tiles, Vercel Project Metrics, the
-	 * Domiex dashboard widget. An icon chip, a muted label, a 2xl semibold value, an optional hint and
-	 * delta chip ("+12.5% vs last week"). It is a description list, so the value is read together with
-	 * its label. Loading renders a matched-shape skeleton so layout does not shift when data arrives.
-	 * Opaque content layer: no material.
+	 * StatCard: the KPI tile (spec KpiTile). A clay card holding an icon chip, a muted label, a 2xl semibold
+	 * value, the ONE time frame the number is about (required: "now", "This month", "Today"), and optionally a
+	 * comparison ("vs last month"), a hint and a delta chip ("+12.5% vs last week"). It is a description list,
+	 * so the value is read together with its label and its time frame. Loading renders a matched-shape
+	 * skeleton so layout does not shift when data arrives.
 	 */
 
 	import { type VariantProps, cva } from 'class-variance-authority';
@@ -38,6 +36,10 @@
 	type Props = {
 		label: string;
 		value: string | number;
+		/** The one period the number is about, in words ("This month", "Today", "Right now"). */
+		timeframe: string;
+		/** What the number is set against ("vs last month"). */
+		comparison?: string;
 		/** One line under the value saying what it counts. */
 		hint?: string;
 		delta?: { value: number; period: string };
@@ -51,6 +53,8 @@
 	let {
 		label,
 		value,
+		timeframe,
+		comparison,
 		hint,
 		delta,
 		icon: IconComp,
@@ -69,7 +73,7 @@
 	);
 </script>
 
-<Card.Root surface="solid" padding="md" class={className} aria-busy={loading ? 'true' : undefined}>
+<Card.Root padding="md" class={className} aria-busy={loading ? 'true' : undefined}>
 	<div class="flex items-start justify-between gap-3">
 		<dl class="stack stack-tight m-0 min-w-0 flex-1">
 			<dt class="body-sm text-muted-foreground">{label}</dt>
@@ -87,6 +91,10 @@
 						>{value}</span
 					>
 				{/if}
+			</dd>
+			<dd class="caption m-0" data-slot="stat-timeframe">
+				<span class="text-foreground font-semibold">{timeframe}</span>
+				{#if comparison}<span class="text-muted-foreground"> · {comparison}</span>{/if}
 			</dd>
 			{#if hint}
 				<dd class="caption text-subtle-foreground m-0">{hint}</dd>

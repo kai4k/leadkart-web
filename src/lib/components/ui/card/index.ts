@@ -1,6 +1,5 @@
 import Root, {
 	type CardPadding,
-	type CardElevation,
 	type CardSurface,
 	type CardVariants,
 	cardVariants
@@ -19,7 +18,6 @@ export {
 	Content,
 	Footer,
 	type CardPadding,
-	type CardElevation,
 	type CardSurface,
 	type CardVariants,
 	cardVariants

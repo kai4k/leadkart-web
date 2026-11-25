@@ -23,7 +23,7 @@
 >
 	{#if icon}
 		<div
-			class="bg-muted text-subtle-foreground inline-flex h-12 w-12 items-center justify-center rounded-full"
+			class="bg-tray text-subtle-foreground inline-flex h-14 w-14 items-center justify-center rounded-full"
 		>
 			<Icon {icon} size="lg" />
 		</div>

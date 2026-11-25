@@ -218,16 +218,16 @@
 	.animate-shimmer {
 		background: linear-gradient(
 			90deg,
-			var(--muted) 0%,
+			var(--tray) 0%,
 			var(--skeleton-highlight) 50%,
-			var(--muted) 100%
+			var(--tray) 100%
 		);
 		background-size: 200% 100%;
 		animation: shimmer 2s var(--ease-linear) infinite;
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.animate-shimmer {
-			background: var(--muted);
+			background: var(--tray);
 			animation: none;
 		}
 	}

@@ -68,7 +68,7 @@
 
 	<Tabs.Content value="overview">
 		<div class="grid grid-cols-1 gap-4 pt-4 lg:grid-cols-2">
-			<Card.Root padding="md" elevation="sm">
+			<Card.Root padding="md">
 				<Card.Header>
 					<Card.Title>Identity</Card.Title>
 				</Card.Header>
@@ -89,7 +89,7 @@
 				</Card.Content>
 			</Card.Root>
 
-			<Card.Root padding="md" elevation="sm">
+			<Card.Root padding="md">
 				<Card.Header>
 					<Card.Title>Reporting line</Card.Title>
 					<Card.Description>Who this member reports to.</Card.Description>
@@ -143,7 +143,7 @@
 
 	<Tabs.Content value="permissions">
 		<div class="stack stack-relaxed pt-4">
-			<Card.Root padding="md" elevation="sm">
+			<Card.Root padding="md">
 				<Card.Header>
 					<div class="cluster cluster-spread">
 						<div class="stack stack-tight">
@@ -183,7 +183,7 @@
 			<!-- Not offered while `may.overrides` is off (member-permissions.svelte.ts says what it waits for): a card
 			     that points at a side panel nobody can open would not be true. -->
 			{#if may.overrides}
-				<Card.Root padding="md" elevation="sm">
+				<Card.Root padding="md">
 					<Card.Header>
 						<div class="cluster cluster-spread">
 							<div class="stack stack-tight">
@@ -210,7 +210,7 @@
 	</Tabs.Content>
 
 	<Tabs.Content value="reports">
-		<Card.Root padding="md" elevation="sm" class="mt-4">
+		<Card.Root padding="md" class="mt-4">
 			<Card.Header>
 				<Card.Title>Direct reports</Card.Title>
 				<Card.Description>

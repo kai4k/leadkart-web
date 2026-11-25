@@ -552,7 +552,22 @@
 			"symbol": "a symbol"
 		}
 	},
+	"alert": {
+		"tone": {
+			"warning": "Needs attention",
+			"danger": "At risk",
+			"info": "Note",
+			"neutral": "Status"
+		}
+	},
 	"dashboard": {
+		"timeframe": {
+			"now": "Right now",
+			"today": "Today",
+			"thisWeek": "This week",
+			"thisMonth": "This month",
+			"allTime": "All time"
+		},
 		"title": {
 			"operator": "Operator Dashboard",
 			"tenantAdmin": "Tenant Dashboard",

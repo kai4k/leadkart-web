@@ -1,13 +1,17 @@
 <script lang="ts" module>
 	import { cva, type VariantProps } from 'class-variance-authority';
+	/**
+	 * Cards are solid materials (never the translucent kind). Three surfaces: `clay` (the default, a raised white card), `sheet` (a working surface: the
+	 * big flat sheet a table or an app frame sits on) and `tray` (a recessed, tinted holder). The material owns the fill,
+	 * the shadow and the 1px edge that stays visible under forced colours and increased contrast.
+	 */
 	export const cardVariants = cva(
 		[
-			'group/card flex flex-col gap-4 overflow-hidden rounded-xl text-sm',
-			'ring-1 ring-border forced-colors:border forced-colors:border-[CanvasText]',
+			'group/card text-foreground flex flex-col gap-4 overflow-hidden rounded-card text-sm',
 			'has-data-[slot=card-footer]:pb-0',
 			'has-[>img:first-child]:pt-0',
-			'*:[img:first-child]:rounded-t-xl',
-			'*:[img:last-child]:rounded-b-xl'
+			'*:[img:first-child]:rounded-t-card',
+			'*:[img:last-child]:rounded-b-card'
 		],
 		{
 			variants: {
@@ -16,19 +20,18 @@
 					md: 'px-5 py-4',
 					lg: 'px-7 py-6 gap-5'
 				},
-				elevation: { none: '', sm: 'shadow-card', md: 'shadow-md' },
 				surface: {
-					default: 'bg-card text-foreground',
-					solid: 'bg-card text-foreground'
+					clay: 'material-clay',
+					sheet: 'material-sheet',
+					tray: 'material-tray'
 				},
 				interactive: { true: 'interactive cursor-pointer', false: '' }
 			},
-			defaultVariants: { padding: 'md', elevation: 'sm', surface: 'default', interactive: false }
+			defaultVariants: { padding: 'md', surface: 'clay', interactive: false }
 		}
 	);
 
 	export type CardPadding = NonNullable<VariantProps<typeof cardVariants>['padding']>;
-	export type CardElevation = NonNullable<VariantProps<typeof cardVariants>['elevation']>;
 	export type CardSurface = NonNullable<VariantProps<typeof cardVariants>['surface']>;
 	export type CardVariants = VariantProps<typeof cardVariants>;
 </script>
@@ -40,8 +43,7 @@
 	let {
 		ref = $bindable(null),
 		padding = 'md',
-		elevation = 'sm',
-		surface = 'default',
+		surface = 'clay',
 		interactive = false,
 		class: className,
 		children,
@@ -52,7 +54,7 @@
 <div
 	bind:this={ref}
 	data-slot="card"
-	class={cn(cardVariants({ padding, elevation, surface, interactive }), className)}
+	class={cn(cardVariants({ padding, surface, interactive }), className)}
 	{...rest}
 >
 	{@render children?.()}

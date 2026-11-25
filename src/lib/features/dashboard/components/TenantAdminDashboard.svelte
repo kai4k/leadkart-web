@@ -35,57 +35,70 @@
 
 	const email = $derived(session.principal?.email ?? '—');
 
-	const tiles: Array<{ label: string; hint: string; icon: typeof Coins; accent: StatCardAccent }> =
-		[
-			{
-				label: 'dashboard.tile.leadCredits.label',
-				hint: 'dashboard.tile.leadCredits.hint',
-				icon: Coins,
-				accent: 'primary'
-			},
-			{
-				label: 'dashboard.tile.teamActive.label',
-				hint: 'dashboard.tile.teamActive.hint',
-				icon: Users,
-				accent: 'success'
-			},
-			{
-				label: 'dashboard.tile.leadsThisWeek.label',
-				hint: 'dashboard.tile.leadsThisWeek.hint',
-				icon: UserPlus,
-				accent: 'primary'
-			},
-			{
-				label: 'dashboard.tile.conversionThisMonth.label',
-				hint: 'dashboard.tile.conversionThisMonth.hint',
-				icon: TrendingUp,
-				accent: 'success'
-			},
-			{
-				label: 'dashboard.tile.openOrders.label',
-				hint: 'dashboard.tile.openOrders.hint',
-				icon: PackageCheck,
-				accent: 'primary'
-			},
-			{
-				label: 'dashboard.tile.pendingDispatches.label',
-				hint: 'dashboard.tile.pendingDispatches.hint',
-				icon: Truck,
-				accent: 'warning'
-			},
-			{
-				label: 'dashboard.tile.inventoryAlerts.label',
-				hint: 'dashboard.tile.inventoryAlerts.hint',
-				icon: AlertTriangle,
-				accent: 'warning'
-			},
-			{
-				label: 'dashboard.tile.overdueTasks.label',
-				hint: 'dashboard.tile.overdueTasks.hint',
-				icon: ClipboardList,
-				accent: 'danger'
-			}
-		];
+	const tiles: Array<{
+		label: string;
+		hint: string;
+		timeframe: string;
+		icon: typeof Coins;
+		accent: StatCardAccent;
+	}> = [
+		{
+			label: 'dashboard.tile.leadCredits.label',
+			hint: 'dashboard.tile.leadCredits.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: Coins,
+			accent: 'primary'
+		},
+		{
+			label: 'dashboard.tile.teamActive.label',
+			hint: 'dashboard.tile.teamActive.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: Users,
+			accent: 'success'
+		},
+		{
+			label: 'dashboard.tile.leadsThisWeek.label',
+			hint: 'dashboard.tile.leadsThisWeek.hint',
+			timeframe: 'dashboard.timeframe.thisWeek',
+			icon: UserPlus,
+			accent: 'primary'
+		},
+		{
+			label: 'dashboard.tile.conversionThisMonth.label',
+			hint: 'dashboard.tile.conversionThisMonth.hint',
+			timeframe: 'dashboard.timeframe.thisMonth',
+			icon: TrendingUp,
+			accent: 'success'
+		},
+		{
+			label: 'dashboard.tile.openOrders.label',
+			hint: 'dashboard.tile.openOrders.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: PackageCheck,
+			accent: 'primary'
+		},
+		{
+			label: 'dashboard.tile.pendingDispatches.label',
+			hint: 'dashboard.tile.pendingDispatches.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: Truck,
+			accent: 'warning'
+		},
+		{
+			label: 'dashboard.tile.inventoryAlerts.label',
+			hint: 'dashboard.tile.inventoryAlerts.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: AlertTriangle,
+			accent: 'warning'
+		},
+		{
+			label: 'dashboard.tile.overdueTasks.label',
+			hint: 'dashboard.tile.overdueTasks.hint',
+			timeframe: 'dashboard.timeframe.now',
+			icon: ClipboardList,
+			accent: 'danger'
+		}
+	];
 </script>
 
 <div class="stack stack-relaxed">
@@ -104,6 +117,7 @@
 			<StatCard
 				label={$_(tile.label)}
 				hint={$_(tile.hint)}
+				timeframe={$_(tile.timeframe)}
 				value="—"
 				icon={tile.icon}
 				accent={tile.accent}

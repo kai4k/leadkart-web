@@ -8,7 +8,7 @@ let component: ReturnType<typeof mount> | undefined;
 
 function render(props: Record<string, unknown>) {
 	target = document.body.appendChild(document.createElement('div'));
-	component = mount(StatCard as never, { target, props });
+	component = mount(StatCard as never, { target, props: { timeframe: 'Right now', ...props } });
 	flushSync();
 }
 afterEach(() => {

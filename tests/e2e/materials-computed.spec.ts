@@ -38,7 +38,9 @@ async function everySurface(
 	page: Page,
 	expectation: typeof glass,
 	label: string,
-	overlayExpectation: typeof glass = expectation
+	overlayExpectation: typeof glass = expectation,
+	/** The "dialog" the helper opens is the command palette (Ctrl+K), the one overlay that is glass. */
+	paletteExpectation: typeof glass = overlayExpectation
 ) {
 	await openBulk(page);
 	for (const [name, sel] of Object.entries(SURFACES))
@@ -46,7 +48,10 @@ async function everySurface(
 	for (const kind of ['menu', 'dialog', 'sheet'] as const) {
 		const loc = await overlay(page, kind);
 		await page.waitForTimeout(300); // the open animation settles
-		overlayExpectation(await paint(loc), `${label} ${kind}`);
+		(kind === 'dialog' ? paletteExpectation : overlayExpectation)(
+			await paint(loc),
+			`${label} ${kind}`
+		);
 		await closeOverlay(page);
 	}
 }
@@ -57,11 +62,11 @@ test.describe('materials: computed styles on the built app', () => {
 	});
 
 	for (const mode of ['light', 'dark']) {
-		test(`Glass (${mode}): topbar, sidebar and bulk bar are blurred and translucent; dialog, sheet and menu are milk (no blur)`, async ({
+		test(`Glass (${mode}): topbar, sidebar, bulk bar and the command palette are blurred and translucent; sheet and menu are milk (no blur)`, async ({
 			page
 		}) => {
 			await leads(page, { mode });
-			await everySurface(page, glass, `glass/${mode}`, milk);
+			await everySurface(page, glass, `glass/${mode}`, milk, glass);
 		});
 	}
 
