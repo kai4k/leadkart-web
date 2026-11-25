@@ -10,10 +10,10 @@
 		userDetailQuery
 	} from '#lib/features/users/queries.ts';
 	import type { UserDto } from '#lib/features/users/types.ts';
-	import { displayName } from '#lib/features/auth/index.ts';
+	import { displayName, session } from '#lib/features/auth/index.ts';
 	import { ConflictError, ValidationError } from '#lib/api/errors.ts';
 	import { formatDate } from '#lib/utils/format.ts';
-	import { PLATFORM_MANAGED_ROLE } from '#lib/features/roles/index.ts';
+	import { PLATFORM_MANAGED_ROLE, mayConferPlatformManaged } from '#lib/features/roles/index.ts';
 
 	type Props = {
 		open: boolean;
@@ -23,15 +23,23 @@
 
 	let { open = $bindable(false), user, onOpenChange }: Props = $props();
 
-	// Go refuses (403 grant_exceeds_authority) any caller conferring a role-management name on a member override;
-	// removing one is always allowed, so only the grants list is checked.
+	// Go refuses (403 grant_exceeds_authority) conferring a role-management name on a member's override, as a grant AND
+	// as a revocation, unless the caller is LeadKart staff in LeadKart's own tenant (`mayConferPlatformManaged`).
+	// Taking one away is always allowed, so a revocation the member already has may stay in the list.
+	let baseRevoked: ReadonlySet<string> = new Set();
+	const may = () => mayConferPlatformManaged(session.capabilities, session.inTenantContext);
 	const schema = z.object({
 		granted: z
 			.array(z.string())
-			.refine((names) => !names.some((n) => PLATFORM_MANAGED_ROLE.has(n)), {
+			.refine((names) => may() || !names.some((n) => PLATFORM_MANAGED_ROLE.has(n)), {
 				message: 'form.errors.permissionNotGrantable'
 			}),
-		revoked: z.array(z.string())
+		revoked: z
+			.array(z.string())
+			.refine(
+				(names) => may() || !names.some((n) => PLATFORM_MANAGED_ROLE.has(n) && !baseRevoked.has(n)),
+				{ message: 'form.errors.permissionNotRevocable' }
+			)
 	});
 
 	const mutation = replacePermissionOverridesMutation();
@@ -123,6 +131,7 @@
 	{onSubmit}
 	initial={() => {
 		baseVersion = detail.data?.overrides_version ?? '';
+		baseRevoked = new Set(overrides?.revoked ?? []);
 		return {
 			granted: (overrides?.granted ?? []).map((g) => g.name),
 			revoked: [...(overrides?.revoked ?? [])]

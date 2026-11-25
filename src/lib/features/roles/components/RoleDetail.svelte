@@ -18,6 +18,7 @@
 	import { createRolePermissions } from '../role-permissions.svelte.ts';
 	import {
 		unchangeablePermissions,
+		mayConferPlatformManaged,
 		ADMIN_TIER_ONLY,
 		PLATFORM_RESERVED
 	} from '../permissions-catalogue.ts';
@@ -132,10 +133,15 @@
 		(session.capabilities?.effective_permissions.includes(permission) ?? false) ||
 		(session.inTenantContext && !PLATFORM_RESERVED.has(permission));
 	const refusedPermissions = $derived<Record<string, string>>({
-		...unchangeablePermissions(holds, {
-			reserved: $_('pages.roles.platformReserved'),
-			notHeld: $_('pages.roles.notHeld')
-		}),
+		...unchangeablePermissions(
+			holds,
+			{
+				reserved: $_('pages.roles.platformReserved'),
+				notHeld: $_('pages.roles.notHeld'),
+				platformManaged: $_('pages.roles.platformManaged')
+			},
+			mayConferPlatformManaged(session.capabilities, session.inTenantContext)
+		),
 		// A role below the Administrator tier cannot contain an admin-tier-only name (Go: admin_tier_required): not offered.
 		...(role !== null && isBelowAdminTier(role.hierarchy_level)
 			? Object.fromEntries([...ADMIN_TIER_ONLY].map((n) => [n, $_('pages.roles.adminTierOnly')]))

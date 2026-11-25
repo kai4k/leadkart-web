@@ -230,4 +230,17 @@ describe.skipIf(!haveGo)('the persona builder equals Go at the pinned commit', (
 			'return c != nil && c.IsPlatform && c.TenantSlug == PlatformTenantSlug && !c.IsImpersonation()'
 		);
 	});
+
+	it('mayConferManaged (authority/policy.go) is the clause `mayConferPlatformManaged` mirrors', () => {
+		const src = stripComments(goFile('internal/identity/domain/authority/policy.go'));
+		const text = src.replace(/\s+/g, ' ');
+		// refused unless: the actor may manage roles, is not an impersonation session, is a platform operator or super
+		// user, and decides in its own tenant (the web's "not inside a company's scope")
+		expect(text).toContain(
+			'if !a.mayManageRoles || a.impersonation || (!a.platformOperator && !a.superUser) || !sameTenant(tid, a.tenantID) {'
+		);
+		expect(text).toContain('ErrGrantExceedsAuthority, n)');
+		// conferring only: a removal of a managed name in a company is outside the ceiling
+		expect(text).toContain('if inPlatform || !permission.IsPlatformManagedRole(n) {');
+	});
 });

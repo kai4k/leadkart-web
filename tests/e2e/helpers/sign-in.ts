@@ -39,6 +39,8 @@ export interface SignInOpts {
 	permissions?: Permission[];
 	/** Overrides the tier's default effective_permissions (what Go computes). */
 	effective_permissions?: Permission[];
+	/** An impersonation session: a platform operator acting inside the company (the token carries `act`). */
+	impersonation?: { session_id: string; tenant_display_name: string };
 	is_super_user?: boolean;
 	tenant_id?: string;
 	tenant_slug?: string;
@@ -89,7 +91,8 @@ export async function signInAsTier(page: Page, opts: SignInOpts): Promise<void> 
 		tenant_slug: tenantSlug,
 		membership_id: membershipId,
 		person_id: personId,
-		email
+		email,
+		impersonation: opts.impersonation
 	});
 
 	const user = fakeUserDto({

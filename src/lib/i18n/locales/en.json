@@ -452,7 +452,8 @@
 			"itemsRequired": "Add at least one line item.",
 			"selectOrder": "Select at least one order.",
 			"permissionNamesInvalid": "One or more permission names are invalid.",
-			"permissionNotGrantable": "Role-management permissions are set by LeadKart and can't be granted to a member."
+			"permissionNotGrantable": "Role-management permissions are set by LeadKart and can't be granted to a member.",
+			"permissionNotRevocable": "Role-management permissions are set by LeadKart and can't be added to a member's revocations."
 		},
 		"passwordRule": {
 			"min_length": "The password is too short.",
@@ -626,6 +627,7 @@
 			"readOnly": "Roles are set up by LeadKart. Contact support to add or change a role.",
 			"adminTierOnly": "Only the Administrator tier and above can hold this permission.",
 			"platformReserved": "Reserved for the platform team.",
+			"platformManaged": "Only LeadKart can hold this.",
 			"notHeld": "You can only change a permission you hold yourself."
 		},
 		"permissionRequests": {

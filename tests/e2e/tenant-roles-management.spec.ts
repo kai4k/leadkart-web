@@ -23,6 +23,8 @@ import { listMockCalls, resetMock, registerMocks, registerMock } from './helpers
 
 import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
 
+const MANAGED_NAMES = ['identity.roles.create', 'identity.roles.update', 'identity.roles.manage'];
+
 const READ_ONLY_LINE = 'Roles are set up by LeadKart. Contact support to add or change a role.';
 
 const SUPER_ADMIN_ROLE = {
@@ -456,54 +458,109 @@ test.describe('Roles: a LeadKart operator inside a company', () => {
 		});
 	}
 
-	test('edit: the operator opens a role from the list, renames it and saves its permissions, both under the company', async ({
+	for (const superUser of [true, false]) {
+		test(`edit (${superUser ? 'super user' : 'platform.roles.manage'}): the operator opens a role from the list, renames it and saves its permissions, both under the company`, async ({
+			page
+		}) => {
+			await enterAcmeRoles(page, [CUSTOM_ROLE], { superUser });
+			await registerMocks([
+				{ method: 'GET', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 200, body: CUSTOM_ROLE },
+				{ method: 'PATCH', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 204 },
+				{
+					method: 'PUT',
+					path: `/api/v1/roles/${CUSTOM_ROLE.id}/permissions`,
+					status: 204
+				}
+			]);
+
+			// the row's Edit item goes to the scope page (the own-tenant one is closed in a tenant context)
+			await page
+				.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
+				.first()
+				.click();
+			await page.getByText('Edit', { exact: true }).click();
+			await page.waitForURL(new RegExp(`/operator/scope/roles/${CUSTOM_ROLE.id}$`));
+			await expect(page.getByText('Hierarchy level 5')).toBeVisible();
+			await expect(page.getByText(READ_ONLY_LINE)).toHaveCount(0);
+			// the page sits under the tenant's own header (Tenants / Acme): no "Settings" trail of its own
+			await expect(
+				page.getByRole('navigation', { name: 'Breadcrumb' }).getByText('Settings')
+			).toHaveCount(0);
+
+			await page.getByLabel('Name').fill('Sales Head');
+			await page.getByRole('button', { name: 'Save properties' }).click();
+			await expect(page.getByText('Saved.')).toBeVisible();
+
+			await page.getByRole('checkbox', { name: 'crm.leads.assign', exact: true }).check();
+			await page.getByRole('button', { name: 'Save permissions' }).click();
+
+			await expect
+				.poll(
+					async () =>
+						(await listMockCalls()).filter(
+							(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
+						).length
+				)
+				.toBe(1);
+			const calls = await listMockCalls();
+			const patch = calls.find(
+				(c) => c.method === 'PATCH' && c.path === `/api/v1/roles/${CUSTOM_ROLE.id}`
+			)!;
+			const put = calls.find((c) => c.method === 'PUT' && c.path.endsWith('/permissions'))!;
+			expect(patch['x-tenant-id']).toBe(ACME.id);
+			expect(put['x-tenant-id']).toBe(ACME.id);
+			expect(JSON.parse(patch.body)).toMatchObject({ name: 'Sales Head' });
+			expect(JSON.parse(put.body).permissions).toContain('crm.leads.assign');
+		});
+	}
+
+	for (const superUser of [true, false]) {
+		test(`the role tree refuses the three role-management names on a company role (${superUser ? 'super user' : 'platform.roles.manage'}), with the reason`, async ({
+			page
+		}) => {
+			await enterAcmeRoles(page, [CUSTOM_ROLE], { superUser });
+			await registerMock({
+				method: 'GET',
+				path: `/api/v1/roles/${CUSTOM_ROLE.id}`,
+				status: 200,
+				body: CUSTOM_ROLE
+			});
+			await page.goto(`/operator/scope/roles/${CUSTOM_ROLE.id}`);
+			await expect(page.getByRole('button', { name: 'Save permissions' })).toBeVisible();
+			for (const n of MANAGED_NAMES) {
+				await expect(page.getByRole('checkbox', { name: n, exact: true })).toBeDisabled();
+			}
+			await expect(page.getByText('Only LeadKart can hold this.').first()).toBeVisible();
+			// an ordinary name stays editable
+			await expect(
+				page.getByRole('checkbox', { name: 'crm.leads.assign', exact: true })
+			).toBeEnabled();
+		});
+	}
+
+	test('an impersonation session sees the three role-management names refused on a company role', async ({
 		page
 	}) => {
-		await enterAcmeRoles(page, [CUSTOM_ROLE]);
-		await registerMocks([
-			{ method: 'GET', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 200, body: CUSTOM_ROLE },
-			{ method: 'PATCH', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 204 },
-			{
-				method: 'PUT',
-				path: `/api/v1/roles/${CUSTOM_ROLE.id}/permissions`,
-				status: 204
+		await signInAsTier(page, {
+			tier: 'tenant-admin',
+			permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
+			// an impersonation session holds the names through the company's plane (Go tenantPlaneMayHold)
+			effective_permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
+			impersonation: {
+				session_id: '00000000-0000-4000-8000-0000000000e1',
+				tenant_display_name: 'Acme'
 			}
+		});
+		await registerMocks([
+			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
+			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [CUSTOM_ROLE] } },
+			{ method: 'GET', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 200, body: CUSTOM_ROLE }
 		]);
-
-		// the row's Edit item goes to the scope page (the own-tenant one is closed in a tenant context)
-		await page
-			.locator('tr:has-text("Sales Lead") button[aria-label="Actions for Sales Lead"]')
-			.first()
-			.click();
-		await page.getByText('Edit', { exact: true }).click();
-		await page.waitForURL(new RegExp(`/operator/scope/roles/${CUSTOM_ROLE.id}$`));
-		await expect(page.getByText('Hierarchy level 5')).toBeVisible();
-		await expect(page.getByText(READ_ONLY_LINE)).toHaveCount(0);
-
-		await page.getByLabel('Name').fill('Sales Head');
-		await page.getByRole('button', { name: 'Save properties' }).click();
-		await expect(page.getByText('Saved.')).toBeVisible();
-
-		await page.getByRole('checkbox', { name: 'crm.leads.assign', exact: true }).check();
-		await page.getByRole('button', { name: 'Save permissions' }).click();
-
-		await expect
-			.poll(
-				async () =>
-					(await listMockCalls()).filter(
-						(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
-					).length
-			)
-			.toBe(1);
-		const calls = await listMockCalls();
-		const patch = calls.find(
-			(c) => c.method === 'PATCH' && c.path === `/api/v1/roles/${CUSTOM_ROLE.id}`
-		)!;
-		const put = calls.find((c) => c.method === 'PUT' && c.path.endsWith('/permissions'))!;
-		expect(patch['x-tenant-id']).toBe(ACME.id);
-		expect(put['x-tenant-id']).toBe(ACME.id);
-		expect(JSON.parse(patch.body)).toMatchObject({ name: 'Sales Head' });
-		expect(JSON.parse(put.body).permissions).toContain('crm.leads.assign');
+		await page.goto(`/settings/roles/${CUSTOM_ROLE.id}`);
+		await expect(page.getByRole('button', { name: 'Save permissions' })).toBeVisible();
+		for (const n of MANAGED_NAMES) {
+			await expect(page.getByRole('checkbox', { name: n, exact: true })).toBeDisabled();
+		}
 	});
 
 	test('a11y: the operator role page', async ({ page }) => {

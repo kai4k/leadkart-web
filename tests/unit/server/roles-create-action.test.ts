@@ -118,6 +118,46 @@ describe('the hierarchy level is digits only, or no role is created', () => {
 	});
 });
 
+describe('create-role action: where a created role lands', () => {
+	const created = () => {
+		goFetch.mockResolvedValue({ ok: true, status: 201 });
+		readGoJson.mockResolvedValue({ role_id: 'r/1 x' });
+	};
+
+	it('an operator acting inside a company lands on the role page in the scope tree', async () => {
+		loadCapabilities.mockResolvedValue({
+			is_platform: true,
+			is_super_user: false,
+			permissions: [],
+			effective_permissions: ['platform.roles.manage']
+		});
+		scopeState.state = 'valid';
+		created();
+		try {
+			await expect(run('valid')).rejects.toMatchObject({
+				status: 303,
+				location: `/operator/scope/roles/${encodeURIComponent('r/1 x')}`
+			});
+		} finally {
+			scopeState.state = 'none';
+		}
+	});
+
+	it('outside a tenant context it lands on the own-tenant role page', async () => {
+		loadCapabilities.mockResolvedValue({
+			is_platform: true,
+			is_super_user: false,
+			permissions: [],
+			effective_permissions: ['platform.roles.manage']
+		});
+		created();
+		await expect(run()).rejects.toMatchObject({
+			status: 303,
+			location: `/settings/roles/${encodeURIComponent('r/1 x')}`
+		});
+	});
+});
+
 describe('create-role action keeps the form on an outage', () => {
 	const allowed = () =>
 		loadCapabilities.mockResolvedValue({

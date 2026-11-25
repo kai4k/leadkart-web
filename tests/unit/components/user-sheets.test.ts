@@ -10,6 +10,9 @@ import type { QueryClient } from '@tanstack/svelte-query';
 const h = vi.hoisted(() => ({
 	qc: undefined as unknown as QueryClient,
 	held: [] as string[],
+	// the caller: a company admin by default; LeadKart staff in their own tenant is { is_platform: true }
+	caps: { is_platform: false } as { is_platform: boolean; impersonation?: unknown },
+	inTenantContext: false,
 	// what `GET /v1/users/{id}` answers for the overrides panel (undefined = still loading)
 	detail: undefined as unknown,
 	detailError: false,
@@ -52,7 +55,15 @@ vi.mock('#lib/features/auth/index.ts', async () => {
 		displayName,
 		initials,
 		ACTION,
-		session: { canAny: (...perms: string[]) => perms.some((p) => h.held.includes(p)) }
+		session: {
+			canAny: (...perms: string[]) => perms.some((p) => h.held.includes(p)),
+			get capabilities() {
+				return h.caps;
+			},
+			get inTenantContext() {
+				return h.inTenantContext;
+			}
+		}
 	};
 });
 const gw = vi.hoisted(() => ({
@@ -116,6 +127,8 @@ beforeEach(() => {
 	h.refetch = vi.fn();
 	h.detail = undefined;
 	h.detailError = false;
+	h.caps = { is_platform: false };
+	h.inTenantContext = false;
 	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	h.held = [...ACTION.roleAssign, ...ACTION.roleRevoke];
@@ -348,7 +361,7 @@ describe('PermissionOverridesPanel', () => {
 		);
 	});
 
-	it('granting a role-management name is refused in the form (Go: 403 grant_exceeds_authority); revoking one is sent', async () => {
+	it('granting a role-management name on a company member is refused in the form (Go: 403 grant_exceeds_authority), and so is adding one to the revocations', async () => {
 		gw.replacePermissionOverrides.mockResolvedValue(undefined);
 		open();
 		const [grants, revokes] = tags();
@@ -362,6 +375,69 @@ describe('PermissionOverridesPanel', () => {
 			.querySelector<HTMLElement>('button[aria-label="Remove identity.roles.update"]')!
 			.click();
 		flushSync();
+		addTag(revokes!, 'identity.roles.manage');
+		save();
+		await vi.waitFor(() =>
+			expect(document.body.textContent).toContain("can't be added to a member's revocations")
+		);
+		expect(gw.replacePermissionOverrides).not.toHaveBeenCalled();
+	});
+
+	it('a revocation of a role-management name the member already has stays; clearing it is sent', async () => {
+		gw.replacePermissionOverrides.mockResolvedValue(undefined);
+		open(
+			person(1, {
+				permission_overrides: {
+					granted: [],
+					revoked: ['identity.roles.manage', 'crm.leads.delete']
+				},
+				overrides_version: 'v7'
+			})
+		);
+		// untouched: the stale one is sent back as it was (Go keeps it)
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
+		// cleared: sent without it
+		document
+			.querySelector<HTMLElement>('button[aria-label="Remove identity.roles.manage"]')!
+			.click();
+		flushSync();
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(2));
+		expect(gw.replacePermissionOverrides).toHaveBeenLastCalledWith('m1', {
+			overrides_version: 'v7',
+			granted: [],
+			revoked: ['crm.leads.delete']
+		});
+	});
+
+	async function refusedGrant() {
+		open();
+		addTag(tags()[0]!, 'identity.roles.create');
+		save();
+		await vi.waitFor(() =>
+			expect(document.body.textContent).toContain("can't be granted to a member")
+		);
+		expect(gw.replacePermissionOverrides).not.toHaveBeenCalled();
+	}
+
+	it('an operator acting inside a company is refused like the company', async () => {
+		h.caps = { is_platform: true };
+		h.inTenantContext = true;
+		await refusedGrant();
+	});
+
+	it('an impersonation session is refused like the company', async () => {
+		h.caps = { is_platform: true, impersonation: { session_id: 's' } };
+		await refusedGrant();
+	});
+
+	it('LeadKart staff in their own tenant may grant and revoke the names (Go mayConferManaged)', async () => {
+		h.caps = { is_platform: true };
+		gw.replacePermissionOverrides.mockResolvedValue(undefined);
+		open();
+		const [grants, revokes] = tags();
+		addTag(grants!, 'identity.roles.update');
 		addTag(revokes!, 'identity.roles.manage');
 		save();
 		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));

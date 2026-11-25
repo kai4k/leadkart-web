@@ -280,6 +280,21 @@ export const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Go's `authority.mayConferManaged`: the three platform-managed names may be CONFERRED (on a role, or on a member's
+ * override grants or revocations) only by LeadKart staff acting in LeadKart's own tenant: a platform operator who is
+ * not an impersonation session and is not acting inside a company. Everywhere else (a company's own admin, an
+ * operator in a company's scope, an impersonation session) Go answers 403 `grant_exceeds_authority`. Taking one away
+ * is never refused. The one rule behind the role permission tree and the overrides panel; held against Go's clause in
+ * `tests/unit/support/go-personas-pinned.test.ts`.
+ */
+export function mayConferPlatformManaged(
+	caps: { is_platform: boolean; impersonation?: unknown } | null | undefined,
+	inTenantContext: boolean
+): boolean {
+	return caps != null && caps.is_platform && !caps.impersonation && !inTenantContext;
+}
+
+/**
  * Go's `permission.IsRequestable`: exactly what `tenant.admin` implies (every catalogue name that is not
  * platform-reserved) minus the platform-managed role names. The one list behind every picker of names a company may
  * ask for or be given; the Go comparison in `permissions.test.ts` holds it to Go's own rule.
@@ -298,13 +313,20 @@ export const requestablePermissions = (): PermissionCatalogueEntry[] =>
  * (`authority.mayChangePermissions`): a platform-reserved one is refused to everyone but a super user, and any other
  * must be held by the caller; one refused name fails the whole save without saying which. `holds` is the session's own
  * rule (`session.can`), which already holds everything for a super user, so a name it holds is never refused here.
+ * The platform-managed role names are refused whatever the caller holds unless `mayConfer` says it may confer them
+ * (`mayConferPlatformManaged`); the tree keeps the state such a name already has.
  */
 export function unchangeablePermissions(
 	holds: (name: string) => boolean,
-	reasons: { reserved: string; notHeld: string }
+	reasons: { reserved: string; notHeld: string; platformManaged?: string },
+	mayConfer = true
 ): Record<string, string> {
 	const refused: Record<string, string> = {};
 	for (const { name } of PERMISSION_CATALOGUE) {
+		if (!mayConfer && PLATFORM_MANAGED_ROLE.has(name)) {
+			refused[name] = reasons.platformManaged ?? reasons.notHeld;
+			continue;
+		}
 		if (holds(name)) continue;
 		refused[name] = PLATFORM_RESERVED.has(name) ? reasons.reserved : reasons.notHeld;
 	}
