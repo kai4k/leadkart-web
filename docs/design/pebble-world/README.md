@@ -9,7 +9,9 @@ page, this page is the spec to match (see `docs/superpowers/specs/` for the writ
 
 ## Rebuild
 
-From the repo root:
+The committed HTML is the durable artifact. The generator is a local brainstorm source under
+`.superpowers/brainstorm/universe-src/`, which is gitignored and not in the repo, so a fresh clone
+cannot rebuild it. On the machine that has those sources, from the repo root:
 
 ```
 node .superpowers/brainstorm/universe-src/build.mjs --only=world --out=docs/design/pebble-world/reference.html

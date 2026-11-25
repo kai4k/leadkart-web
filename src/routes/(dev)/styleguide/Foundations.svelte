@@ -9,7 +9,6 @@
 
 	const prefs = getPreferences();
 
-	const MODES = ['light', 'dark'] as const;
 	const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 	/** [label, token stem]: the palette-following ramps, then the fixed status and neutral ramps */
 	const SCALES = [
@@ -62,6 +61,11 @@
 	] as const;
 	const DURATIONS = ['instant', 'fast', 'base', 'slow', 'slower', 'slowest', 'app'];
 	const EASES = ['linear', 'in', 'out', 'in-out', 'spring', 'spring-soft'];
+	/** [label, duration, ease]: each duration on the default ease, each ease on the slow duration */
+	const MOTION = [
+		...DURATIONS.map((d) => [`duration-${d}`, d, 'out'] as const),
+		...EASES.map((e) => [`ease-${e}`, 'slow', e] as const)
+	];
 	const swatchClass = 'border-border h-10 rounded-md border';
 	const labelClass = 'text-muted-foreground text-center font-mono text-xs';
 </script>
@@ -84,7 +88,7 @@
 				{id}
 			</button>
 		{/each}
-		{#each MODES as id (id)}
+		{#each PREFERENCE_VALUES.mode as id (id)}
 			<button
 				type="button"
 				onclick={() => prefs.set({ mode: id })}
@@ -244,29 +248,24 @@
 	</div>
 
 	<h3 class="h4">Motion</h3>
-	<p class="body-sm text-muted-foreground">Hover a bar: it slides with that duration and easing.</p>
+	<p class="body-sm text-muted-foreground">
+		Hover or focus a row: its bar slides with that duration and easing. Under reduced motion the
+		bars stay still.
+	</p>
 	<div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-		{#each DURATIONS as name (name)}
-			<div class="group flex items-center gap-3">
-				<span class="{labelClass} w-32 text-start">duration-{name}</span>
-				<div class="bg-primary-tonal h-3 flex-1 overflow-hidden rounded-full">
-					<div
-						class="bg-primary-indicator h-full w-1/4 rounded-full group-hover:translate-x-[300%]"
-						style="transition: transform var(--duration-{name}) var(--ease-out);"
-					></div>
-				</div>
-			</div>
-		{/each}
-		{#each EASES as name (name)}
-			<div class="group flex items-center gap-3">
-				<span class="{labelClass} w-32 text-start">ease-{name}</span>
-				<div class="bg-primary-tonal h-3 flex-1 overflow-hidden rounded-full">
-					<div
-						class="bg-primary-indicator h-full w-1/4 rounded-full group-hover:translate-x-[300%]"
-						style="transition: transform var(--duration-slow) var(--ease-{name});"
-					></div>
-				</div>
-			</div>
+		{#each MOTION as [label, duration, ease] (label)}
+			<button
+				type="button"
+				class="group focus-visible:ring-ring flex items-center gap-3 rounded-md focus-visible:ring-2"
+			>
+				<span class="{labelClass} w-32 text-start">{label}</span>
+				<span class="bg-primary-tonal block h-3 flex-1 overflow-hidden rounded-full">
+					<span
+						class="bg-primary-indicator motion-reduce:group-hover:translate-x-0 motion-reduce:group-focus-visible:translate-x-0 block h-full w-1/4 rounded-full group-hover:translate-x-[300%] group-focus-visible:translate-x-[300%]"
+						style="transition: transform var(--duration-{duration}) var(--ease-{ease});"
+					></span>
+				</span>
+			</button>
 		{/each}
 	</div>
 </section>

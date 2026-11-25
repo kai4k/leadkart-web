@@ -124,6 +124,11 @@ function defineRoutes() {
 			await expectClean(page);
 		});
 
+		test('styleguide', async ({ page }) => {
+			await page.goto('/styleguide');
+			await expectClean(page);
+		});
+
 		test('reset-password — with token', async ({ page }) => {
 			await page.goto('/reset-password?token=mock');
 			await expectClean(page);

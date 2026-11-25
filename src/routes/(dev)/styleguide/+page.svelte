@@ -1,7 +1,9 @@
 <script lang="ts">
 	/**
-	 * Design-system styleguide — renders every Button variant × size × state
-	 * combination + Card variants + colour swatches + glass surfaces.
+	 * Design-system styleguide — every Button variant × size × state, Card
+	 * variants and Alerts here; fields in Fields.svelte, overlays in
+	 * Overlays.svelte, and the foundations (palette × mode, colour roles, type,
+	 * space, radius, materials, motion) in Foundations.svelte.
 	 *
 	 * Gated to a `(dev)` route group — visible at /styleguide but never linked
 	 * from the user-facing nav. Used by:
@@ -38,7 +40,7 @@
 	<meta name="robots" content="noindex,nofollow" />
 </svelte:head>
 
-<div class="container-page stack stack-loose py-8">
+<main id="main-content" class="container-page stack stack-loose py-8" tabindex="-1">
 	<header class="stack stack-tight">
 		<h1 class="display-1">LeadKart design system</h1>
 		<p class="body-lg text-muted-foreground">
@@ -145,4 +147,4 @@
 			{/each}
 		</div>
 	</section>
-</div>
+</main>
