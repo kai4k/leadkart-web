@@ -1,11 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { glass, opaque, paint, setPrefs } from './helpers/materials';
+import { milk, opaque, paint, setPrefs } from './helpers/materials';
 
 /**
  * The REAL FormSheet and the REAL ReasonConfirmDialog (the styleguide's "Form sheet and reason confirm" demo, not a
- * stand-in): a form sheet is glass at rest, a confirm opened over it is OPAQUE (computed `backdrop-filter: none`), the
- * sheet stays glass under it, the confirm is an alert dialog (Cancel first and focused, an outside press does not dismiss
+ * stand-in): a form sheet is milk at rest (near-opaque, no blur), a confirm opened over it is OPAQUE (computed
+ * `backdrop-filter: none`), the sheet stays milk under it, the confirm is an alert dialog (Cancel first and focused, an outside press does not dismiss
  * it, Escape closes only it), and type-to-confirm blocks until the name is typed. axe finds nothing serious in either.
  */
 
@@ -29,7 +29,7 @@ async function openReasonOverSheet(page: Page) {
 }
 
 test.describe('a reason confirm over a form sheet', () => {
-	test('the sheet is glass, the confirm over it is opaque (no glass on glass), under the real components', async ({
+	test('the sheet is milk, the confirm over it is opaque, under the real components', async ({
 		page
 	}) => {
 		await guide(page);
@@ -37,7 +37,7 @@ test.describe('a reason confirm over a form sheet', () => {
 		const sheet = page.locator('[data-slot="sheet-content"]');
 		await expect(sheet).toBeVisible();
 		await page.waitForTimeout(400);
-		glass(await paint(sheet), 'form sheet at rest');
+		milk(await paint(sheet), 'form sheet at rest');
 		// the form's own parts add no material of their own
 		for (const part of ['sheet-header', 'sheet-body', 'sheet-footer'])
 			expect((await paint(sheet.locator(`[data-slot="${part}"]`))).filter, part).toBe('none');
@@ -49,7 +49,7 @@ test.describe('a reason confirm over a form sheet', () => {
 			'none'
 		);
 		opaque(await paint(confirm), 'confirm over the sheet');
-		glass(await paint(sheet), 'the sheet stays glass under the confirm');
+		milk(await paint(sheet), 'the sheet stays milk under the confirm');
 	});
 
 	test('an alert dialog: Cancel first and focused, type-to-confirm blocks, an outside press does not dismiss, Escape closes only the confirm', async ({
@@ -153,7 +153,7 @@ test.describe('a form with unsaved input asks before it closes', () => {
 		await expect(question(page)).toHaveCount(0);
 	});
 
-	test('Escape asks; the question is opaque over the glass sheet, Keep editing is focused, an outside press does not dismiss it', async ({
+	test('Escape asks; the question is opaque over the milk sheet, Keep editing is focused, an outside press does not dismiss it', async ({
 		page
 	}) => {
 		const sheet = await openDirty(page);
@@ -165,7 +165,7 @@ test.describe('a form with unsaved input asks before it closes', () => {
 		await expect(q.getByRole('button', { name: 'Keep editing' })).toBeFocused();
 		expect((await paint(q)).filter, 'the question over the sheet: backdrop-filter').toBe('none');
 		opaque(await paint(q), 'the discard question over the sheet');
-		glass(await paint(sheet), 'the sheet stays glass under the question');
+		milk(await paint(sheet), 'the sheet stays milk under the question');
 		await page.mouse.click(5, 5);
 		await expect(q).toBeVisible();
 		await expect(sheet).toBeVisible();
