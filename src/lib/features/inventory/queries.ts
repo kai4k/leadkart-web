@@ -26,7 +26,6 @@ import * as api from './api';
 import type { ListBatchesParams, ListMovementsParams, ListProductsParams } from './api';
 import { movementReasonLabel } from './view-models';
 import type {
-	BulkProductActionRequest,
 	CreateBatchRequest,
 	CreateMovementRequest,
 	CreateProductRequest,
@@ -36,7 +35,7 @@ import type {
 	WriteOffBatchRequest
 } from './schemas';
 
-export const inventoryKeys = {
+const inventoryKeys = {
 	all: ['inventory'] as const,
 
 	productLists: () => [...inventoryKeys.all, 'products', 'list'] as const,
@@ -134,17 +133,6 @@ export function deleteProductMutation() {
 					}
 			);
 			toast.success('Product deleted');
-		}
-	}));
-}
-
-export function bulkProductActionMutation() {
-	const qc = useQueryClient();
-	return createMutation(() => ({
-		mutationFn: (body: BulkProductActionRequest) => api.bulkProductAction(body),
-		onSuccess: (result) => {
-			void qc.invalidateQueries({ queryKey: inventoryKeys.productLists() });
-			toast.success(`${result.affected} product${result.affected === 1 ? '' : 's'} updated`);
 		}
 	}));
 }

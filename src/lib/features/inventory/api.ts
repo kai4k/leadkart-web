@@ -14,9 +14,6 @@ import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
 import { CSV_TYPE, downloadBlob } from '#lib/utils/download.ts';
 import {
 	batchDtoSchema,
-	bulkActionResultSchema,
-	bulkUploadPreviewSchema,
-	bulkUploadResultSchema,
 	computedPricesResponseSchema,
 	gstDefaultsResponseSchema,
 	listBatchesResponseSchema,
@@ -26,10 +23,6 @@ import {
 	referenceListResponseSchema,
 	stockMovementDtoSchema,
 	type BatchDto,
-	type BulkProductActionRequest,
-	type BulkActionResult,
-	type BulkUploadPreview,
-	type BulkUploadResult,
 	type ComputedPricesResponse,
 	type CreateBatchRequest,
 	type CreateMovementRequest,
@@ -215,29 +208,6 @@ export async function getComputedPrices(productId: string): Promise<ComputedPric
 		`/v1/inventory/products/${seg(productId)}/computed-prices`
 	);
 	return parseResponse(computedPricesResponseSchema, raw);
-}
-
-// ── Bulk ─────────────────────────────────────────────────────────────
-
-export async function bulkProductAction(body: BulkProductActionRequest): Promise<BulkActionResult> {
-	const raw = await apiLegacy.post<unknown>('/v1/inventory/products/bulk-action', body);
-	return parseResponse(bulkActionResultSchema, raw);
-}
-
-export async function bulkUploadPreview(file: File): Promise<BulkUploadPreview> {
-	const form = new FormData();
-	form.append('file', file);
-	return api.postForm('/v1/inventory/products/bulk-upload/preview', form, bulkUploadPreviewSchema);
-}
-
-export async function bulkUploadCommit(
-	file: File,
-	opts: { upsert_by?: 'product_key' | 'none' } = {}
-): Promise<BulkUploadResult> {
-	const form = new FormData();
-	form.append('file', file);
-	form.append('upsert_by', opts.upsert_by ?? 'product_key');
-	return api.postForm('/v1/inventory/products/bulk-upload/commit', form, bulkUploadResultSchema);
 }
 
 /** CSV export, saved as a file through the one download helper (the Blob is `text/csv`, whatever the response said). */

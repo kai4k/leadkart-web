@@ -6,7 +6,7 @@ import { TEST_MEMBERSHIP_ID, TEST_TENANT_ID } from './helpers/fake-jwt';
 /**
  * Inventory module e2e (per crm-modules-contracts.md, BRD-aligned rev 2).
  *
- * Owns: Products + Batches + StockMovements + reference data + bulk.
+ * Owns: Products + Batches + StockMovements + reference data.
  * RFC-4122 UUIDs throughout. Mock-server matches on pathname only;
  * last fixture wins.
  */
@@ -24,8 +24,7 @@ const INVENTORY_PERMISSIONS = [
 	'crm.inventory.create',
 	'crm.inventory.update',
 	'crm.inventory.delete',
-	'crm.inventory.adjust_stock',
-	'crm.inventory.bulk_upload'
+	'crm.inventory.adjust_stock'
 ];
 
 const NOW_DATE = new Date();
@@ -163,7 +162,7 @@ test.describe('Inventory — discovery + empty state', () => {
 		).toBeVisible();
 		await expect(page.getByText(/no products yet/i)).toBeVisible();
 		await expect(page.getByRole('button', { name: /create product/i }).first()).toBeVisible();
-		await expect(page.getByRole('button', { name: /bulk upload/i }).first()).toBeVisible();
+		await expect(page.getByRole('button', { name: /bulk upload/i })).toHaveCount(0);
 	});
 });
 
@@ -753,7 +752,7 @@ test.describe('Inventory — keyboard nav (j/k/Enter/x)', () => {
 		await registerReferenceData();
 	});
 
-	test('j moves focus to next row; Enter opens detail; x toggles selection', async ({ page }) => {
+	test('j moves focus to next row; Enter opens detail', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
 		await registerMocks([
 			{
@@ -792,107 +791,12 @@ test.describe('Inventory — keyboard nav (j/k/Enter/x)', () => {
 		await page.locator('[data-roving-root] tbody tr[tabindex="0"]').first().focus();
 
 		// `j` advances focus from the first row to the second.
-		// `k` walks it back to the first. `x` toggles selection on
-		// the focused (first) row.
+		// `k` walks it back to the first.
 		await page.keyboard.press('j');
 		await page.keyboard.press('k');
-		await page.keyboard.press('x');
-		await expect(page.getByTestId(`row-checkbox-${productIn.id}`)).toBeChecked();
 
 		// Enter on the focused row navigates to /inventory/{id}.
 		await page.keyboard.press('Enter');
 		await page.waitForURL(new RegExp(`/inventory/${productIn.id}$`));
-	});
-});
-
-test.describe('Inventory — bulk actions', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-		await registerReferenceData();
-	});
-
-	test('select 2 rows + deactivate → POST /bulk-action', async ({ page }) => {
-		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/inventory/products',
-				status: 200,
-				body: { items: [productIn, productLow], has_more: false }
-			},
-			{
-				method: 'POST',
-				path: '/api/v1/inventory/products/bulk-action',
-				status: 200,
-				body: { affected: 2, errors: [] }
-			}
-		]);
-		await page.goto('/inventory');
-		// a click before hydration is lost: wait for the page to be interactive
-		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-		await page.getByTestId(`row-checkbox-${productIn.id}`).check();
-		await page.getByTestId(`row-checkbox-${productLow.id}`).check();
-		await page
-			.getByRole('button', { name: /^Deactivate$/i })
-			.first()
-			.click();
-		await expect(page.getByText(/2 products updated/i)).toBeVisible({ timeout: 5000 });
-	});
-});
-
-test.describe('Inventory — bulk upload', () => {
-	test.beforeEach(async () => {
-		await resetMock();
-		await registerReferenceData();
-	});
-
-	test('preview + commit happy path with upsert-by-product-key', async ({ page }) => {
-		await signInAsTier(page, { tier: 'tenant-admin', permissions: INVENTORY_PERMISSIONS });
-		await registerMocks([
-			{
-				method: 'GET',
-				path: '/api/v1/inventory/products',
-				status: 200,
-				body: { items: [], has_more: false }
-			},
-			{
-				method: 'POST',
-				path: '/api/v1/inventory/products/bulk-upload/preview',
-				status: 200,
-				body: {
-					total_rows: 2,
-					rows: [
-						{ brand_name: 'A', manufacturer_name: 'X', pack_size: '10x10', pack_type: 'Strip' },
-						{ brand_name: 'B', manufacturer_name: 'Y', pack_size: '5x6', pack_type: 'Box' }
-					],
-					errors: []
-				}
-			},
-			{
-				method: 'POST',
-				path: '/api/v1/inventory/products/bulk-upload/commit',
-				status: 200,
-				body: { inserted: 1, updated: 1, failed: 0, errors: [] }
-			}
-		]);
-		await page.goto('/inventory');
-		// a click before hydration is lost: wait for the page to be interactive
-		await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-		await page
-			.locator('#main-content')
-			.getByRole('button', { name: /bulk upload/i })
-			.first()
-			.click();
-		await expect(page.getByRole('heading', { name: /bulk upload products/i })).toBeVisible();
-		await page.getByTestId('bulk-upload-input').setInputFiles({
-			name: 'products.csv',
-			mimeType: 'text/csv',
-			buffer: Buffer.from('brand_name,manufacturer_name,pack_size,pack_type\nA,X,10x10,Strip')
-		});
-		await page.getByRole('button', { name: /^preview$/i }).click();
-		await expect(page.getByText(/2 total/)).toBeVisible({ timeout: 5000 });
-		await page.getByRole('button', { name: /commit upload/i }).click();
-		await expect(page.getByText(/Upload complete/i)).toBeVisible({ timeout: 5000 });
-		await expect(page.getByText(/1 inserted/i)).toBeVisible();
 	});
 });

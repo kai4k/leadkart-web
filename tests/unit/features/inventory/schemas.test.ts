@@ -11,9 +11,6 @@ import {
 	createBatchRequestSchema,
 	createMovementRequestSchema,
 	writeOffBatchRequestSchema,
-	bulkProductActionRequestSchema,
-	bulkUploadPreviewSchema,
-	bulkUploadResultSchema,
 	gstDefaultsResponseSchema,
 	computedPricesResponseSchema
 } from '#lib/features/inventory/schemas.ts';
@@ -198,19 +195,6 @@ describe('writeOffBatchRequestSchema', () => {
 	});
 });
 
-describe('bulkProductActionRequestSchema', () => {
-	it('accepts action + ids', () => {
-		expect(
-			bulkProductActionRequestSchema.parse({ ids: ['p-1'], action: 'deactivate' }).action
-		).toBe('deactivate');
-	});
-	it('rejects empty ids', () => {
-		expect(
-			bulkProductActionRequestSchema.safeParse({ ids: [], action: 'deactivate' }).success
-		).toBe(false);
-	});
-});
-
 describe('productDtoSchema', () => {
 	it('parses a complete DTO', () => {
 		const dto = {
@@ -294,19 +278,5 @@ describe('computedPricesResponseSchema', () => {
 			sale_rate_with_gst: 50.4
 		});
 		expect(out.purchase_rate_with_gst).toBe(33.6);
-	});
-});
-
-describe('bulkUploadPreviewSchema', () => {
-	it('parses a preview', () => {
-		const r = bulkUploadPreviewSchema.parse({ total_rows: 0, rows: [], errors: [] });
-		expect(r.total_rows).toBe(0);
-	});
-});
-
-describe('bulkUploadResultSchema', () => {
-	it('parses with defaults', () => {
-		const r = bulkUploadResultSchema.parse({ inserted: 1, updated: 2, failed: 0 });
-		expect(r.errors).toEqual([]);
 	});
 });

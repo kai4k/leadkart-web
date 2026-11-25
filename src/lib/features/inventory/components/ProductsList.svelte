@@ -10,23 +10,16 @@
 		EmptyState,
 		type DataTableColumn
 	} from '#lib/components/ui/index.ts';
+	import { ResourceListPage, type ResourceListAction } from '#lib/components/data/index.ts';
+	import { Icon, Plus, Package } from '#lib/icons/index.ts';
 	import {
-		ResourceListPage,
-		type ResourceListAction,
-		type BulkAction
-	} from '#lib/components/data/index.ts';
-	import { Icon, Plus, Package, UploadCloud, Pause } from '#lib/icons/index.ts';
-	import {
-		createBulkSelection,
 		createKeyboardListNav,
 		createSavedViews,
 		createUrlFilters,
-		filtersScopeKey,
 		type SavedView
 	} from '#lib/hooks/index.ts';
 	import {
 		productsInfiniteQuery,
-		bulkProductActionMutation,
 		categoriesQuery,
 		typesQuery
 	} from '#lib/features/inventory/queries.ts';
@@ -46,18 +39,16 @@
 	import { getListErrorMessage } from '#lib/api/error-messages.ts';
 	import { buildProductFilterConfig, type ProductFilters } from './ProductFilters.svelte';
 	import CreateProductDrawer from './CreateProductDrawer.svelte';
-	import ProductBulkUploadDrawer from './ProductBulkUploadDrawer.svelte';
 
 	/**
 	 * ProductsList — pharma product catalog.
 	 *
 	 * Composes ResourceListPage: title row + saved-view tabs + filter
-	 * bar + bulk-action bar + body. URL is the single source of truth
-	 * for filters (via UseUrlFilters). Body uses `<DataTable.Root>`
-	 * with a `'select'` column wired to the shared `UseBulkSelection`.
+	 * bar + body. URL is the single source of truth
+	 * for filters (via UseUrlFilters). Body uses `<DataTable.Root>`.
 	 *
-	 * Linear-style keyboard nav (j/k row focus, Enter detail, x toggle
-	 * selection) is provided via `UseKeyboardListNav` and the focused
+	 * Linear-style keyboard nav (j/k row focus, Enter detail)
+	 * is provided via `UseKeyboardListNav` and the focused
 	 * row gets a primary border-s accent.
 	 */
 
@@ -128,29 +119,9 @@
 		return pages.flatMap((p) => p.items);
 	});
 
-	// ── Bulk selection ────────────────────────────────────────────────
-	// cleared when the search or filters change: a bulk action must not reach rows that are no longer shown.
-	// Sorting keeps it: the same rows in another order.
-	const selection = createBulkSelection<ProductDto>(() => filtersScopeKey(filters.filters));
-
-	const bulkMut = bulkProductActionMutation();
-
-	const bulkActions: BulkAction[] = [
-		{
-			id: 'deactivate',
-			label: 'Deactivate',
-			icon: Pause as never,
-			onClick: () =>
-				bulkMut.mutate(
-					{ ids: Array.from(selection.selected), action: 'deactivate' },
-					{ onSuccess: () => selection.clear() }
-				)
-		}
-	];
-
 	// ── Drawer state ──────────────────────────────────────────────────
+	// (No bulk actions and no bulk upload: Go has neither route. The inventory rebuild re-contracts them.)
 	let createOpen = $state(false);
-	let bulkUploadOpen = $state(false);
 
 	const mayCatalog = $derived(session.canAny(...ACTION.catalogManage));
 	const primaryAction: ResourceListAction | undefined = $derived(
@@ -158,34 +129,22 @@
 			? { label: 'Create product', icon: Plus as never, onClick: () => (createOpen = true) }
 			: undefined
 	);
-	const secondaryActions: ResourceListAction[] = $derived(
-		mayCatalog
-			? [
-					{
-						label: 'Bulk upload',
-						icon: UploadCloud as never,
-						onClick: () => (bulkUploadOpen = true)
-					}
-				]
-			: []
-	);
 
 	const isEmpty = $derived(!query.isPending && !query.isError && products.length === 0);
 
 	function openDetail(p: ProductDto) {
-		// not-a-guard: opens the product row; capabilities only hide create / bulk upload
+		// not-a-guard: opens the product row; capabilities only hide create
 		if (confirmLeave()) goto(resolve('/(app)/inventory/[id]', { id: p.id }));
 	}
 
 	// ── Keyboard nav (Linear / Superhuman convention) ─────────────────
 	// Roving-tabindex pattern: DataTable wires onkeydown/focusin/focusout
 	// from the <tbody> to the nav store and registers per-row refs so
-	// `j`/`k` move DOM focus. When a drawer (Create / Bulk upload) is
+	// `j`/`k` move DOM focus. When the Create drawer is
 	// open it owns focus, so keys naturally bubble through the portal
 	// boundary without polluting the row list.
 	const nav = createKeyboardListNav<ProductDto>({
-		onSelect: (p) => openDetail(p),
-		onToggleSelect: (p) => selection.toggle(p.id)
+		onSelect: (p) => openDetail(p)
 	});
 
 	$effect(() => {
@@ -194,13 +153,6 @@
 
 	// ── DataTable column config ───────────────────────────────────────
 	const columns: DataTableColumn<ProductDto>[] = [
-		{
-			id: 'select',
-			header: '',
-			class: 'w-10',
-			selectLabel: (p) => `Select ${p.brand_name}`
-		},
-
 		{
 			id: 'brand',
 			header: 'Brand',
@@ -310,17 +262,13 @@
 		title={filters.hasActive ? 'No matching products' : 'No products yet'}
 		description={filters.hasActive
 			? 'Try a different filter or clear all.'
-			: 'Add your first pharma product, or bulk upload a CSV.'}
+			: 'Add your first pharma product.'}
 	>
 		{#snippet action()}
 			<div class="cluster cluster-tight">
 				{#if mayCatalog}
 					<Button onclick={() => (createOpen = true)} data-testid="empty-create-product"
 						><Icon icon={Plus} size="sm" /> Create product</Button
-					>
-
-					<Button variant="tonal" onclick={() => (bulkUploadOpen = true)}
-						><Icon icon={UploadCloud} size="sm" /> Bulk upload</Button
 					>
 				{/if}
 			</div>
@@ -332,10 +280,8 @@
 	title="Inventory"
 	subtitle="Pharma catalog: products, batches, stock movements."
 	{primaryAction}
-	{secondaryActions}
 	{savedViews}
 	filters={{ config: filterFields, instance: filters }}
-	bulk={{ selection, actions: bulkActions }}
 >
 	{#if query.isError}
 		<div
@@ -353,7 +299,6 @@
 				state={tableState}
 				error={null}
 				onRowClick={openDetail}
-				{selection}
 				{nav}
 				emptyState={emptyStateSlot}
 			/>
@@ -368,5 +313,3 @@
 </ResourceListPage>
 
 <CreateProductDrawer bind:open={createOpen} onOpenChange={(o) => (createOpen = o)} />
-
-<ProductBulkUploadDrawer bind:open={bulkUploadOpen} onOpenChange={(o) => (bulkUploadOpen = o)} />

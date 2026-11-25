@@ -50,7 +50,30 @@ const KNOWN_DEBT: ReadonlyArray<{ pattern: RegExp; task: string }> = [
 	{ pattern: /^\/api\/v1\/orders\/\{\}\/complete$/, task: 'Tasks 20-23 (orders: complete)' },
 	{ pattern: /^\/api\/v1\/orders\/\{\}\/cancel$/, task: 'Tasks 20-23 (orders: cancel)' },
 	{ pattern: /^\/api\/v1\/orders\/bulk-action$/, task: 'Tasks 20-23 (orders: bulk action)' },
-	{ pattern: /^\/api\/v1\/inventory\//, task: 'Tasks 24-26 (inventory)' }
+	// Inventory: only what Go does not serve. One pin per path (the products and batches CRUD routes are real; bulk
+	// action and bulk upload are gone from the web, Go has neither).
+	{
+		pattern: /^\/api\/v1\/inventory\/batches\/\{\}\/write-off$/,
+		task: 'Tasks 24-26 (inventory: write-off)'
+	},
+	{
+		pattern: /^\/api\/v1\/inventory\/batches\/\{\}\/quarantine$/,
+		task: 'Tasks 24-26 (inventory: quarantine)'
+	},
+	{
+		pattern: /^\/api\/v1\/inventory\/products\/\{\}\/movements(\?.*)?$/,
+		task: 'Tasks 24-26 (inventory: stock movements)'
+	},
+	{ pattern: /^\/api\/v1\/inventory\/categories$/, task: 'Tasks 24-26 (inventory: categories)' },
+	{ pattern: /^\/api\/v1\/inventory\/types$/, task: 'Tasks 24-26 (inventory: types)' },
+	{
+		pattern: /^\/api\/v1\/inventory\/gst-defaults$/,
+		task: 'Tasks 24-26 (inventory: GST defaults)'
+	},
+	{
+		pattern: /^\/api\/v1\/inventory\/products\/\{\}\/computed-prices$/,
+		task: 'Tasks 24-26 (inventory: computed prices)'
+	}
 ];
 
 type Call = { file: string; line: number; method: string; path: string };
