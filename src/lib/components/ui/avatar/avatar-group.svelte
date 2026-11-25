@@ -2,7 +2,7 @@
 	import { cva, type VariantProps } from 'class-variance-authority';
 	export const avatarGroupItemVariants = cva(
 		[
-			'inline-flex items-center justify-center rounded-full font-medium uppercase',
+			'inline-flex items-center justify-center rounded-(--radius-pebble) font-medium uppercase',
 			'ring-2 ring-card',
 			'bg-[linear-gradient(135deg,var(--primary-soft),var(--muted))]',
 			'text-primary-text'
@@ -63,7 +63,7 @@
 			aria-label={member.name}
 		>
 			{#if member.image}
-				<img src={member.image} alt="" class="size-full rounded-full object-cover" />
+				<img src={member.image} alt="" class="size-full rounded-(--radius-pebble) object-cover" />
 			{:else}
 				{initials(member.name)}
 			{/if}

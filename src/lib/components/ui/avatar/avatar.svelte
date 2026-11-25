@@ -2,7 +2,7 @@
 	import { cva, type VariantProps } from 'class-variance-authority';
 	export const avatarVariants = cva(
 		[
-			'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-medium uppercase',
+			'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-(--radius-pebble) font-medium uppercase',
 			'',
 			'bg-[linear-gradient(135deg,var(--primary-soft),var(--muted))]',
 			'text-primary-text',

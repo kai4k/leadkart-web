@@ -23,6 +23,20 @@ import { ACTION, P } from '#lib/features/auth/permissions.ts';
 
 type Caps = Capabilities | null | undefined;
 
+/** The apps of the dock: each has an identity colour (`--app-<key>`, scope class `.app-<key>`). */
+export type AppKey =
+	| 'home'
+	| 'leads'
+	| 'orders'
+	| 'stock'
+	| 'dispatch'
+	| 'payments'
+	| 'reports'
+	| 'team'
+	| 'settings'
+	| 'companies'
+	| 'people';
+
 type NavContext = 'own' | 'scope' | 'both';
 type NavSectionId = 'main' | 'operator' | 'tenantContext' | 'administration' | 'crm' | 'account';
 export type AccessRule =

@@ -35,6 +35,7 @@
 		"test:e2e": "playwright test --project=chromium --project=firefox --project=webkit",
 		"openapi:codegen": "node scripts/openapi-codegen.mjs",
 		"openapi:check": "node scripts/openapi-codegen.mjs --check",
+		"brand:icons": "node scripts/brand/generate-icons.mjs",
 		"size": "size-limit",
 		"size:critical": "node scripts/check-bundle-size.mjs",
 		"prepare": "svelte-kit sync && husky"

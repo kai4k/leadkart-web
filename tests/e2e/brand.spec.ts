@@ -4,15 +4,19 @@ import { signInAsTier } from './helpers/sign-in';
 
 /**
  * The approved logo is wired in: the head links icons that exist, the manifest lists the three
- * installable icons, the browser chrome is Kart Blue, and the in-app mark follows the chosen primary.
+ * installable icons, the browser chrome is the Iris primary (one colour in the head and the manifest,
+ * written by scripts/brand/generate-icons.mjs), and the in-app mark follows the chosen palette: the L
+ * is the primary, the K the second piece.
  */
+
+const HEX = /^#[0-9A-F]{6}$/;
 
 test.describe('brand wiring', () => {
 	test.beforeEach(async () => {
 		await resetMock();
 	});
 
-	test('the page head links icons that are served, and the theme colour is Kart Blue', async ({
+	test('the page head links icons that are served, and the theme colour is the Iris primary', async ({
 		page
 	}) => {
 		const html = await (await page.request.get('/signin')).text();
@@ -27,7 +31,13 @@ test.describe('brand wiring', () => {
 		expect(hrefs.some((h) => h.endsWith('.ico'))).toBe(true);
 		expect(hrefs.some((h) => h.endsWith('.svg'))).toBe(true);
 		expect(hrefs.some((h) => h.includes('apple-touch-icon'))).toBe(true);
-		expect(html).toMatch(/<meta name="theme-color" content="#2563EB"/);
+		const theme = /<meta name="theme-color" content="([^"]+)"/.exec(html)?.[1];
+		expect(theme).toMatch(HEX);
+		const manifest = (await (await page.request.get('/manifest.webmanifest')).json()) as {
+			theme_color: string;
+		};
+		expect(manifest.theme_color).toBe(theme);
+		expect(html).toContain(`<meta name="msapplication-TileColor" content="${theme}"`);
 		expect(html).toContain('name="twitter:card"');
 	});
 
@@ -59,7 +69,7 @@ test.describe('brand wiring', () => {
 			background_color: string;
 			icons: Array<{ src: string; sizes: string; purpose?: string }>;
 		};
-		expect(manifest.theme_color).toBe('#2563EB');
+		expect(manifest.theme_color).toMatch(HEX);
 		expect(manifest.icons.map((i) => i.sizes).sort()).toEqual(['192x192', '512x512', '512x512']);
 		expect(manifest.icons.some((i) => i.purpose === 'maskable')).toBe(true);
 		for (const icon of manifest.icons)
@@ -69,20 +79,20 @@ test.describe('brand wiring', () => {
 	test('the in-app mark follows the primary colour chosen in the customizer', async ({ page }) => {
 		await signInAsTier(page, { tier: 'tenant-admin', permissions: ['tenant.admin'] });
 		await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
-		const frameStroke = (p: Page) =>
+		const lFill = (p: Page) =>
 			p
 				.locator('header [data-brand-mark] svg path')
 				.first()
-				.evaluate((el) => getComputedStyle(el).stroke);
-		const capsuleStroke = (p: Page) =>
+				.evaluate((el) => getComputedStyle(el).fill);
+		const kFill = (p: Page) =>
 			p
 				.locator('header [data-brand-mark] svg path')
 				.nth(1)
-				.evaluate((el) => getComputedStyle(el).stroke);
-		const before = await frameStroke(page);
+				.evaluate((el) => getComputedStyle(el).fill);
+		const before = await lFill(page);
 		expect(before).not.toBe('none');
-		// the capsule is a second tone, not the frame colour again, and it follows the palette too
-		const capsuleBefore = await capsuleStroke(page);
+		// the K is a second tone, not the L colour again, and it follows the palette too
+		const capsuleBefore = await kFill(page);
 		expect(capsuleBefore).not.toBe('none');
 		expect(capsuleBefore).not.toBe(before);
 
@@ -92,9 +102,9 @@ test.describe('brand wiring', () => {
 			.getByRole('radio', { name: 'Ocean' })
 			.click();
 		await expect(page.locator('html')).toHaveAttribute('data-palette', 'ocean');
-		const after = await frameStroke(page);
+		const after = await lFill(page);
 		expect(after).not.toBe(before);
-		const capsuleAfter = await capsuleStroke(page);
+		const capsuleAfter = await kFill(page);
 		expect(capsuleAfter).not.toBe(after);
 		expect(capsuleAfter).not.toBe(capsuleBefore);
 	});

@@ -66,7 +66,7 @@ bottom-right`, `richColors`, `closeButton`, token classes only; icons via `#lib/
 
 ## Not generated (LeadKart composites, plan L16)
 
-`AuthCard`, `BrandMark` (the approved logo drawn inline in the brand tokens, optional outlined `BrandWordmark` beside it; the large `BrandIcon` is in `layouts/`), `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `StatCard`,
+`AuthCard`, `AppPebble` (the one app pebble: an app's icon or the brand mark on `material-pebble`), `BrandMark` (the LK "Two Cuts" monogram drawn inline: L = `--primary`, K = `--brand-2`; optional outlined `BrandWordmark` beside it), `BrandIcon` (the brand `AppPebble` with the mark), `ConfirmDialog`, `CopyButton`, `DescriptionList`, `EmptyState`, `StatCard`,
 `StatusPill`, `kanban/`, `stepper/`, `timeline/`, `spinner/`, and the legacy `data-table/`.
 
 ## Stacking

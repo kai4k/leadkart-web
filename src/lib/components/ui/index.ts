@@ -53,6 +53,8 @@ export { default as EmptyState } from './EmptyState.svelte';
 export * as Kanban from './kanban';
 export type { KanbanColumnDescriptor, KanbanColumnAccent, KanbanMove } from './kanban';
 export { default as BrandMark } from './BrandMark.svelte';
+export { default as AppPebble } from './AppPebble.svelte';
+export type { AppPebbleSize } from './AppPebble.svelte';
 export { default as BrandIcon } from './BrandIcon.svelte';
 export { default as BrandWordmark } from './BrandWordmark.svelte';
 export { default as StatCard } from './StatCard.svelte';

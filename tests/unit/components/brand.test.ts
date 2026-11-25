@@ -1,12 +1,13 @@
 /**
- * The brand pieces: the mark (the logo pack's geometry, inline, drawn in tokens), the wordmark (one
- * path in currentColor) and the large icon (unique gradient ids per instance, light and dark by CSS).
+ * The brand pieces: the mark (LK monogram 6 "Two Cuts", inline, two token fills), the wordmark (one
+ * path in currentColor), the app pebble and the large icon (the mark on the brand pebble).
  * None of them is an <img>, none paints a hex or oklch literal.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
+import AppPebble from '#lib/components/ui/AppPebble.svelte';
 import BrandMark from '#lib/components/ui/BrandMark.svelte';
 import BrandWordmark from '#lib/components/ui/BrandWordmark.svelte';
 import BrandIcon from '#lib/components/ui/BrandIcon.svelte';
@@ -24,27 +25,37 @@ afterEach(() => {
 	document.body.innerHTML = '';
 });
 
+const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+
 describe('BrandMark', () => {
-	it('draws the logo pack geometry: the frame path, the capsule path and two wheels', () => {
-		const svg = render(BrandMark).querySelector('svg')!;
-		expect(svg.getAttribute('viewBox')).toBe('0 0 512 512');
-		const group = svg.querySelector('g')!;
-		expect(group.getAttribute('transform')).toBe('translate(-24 -14)');
-		expect(group.getAttribute('stroke-linecap')).toBe('round');
-		expect(group.getAttribute('stroke-linejoin')).toBe('round');
-		const paths = [...svg.querySelectorAll('path')];
-		expect(paths.map((p) => p.getAttribute('d'))).toEqual([
-			'M150 108V316a32 32 0 0 0 32 32H410',
-			'M272 248L384 136'
-		]);
-		expect(paths.map((p) => p.getAttribute('stroke-width'))).toEqual(['68', '84']);
-		const wheels = [...svg.querySelectorAll('circle')];
-		expect(
-			wheels.map((c) => [c.getAttribute('cx'), c.getAttribute('cy'), c.getAttribute('r')])
-		).toEqual([
-			['204', '432', '34'],
-			['366', '432', '34']
-		]);
+	// the monogram 6 path set (logo study, glyphs.mjs concept 6), pinned by hash: l + '|' + k
+	const FULL = '72820006e77a7adaf153f708873da466df6e2dd36b9872cf0659dd9917eab28e';
+	const SMALL = 'b100313ba0d13c2f8fa5bce461ef3725e8ecd67116fd8babe3345851645763f7';
+	const drawing = (root: HTMLElement) => {
+		const svg = root.querySelector('svg')!;
+		const [l, k] = [...svg.querySelectorAll('path')];
+		return { svg, l: l!, k: k! };
+	};
+
+	it('draws the monogram 6 path set: the L then the K, two paths and nothing else', () => {
+		const { svg, l, k } = drawing(render(BrandMark, { size: 'lg' }));
+		expect(svg.querySelectorAll('path')).toHaveLength(2);
+		expect(svg.querySelectorAll('circle, rect, line, g, image, linearGradient')).toHaveLength(0);
+		expect(svg.getAttribute('viewBox')).toBe('2 2 60 60');
+		expect(sha(`${l.getAttribute('d')}|${k.getAttribute('d')}`)).toBe(FULL);
+	});
+
+	it('switches to the small drawing at 32 px and under, the full one above', () => {
+		for (const size of ['sm', 'md']) {
+			const { svg, l, k } = drawing(render(BrandMark, { size }));
+			expect(svg.getAttribute('viewBox'), size).toBe('3 3 10 10');
+			expect(sha(`${l.getAttribute('d')}|${k.getAttribute('d')}`), size).toBe(SMALL);
+		}
+		const lg = drawing(render(BrandMark, { size: 'lg' }));
+		expect(lg.svg.getAttribute('viewBox')).toBe('2 2 60 60');
+		// an explicit drawing wins over the size (the pebble sets it)
+		const forced = drawing(render(BrandMark, { size: 'sm', drawing: 'full' }));
+		expect(forced.svg.getAttribute('viewBox')).toBe('2 2 60 60');
 	});
 
 	it('is an image named LeadKart, or hidden from assistive technology when decorative', () => {
@@ -59,38 +70,38 @@ describe('BrandMark', () => {
 		expect(hidden.hasAttribute('aria-label')).toBe(false);
 	});
 
-	it('paints the frame and wheels from --brand-frame and the capsule from --brand-capsule (sidebar: its own pair)', () => {
+	it('fills the L from --primary and the K from --brand-2 (sidebar: its own pair)', () => {
 		const surface = render(BrandMark).querySelector('[data-brand-mark]')!;
-		expect(surface.className).toContain('[--mark-frame:var(--brand-frame)]');
-		expect(surface.className).toContain('[--mark-capsule:var(--brand-capsule)]');
-		const svg = surface.querySelector('svg')!;
-		const [frame, capsule] = [...svg.querySelectorAll('path')];
-		expect(frame!.getAttribute('class')).toContain('stroke-(--mark-frame)');
-		expect(capsule!.getAttribute('class')).toContain('stroke-(--mark-capsule)');
-		for (const wheel of svg.querySelectorAll('circle'))
-			expect(wheel.getAttribute('class')).toContain('fill-(--mark-frame)');
+		expect(surface.className).toContain('[--m1:var(--primary)]');
+		expect(surface.className).toContain('[--m2:var(--brand-2)]');
+		const { l, k } = drawing(surface as HTMLElement);
+		expect(l.getAttribute('class')).toContain('fill-(--m1)');
+		expect(k.getAttribute('class')).toContain('fill-(--m2)');
+		expect(surface.innerHTML).not.toContain('stroke');
 
 		const sidebar = render(BrandMark, { tone: 'sidebar' }).querySelector('[data-brand-mark]')!;
-		expect(sidebar.className).toContain('[--mark-frame:var(--sidebar-brand-frame)]');
-		expect(sidebar.className).toContain('[--mark-capsule:var(--sidebar-brand-capsule)]');
+		expect(sidebar.className).toContain('[--m1:var(--sidebar-brand-frame)]');
+		expect(sidebar.className).toContain('[--m2:var(--sidebar-brand-capsule)]');
 	});
 
-	it('mono paints everything in currentColor', () => {
-		const svg = render(BrandMark, { mono: true }).querySelector('svg')!;
-		for (const el of svg.querySelectorAll('path'))
-			expect(el.getAttribute('class')).toContain('stroke-current');
-		for (const el of svg.querySelectorAll('circle'))
-			expect(el.getAttribute('class')).toContain('fill-current');
-		expect(svg.outerHTML).not.toContain('--mark-frame');
+	it('mono paints both pieces in currentColor', () => {
+		const { svg, l, k } = drawing(render(BrandMark, { mono: true }));
+		expect(l.getAttribute('class')).toContain('fill-current');
+		expect(k.getAttribute('class')).toContain('fill-current');
+		expect(svg.outerHTML).not.toContain('--m1');
 	});
 
-	it('has no raster and no colour literal', () => {
+	it('has no raster, no colour literal and no trace of the old cart-L mark', () => {
 		const html = render(BrandMark, { wordmark: true }).innerHTML;
 		expect(html).not.toContain('<img');
 		expect(html).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
 		expect(html).not.toMatch(/oklch\(|rgb\(/);
+		expect(html).not.toContain('<circle');
 		const source = readFileSync('src/lib/components/ui/BrandMark.svelte', 'utf8');
 		expect(source).not.toMatch(/#[0-9a-fA-F]{6}\b/);
+		// the sidebar's own pair (--sidebar-brand-*) stays until the sidebar goes; the surface tokens are gone
+		expect(source).not.toMatch(/(?<!sidebar-)brand-(frame|capsule)/);
+		expect(source).not.toContain('--mark-frame');
 	});
 
 	it('with the wordmark the pair is one unit named by the wordmark, the mark itself hidden', () => {
@@ -130,39 +141,75 @@ describe('BrandWordmark', () => {
 	});
 });
 
-describe('BrandIcon', () => {
-	it('two instances on one page have distinct gradient and filter ids, and every reference resolves in its own instance', () => {
-		const a = render(BrandIcon);
-		const b = render(BrandIcon);
-		const ids = (root: HTMLElement) => [...root.querySelectorAll('[id]')].map((e) => e.id);
-		const idsA = ids(a);
-		const idsB = ids(b);
-		expect(idsA.length).toBeGreaterThan(10);
-		expect(idsA.filter((id) => idsB.includes(id))).toEqual([]);
-		expect(new Set(idsA).size).toBe(idsA.length);
-		for (const root of [a, b]) {
-			const own = new Set(ids(root));
-			const refs = [...root.innerHTML.matchAll(/url\(#([^)]+)\)/g)].map((m) => m[1]!);
-			expect(refs.length).toBeGreaterThan(10);
-			for (const ref of refs) expect(own.has(ref)).toBe(true);
+describe('AppPebble', () => {
+	it('app="orders" is in the orders scope (--app-accent) and hidden from assistive technology without a label', () => {
+		const pebble = render(AppPebble, { app: 'orders', size: 'md' }).querySelector(
+			'[data-app-pebble]'
+		)!;
+		expect(pebble.classList.contains('app-orders')).toBe(true);
+		expect(pebble.className).toContain('material-pebble');
+		expect(pebble.getAttribute('aria-hidden')).toBe('true');
+		expect(pebble.hasAttribute('role')).toBe(false);
+		expect(pebble.getAttribute('data-app')).toBe('orders');
+	});
+
+	it('with a label it is an image with that name', () => {
+		const pebble = render(AppPebble, { app: 'stock', size: 'sm', label: 'Stock' }).querySelector(
+			'[data-app-pebble]'
+		)!;
+		expect(pebble.getAttribute('role')).toBe('img');
+		expect(pebble.getAttribute('aria-label')).toBe('Stock');
+		expect(pebble.hasAttribute('aria-hidden')).toBe(false);
+	});
+
+	it('without an app it is the brand colour (the home scope, even inside another app) with the mark', () => {
+		const pebble = render(AppPebble, { size: 'lg' }).querySelector('[data-app-pebble]')!;
+		expect(pebble.classList.contains('app-home')).toBe(true);
+		expect(pebble.querySelector('[data-brand-mark]')).not.toBeNull();
+		expect(pebble.hasAttribute('data-app')).toBe(false);
+	});
+
+	it('draws the glyph icon when one is given, not the mark', () => {
+		const Glyph = (anchor: Comment) => {
+			const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+			el.setAttribute('data-glyph', '');
+			anchor.before(el);
+		};
+		const pebble = render(AppPebble, { app: 'leads', size: 'md', icon: Glyph }).querySelector(
+			'[data-app-pebble]'
+		)!;
+		expect(pebble.querySelector('[data-glyph]')).not.toBeNull();
+		expect(pebble.querySelector('[data-brand-mark]')).toBeNull();
+	});
+
+	it('has one size per step and no colour literal', () => {
+		for (const size of ['xs', 'sm', 'md', 'lg']) {
+			const pebble = render(AppPebble, { size }).querySelector('[data-app-pebble]')!;
+			expect(pebble.getAttribute('data-size')).toBe(size);
 		}
+		const source = readFileSync('src/lib/components/ui/AppPebble.svelte', 'utf8');
+		expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b|oklch\(|rgb\(/);
+	});
+});
+
+describe('BrandIcon', () => {
+	it('composes the one pebble: the brand pebble with the mark, decorative', () => {
+		const root = render(BrandIcon);
+		const icon = root.querySelector('[data-brand-icon]')!;
+		expect(icon.getAttribute('aria-hidden')).toBe('true');
+		expect(icon.matches('[data-app-pebble]')).toBe(true);
+		expect(icon.classList.contains('app-home')).toBe(true);
+		const mark = icon.querySelector('[data-brand-mark]')!;
+		expect(mark).not.toBeNull();
+		// the large icon shows the full drawing
+		expect(mark.querySelector('svg')!.getAttribute('viewBox')).toBe('2 2 60 60');
 	});
 
-	it('draws a light and a dark icon and picks one by the dark variant (CSS only)', () => {
-		const icon = render(BrandIcon);
-		const [light, dark] = [...icon.querySelectorAll('svg')];
-		expect(light!.getAttribute('class')).toContain('dark:hidden');
-		expect(dark!.getAttribute('class')).toContain('hidden');
-		expect(dark!.getAttribute('class')).toContain('dark:block');
-		expect(icon.querySelector('[data-brand-icon]')!.getAttribute('aria-hidden')).toBe('true');
-	});
-
-	it('has no raster, no colour literal in its style, and an opaque plate for reduced transparency', () => {
+	it('has no raster, no gradient of its own and no colour literal', () => {
 		const source = readFileSync('src/lib/components/ui/BrandIcon.svelte', 'utf8');
-		const style = source.slice(source.indexOf('<style>'));
-		expect(style).not.toMatch(/#[0-9a-fA-F]{3,8}\b|oklch\(|rgb\(/);
-		expect(style).toContain('var(--brand-plate-solid)');
-		expect(style).toContain('var(--brand-plate-glass)');
+		expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b|oklch\(|rgb\(/);
+		expect(source).not.toContain('linearGradient');
+		expect(source).toContain('AppPebble');
 		expect(render(BrandIcon).innerHTML).not.toContain('<img');
 	});
 });
