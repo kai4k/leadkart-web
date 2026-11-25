@@ -35,6 +35,14 @@
 	const buttonSizes = ['sm', 'default', 'lg'] as const;
 	const brandShades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 	const semanticPalettes = ['brand', 'secondary', 'success', 'warning', 'danger', 'info', 'gray'];
+	/** the solid materials (spec 4.3): the class that makes each, and the radius it is drawn with */
+	const solidMaterials = [
+		['sheet', 'material-sheet rounded-sheet'],
+		['clay', 'material-clay rounded-card'],
+		['clay-sm', 'material-clay-sm rounded-control'],
+		['tray', 'material-tray rounded-card'],
+		['trough', 'material-trough rounded-control']
+	] as const;
 </script>
 
 <svelte:head>
@@ -206,6 +214,41 @@
 					Hover to see the sheen sweep. Composes bg-card border border-border rounded-md shadow-md +
 					.
 				</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ═══ SOLID MATERIALS ══════════════════════════════════════════════ -->
+	<section aria-labelledby="materials-heading" class="stack stack-loose">
+		<h2 id="materials-heading" class="h2">Materials</h2>
+		<div class="bg-background flex flex-wrap items-center gap-4 rounded-lg p-6">
+			{#each solidMaterials as [name, classes] (name)}
+				<div
+					data-material={name}
+					class="text-foreground body-sm grid min-h-16 min-w-32 place-items-center p-4 {classes}"
+				>
+					{name}
+				</div>
+			{/each}
+			<div
+				data-material="glass"
+				class="material-bar text-foreground body-sm grid min-h-16 min-w-32 place-items-center rounded-card p-4"
+			>
+				glass
+			</div>
+			<div
+				data-material="milk"
+				class="material-milk text-foreground body-sm grid min-h-16 min-w-32 place-items-center rounded-card p-4"
+			>
+				milk
+			</div>
+			<div
+				data-material="pebble"
+				class="app-leads material-pebble grid size-14 place-items-center"
+				aria-label="pebble"
+				role="img"
+			>
+				<Icon icon={Plus} size="md" />
 			</div>
 		</div>
 	</section>

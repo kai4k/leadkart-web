@@ -22,7 +22,7 @@
 	/**
 	 * A confirmation on the `alert-dialog` primitive (role `alertdialog`): focus starts on Cancel, an outside press
 	 * does not dismiss it, Escape and Cancel close it unless the action is in flight (`loading` vetoes every way out).
-	 * The panel is the `material-pane`; over a form sheet it is opaque (a pane over a pane is never glass on glass).
+	 * The panel is the `material-milk` (near-opaque, never blurred), so it may open over a form sheet.
 	 * Cancel comes first in the DOM. The confirm button is a plain Button, not `AlertDialog.Action`: that closes the
 	 * dialog on click, and a confirmation closes when its action SUCCEEDS (the caller sets `open` to false).
 	 */

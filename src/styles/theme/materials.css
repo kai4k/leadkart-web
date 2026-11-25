@@ -1,14 +1,27 @@
-/* MATERIALS — Liquid Glass for the control layer (plan G2). Flat rules only: the contrast gate
- * (scripts/arch/check-token-contrast.mjs) resolves this file for every combination. The fills are
- * neutral surfaces at an alpha; the numbers are mode-independent (light-dark() takes colours only).
+/* MATERIALS — Pebble World. Flat rules only: the contrast gate (scripts/arch/check-token-contrast.mjs)
+ * resolves this file for every combination. The glass fills are neutral surfaces at an alpha; the numbers
+ * are mode-independent (light-dark() takes colours only).
  *
- * Where a material is used: the topbar, the horizontal nav and the bulk bar (bar); dialogs, sheets,
- * popovers, menus, the customizer and the command palette (pane); the sidebar (sidebar). Text on a
- * material is always opaque: the only legal alpha in the product lives in this file and in --scrim.
- * The filter is `blur() saturate() contrast()`; contrast < 1 is the luminosity compression that
- * keeps text legible over the darkest and lightest backdrop (proved by the gate, plan 3.1).
+ * Eight materials, one job each (spec 4.3):
+ *   glass                   `material-bar`: the top bar, the dock and floating bars (small, 16px blur, glass on
+ *                           touch too); `material-glass`: the large glass of the auth card and the command
+ *                           palette, notifications and New overlays (24px blur, opaque on a coarse pointer)
+ *   milk                    popovers, menus, dialogs, sheets and toasts: near-opaque, NO backdrop filter
+ *   sheet                   an app's working surface, tables, forms
+ *   clay, clay-sm           cards and tiles; secondary buttons, chips and segment thumbs
+ *   pebble                  app icons, avatars, the brand tile
+ *   tray                    a grouped area inside a sheet
+ *   trough                  inputs, search and the tracks of switches, meters and sliders
+ * Glass is the only material that blurs (the blur budget lives in tests/e2e/material-budget.spec.ts); the
+ * sidebar shares the large-glass filter until the OS shell replaces it. Text on a material is always opaque: the
+ * only legal alpha in the product lives in this file and in --scrim. The glass filter is `blur() saturate()
+ * contrast()`; contrast < 1 is the luminosity compression that keeps text legible over the darkest and
+ * lightest backdrop (proved by the gate, plan 3.1). Milk needs none: at 95% over the scrim the backdrop
+ * barely reaches the text, and the gate proves it with the filter at 1.
  * The fallbacks (reduced transparency, increased contrast, forced colours, print, no support, coarse
- * pointer) live in materials-fallbacks.css and resolve to the `off` block below. */
+ * pointer) live in materials-fallbacks.css and resolve to the `off` block below. Clay, pebble, tray and
+ * trough are solid: no fallback changes their shape, and each carries a transparent 1px border so forced
+ * colours still draw an edge where the shadows vanish. */
 :root {
 	--material-bar-blur: 16px;
 	--material-bar-saturate: 1.8;
@@ -20,10 +33,22 @@
 	--material-bar-filter: blur(var(--material-bar-blur)) saturate(var(--material-bar-saturate))
 		contrast(var(--material-bar-contrast));
 
-	--material-pane-blur: 24px;
-	--material-pane-saturate: 1.5;
-	--material-pane-contrast: 0.6;
-	--material-pane-fill: light-dark(
+	/* milk: no blur, no filter. The two numbers below exist for the gate, which reads the layer's recipe by
+	   name; the utility never applies a filter. */
+	--material-milk-saturate: 1;
+	--material-milk-contrast: 1;
+	--material-milk-fill: light-dark(
+		color-mix(in srgb, var(--popover) 95%, transparent),
+		color-mix(in srgb, var(--popover) 96%, transparent)
+	);
+
+	/* large glass: the auth card now, the command palette, notifications and New overlays in the shell tasks, and
+	   the sidebar until the OS shell replaces it. It was the pane recipe; unlike the bar it is opaque on a coarse
+	   pointer (materials-fallbacks.css), which is what keeps a phone inside the blur budget. */
+	--material-glass-blur: 24px;
+	--material-glass-saturate: 1.5;
+	--material-glass-contrast: 0.6;
+	--material-glass-fill: light-dark(
 		color-mix(in srgb, var(--popover) 84%, transparent),
 		color-mix(in srgb, var(--popover) 88%, transparent)
 	);
@@ -31,8 +56,8 @@
 		color-mix(in srgb, var(--sidebar) 84%, transparent),
 		color-mix(in srgb, var(--sidebar) 88%, transparent)
 	);
-	--material-pane-filter: blur(var(--material-pane-blur)) saturate(var(--material-pane-saturate))
-		contrast(var(--material-pane-contrast));
+	--material-glass-filter: blur(var(--material-glass-blur)) saturate(var(--material-glass-saturate))
+		contrast(var(--material-glass-contrast));
 
 	--material-muted-foreground: light-dark(
 		color-mix(in oklch, var(--muted-foreground) 85%, var(--foreground)),
@@ -72,20 +97,68 @@
 	--brand-plate-glass: 1;
 	--brand-plate-solid: 0;
 	--material-bar-shadow: 0 8px 24px -16px var(--material-shadow-color);
-	--material-pane-shadow:
+	--material-milk-shadow: var(--shadow-float);
+	--material-glass-shadow:
 		0 24px 56px -16px var(--material-shadow-color), 0 4px 12px -4px var(--material-shadow-color);
 	/* no scroll-edge fade token: the bar is the scroll edge effect itself (plan GD14) */
 	--scrim: light-dark(
 		color-mix(in srgb, black 35%, transparent),
 		color-mix(in srgb, black 55%, transparent)
 	);
+
+	/* ── solid materials: clay, pebble, tray, trough, sheet (reference 10-core.css --up, --up-s, --in, --float).
+	   --clay-shade is the ink every shadow is mixed from (a violet-tinted navy in light, black in dark, so a
+	   shadow never turns grey-green on a coloured wall); --clay-light is the top light. */
+	--clay-shade: light-dark(oklch(0.27 0.07 281), oklch(0 0 0));
+	--clay-light: light-dark(white, color-mix(in srgb, white 14%, transparent));
+	--clay-drop: light-dark(
+		color-mix(in srgb, var(--clay-shade) 40%, transparent),
+		color-mix(in srgb, var(--clay-shade) 60%, transparent)
+	);
+	--clay-belly: light-dark(
+		color-mix(in srgb, var(--clay-shade) 7%, transparent),
+		color-mix(in srgb, var(--clay-shade) 30%, transparent)
+	);
+	--clay-hair: light-dark(
+		color-mix(in srgb, var(--clay-shade) 10%, transparent),
+		color-mix(in srgb, white 8%, transparent)
+	);
+	--shadow-clay:
+		0 10px 20px -12px var(--clay-drop), 0 2px 3px var(--clay-belly),
+		inset 0 -3px 6px var(--clay-belly), inset 0 2px 2px var(--clay-light);
+	--shadow-clay-sm:
+		0 4px 8px -4px var(--clay-drop), 0 0 0 0.5px var(--clay-hair),
+		inset 0 -2px 3px var(--clay-belly), inset 0 1.5px 1px var(--clay-light);
+	/* a pebble: the app colour is lit from above and shaded below; the outer drop is the colour itself */
+	--shadow-pebble:
+		0 6px 10px -6px color-mix(in srgb, var(--app-accent) 70%, var(--clay-shade)),
+		inset 0 -3px 5px color-mix(in srgb, black 20%, transparent),
+		inset 0 2.5px 3px color-mix(in srgb, white 50%, transparent);
+	/* the glossy top of a pebble: the share of the app colour kept at the lit end of the gradient. The gate
+	   measures the white glyph on that exact mix for every app colour (PEBBLE_TOP in check-token-contrast). */
+	--pebble-top-mix: 82%;
+	/* a pit: the inside of a trough, the track of a meter, the groove of a segmented control */
+	--shadow-inset:
+		inset 0 2px 5px color-mix(in srgb, var(--clay-shade) 17%, transparent),
+		inset 0 -1px 1px light-dark(color-mix(in srgb, white 85%, transparent), var(--clay-hair));
+	--shadow-float: 0 14px 34px -18px color-mix(in srgb, var(--clay-shade) 36%, transparent);
+	--shadow-sheet:
+		inset 0 0 0 0.5px var(--clay-hair),
+		0 10px 24px -18px color-mix(in srgb, var(--clay-shade) 30%, transparent);
+	--shadow-tray:
+		inset 0 0 0 0.5px var(--clay-hair),
+		inset 0 2px 5px color-mix(in srgb, var(--clay-shade) 5%, transparent);
 }
 :root[data-transparency='reduced'] {
 	--material-bar-fill: light-dark(
 		color-mix(in srgb, var(--card) 92%, transparent),
 		color-mix(in srgb, var(--card) 94%, transparent)
 	);
-	--material-pane-fill: light-dark(
+	--material-milk-fill: light-dark(
+		color-mix(in srgb, var(--popover) 97%, transparent),
+		color-mix(in srgb, var(--popover) 98%, transparent)
+	);
+	--material-glass-fill: light-dark(
 		color-mix(in srgb, var(--popover) 94%, transparent),
 		color-mix(in srgb, var(--popover) 95%, transparent)
 	);
@@ -97,17 +170,19 @@
 	--brand-plate-solid: 1;
 }
 /* OFF: the opaque equivalent. Every fallback block in materials-fallbacks.css repeats exactly
-   these declarations (a unit test compares them). */
+   these declarations (a unit test compares them). Clay, pebble, tray and trough are not here: they are
+   solid in every state and keep their shape. */
 :root[data-transparency='off'] {
 	--material-bar-fill: var(--card);
-	--material-pane-fill: var(--popover);
+	--material-milk-fill: var(--popover);
+	--material-glass-fill: var(--popover);
 	--material-sidebar-fill: var(--sidebar);
 	--material-bar-filter: none;
-	--material-pane-filter: none;
+	--material-glass-filter: none;
 	--material-bar-saturate: 1;
 	--material-bar-contrast: 1;
-	--material-pane-saturate: 1;
-	--material-pane-contrast: 1;
+	--material-glass-saturate: 1;
+	--material-glass-contrast: 1;
 	--material-control: var(--muted);
 	--material-control-hover: var(--accent);
 	--brand-plate-glass: 0;

@@ -223,7 +223,7 @@ export function classElements(src) {
 		styles.push({ line: lineOf(ast.css.content.start), css: ast.css.content.styles });
 
 	const usesMaterial = elements.some((e) =>
-		e.tokens.some((t) => /^material-(?:bar|pane|sidebar|sidebar-bar)$/.test(t.base))
+		e.tokens.some((t) => /^material-(?:bar|glass|milk|sidebar|sidebar-bar)$/.test(t.base))
 	);
 	return { elements, scripts, styles, styleAttrs, dynamic, usesMaterial, text: src };
 }

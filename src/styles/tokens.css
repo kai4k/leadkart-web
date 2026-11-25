@@ -141,6 +141,12 @@
 	--radius-xs: 0.25rem; /* 4px — used sparingly for tight chips */
 	--radius-2xl: 2rem; /* 32px — hero cards */
 	--radius-full: 9999px;
+	/* concentric shape (spec 4.4): the sheet holds cards (20), a card holds controls (pill or 14); a shell
+	   capsule is a pill; a pebble is a squircle, a share of its own side */
+	--radius-sheet: 1.5rem;
+	--radius-card: 1.25rem;
+	--radius-control: 0.875rem;
+	--radius-pebble: 28%;
 
 	/* ═══ SHADOW — paired light/dark via opacity, not separate values ═══ */
 	--shadow-xs: 0 1px 2px 0 oklch(0.2 0.02 256 / 0.05);
@@ -204,9 +210,11 @@
 	/* Interaction transform tokens — consumed by Button + Card + glass
 	 * surfaces. Press-scale 0.96 matches iOS button feedback; hover-lift
 	 * raises by 1px + scales 1.01 for the "magnetic" pull feel. */
-	--motion-press-scale: 0.96;
+	--press-scale: 0.96;
 	--motion-hover-scale: 1.01;
-	--motion-hover-lift: -1px;
+	--lift: 2px;
+	/* the cross-fade between apps; nothing in the product loops */
+	--duration-app: 150ms;
 
 	/* ═══ ICON SIZES — replaces inline `size={N}` magic numbers ═══ */
 	--icon-xs: 14px;
@@ -244,6 +252,22 @@
  * ═══════════════════════════════════════════════════════════════════ */
 :root {
 	--radius: 0.75rem;
+	/* DENSITY: row height and padding of lists, tables and menus. `compact` tightens through these two
+	   tokens only, so a component that reads them follows the preference with no rule of its own. */
+	--density-row: 3rem;
+	--density-pad: 1rem;
+}
+:root[data-density='compact'] {
+	--density-row: 2.25rem;
+	--density-pad: 0.625rem;
+}
+/* no press squish, no lift, no cross-fade; the transition and animation durations are zeroed in base.css */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--press-scale: 1;
+		--lift: 0px;
+		--duration-app: 0ms;
+	}
 }
 
 @theme inline {
@@ -318,6 +342,8 @@
 	--color-primary-tonal-foreground: var(--primary-tonal-foreground);
 	--color-field: var(--field-border);
 	--color-meter-track: var(--meter-track);
+	--color-tray: var(--tray);
+	--color-trough: var(--trough);
 	--color-focus: var(--focus-ring);
 	--color-badge-count: var(--badge-count);
 	--color-badge-count-foreground: var(--badge-count-foreground);

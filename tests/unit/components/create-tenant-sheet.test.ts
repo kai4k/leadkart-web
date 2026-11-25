@@ -77,7 +77,7 @@ describe('CreateTenantDrawer is a FormSheet', () => {
 		expect(btn.getAttribute('form')).toBe('register-tenant-form');
 		expect(document.querySelector('[data-slot="sheet-footer"]')!.contains(btn)).toBe(true);
 		expect(document.querySelector('[data-slot="sheet-content"]')!.className).toContain(
-			'material-pane'
+			'material-milk'
 		);
 	});
 

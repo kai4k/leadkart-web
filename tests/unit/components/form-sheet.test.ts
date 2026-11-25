@@ -138,9 +138,9 @@ describe.each(['sheet', 'dialog'] as const)('Form surface: %s', (surface) => {
 		);
 	});
 
-	it('the content is the material pane and nothing inside it is another material (no glass on glass)', () => {
+	it('the content is the milk material and nothing inside it is another material (no glass on glass)', () => {
 		const content = document.querySelector(`[data-slot="${surface}-content"]`)!;
-		expect(content.classList.contains('material-pane')).toBe(true);
+		expect(content.classList.contains('material-milk')).toBe(true);
 		const inner = [...content.querySelectorAll('*')].filter((el) =>
 			[...el.classList].some((c) => c.startsWith('material-'))
 		);

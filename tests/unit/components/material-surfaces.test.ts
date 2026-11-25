@@ -1,5 +1,5 @@
 /**
- * G5: the overlay primitives sit on the pane material. Each content element is `material-pane` and no longer
+ * G5: the overlay primitives sit on the milk material. Each content element is `material-milk` and no longer
  * `bg-popover`; the scrim is `bg-scrim`; the dialog still has its modal layer; no shadow or ring of its own.
  */
 import { afterEach, describe, expect, it } from 'vitest';
@@ -24,7 +24,7 @@ async function open(which: string) {
 }
 const slot = (name: string) => document.querySelector<HTMLElement>(`[data-slot="${name}"]`);
 
-describe('the pane material on the overlay primitives', () => {
+describe('the milk material on the overlay primitives', () => {
 	it.each([
 		['dialog', 'dialog-content', 'dialog-overlay'],
 		['sheet', 'sheet-content', 'sheet-overlay'],
@@ -32,13 +32,14 @@ describe('the pane material on the overlay primitives', () => {
 		['popover', 'popover-content', undefined],
 		['dropdown-menu', 'dropdown-menu-content', undefined]
 	])(
-		'%s: content is material-pane, with no bg-popover, shadow or ring; the scrim is bg-scrim',
+		'%s: content is material-milk, with no bg-popover, shadow or ring; the scrim is bg-scrim',
 		async (which, content, overlay) => {
 			await open(which);
 			const el = slot(content);
 			expect(el, content).not.toBeNull();
 			const classes = el!.className.split(/\s+/);
-			expect(classes).toContain('material-pane');
+			expect(classes).toContain('material-milk');
+			expect(classes).not.toContain('material-pane');
 			expect(classes).toContain('text-popover-foreground');
 			for (const gone of ['bg-popover', 'shadow-md', 'shadow-lg', 'ring-1', 'ring-border'])
 				expect(classes, gone).not.toContain(gone);

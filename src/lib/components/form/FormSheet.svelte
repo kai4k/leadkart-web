@@ -12,7 +12,7 @@
 
 	/**
 	 * FormSheet: a form in a side sheet (the create / edit / assign pattern). The sheet is the
-	 * `material-pane`; header and footer are separated by opaque `border-border` hairlines and add no surface
+	 * `material-milk`; header and footer are separated by opaque `border-border` hairlines and add no surface
 	 * of their own (no glass on glass). The form resets from `initial()` on every open, the sheet refuses to
 	 * close while the save is in flight (`busy`), one banner shows a form-level failure, field errors show on
 	 * their fields (the first invalid one gets focus), and leaving the page with unsaved input asks first.

@@ -70,7 +70,7 @@
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			'material-pane text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95  flex max-h-[90vh] max-w-[calc(100%_-_2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 text-sm   duration-100 fixed top-1/2 left-1/2 z-(--z-modal) w-full -translate-x-1/2 -translate-y-1/2 outline-none',
+			'material-milk text-popover-foreground data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95  flex max-h-[90vh] max-w-[calc(100%_-_2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 text-sm   duration-100 fixed top-1/2 left-1/2 z-(--z-modal) w-full -translate-x-1/2 -translate-y-1/2 outline-none',
 			dialogSizes({ size }),
 			className
 		)}

@@ -58,10 +58,10 @@ const escape = () => {
 };
 
 describe('ConfirmDialog on the alert-dialog primitive', () => {
-	it('is an alertdialog, the material pane, over the scrim; the title names it', async () => {
+	it('is an alertdialog, the milk material, over the scrim; the title names it', async () => {
 		await open();
 		expect(content().getAttribute('role')).toBe('alertdialog');
-		expect(content().className).toContain('material-pane');
+		expect(content().className).toContain('material-milk');
 		expect(document.querySelector('[data-slot="alert-dialog-overlay"]')!.className).toContain(
 			'bg-scrim'
 		);

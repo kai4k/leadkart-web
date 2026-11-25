@@ -30,6 +30,7 @@ export interface CheckResult {
 }
 export const AXES: Axes & { transparency: string[] };
 export const PAIRS: Pair[];
+export const PEBBLE_TOP: number;
 export function parseRules(
 	css: string,
 	file: string,

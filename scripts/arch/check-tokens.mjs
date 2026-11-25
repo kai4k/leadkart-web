@@ -570,7 +570,7 @@ export const FILE_RULES = [
 		id: 'm1',
 		title: 'backdrop-* outside a material definition',
 		find: findBackdrop,
-		fix: 'use material-bar / material-pane / material-sidebar (utilities.css); only theme/materials*.css, utilities.css and layouts.css may touch a backdrop filter.'
+		fix: 'use material-bar / material-glass / material-sidebar (utilities.css; milk never blurs); only theme/materials*.css, utilities.css and layouts.css may touch a backdrop filter.'
 	},
 	{
 		id: 'm3',

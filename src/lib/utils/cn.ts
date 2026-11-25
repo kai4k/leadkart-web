@@ -2,15 +2,32 @@ import { clsx, type ClassValue } from 'clsx';
 import { extendTailwindMerge } from 'tailwind-merge';
 
 /**
- * The four material utilities (styles/utilities.css) are ONE class group: a component can carry only one of
+ * The material utilities (styles/utilities.css: the glass bar and large glass, milk and sidebar ones, and the solid sheet, clay,
+ * clay-sm, pebble, tray and trough) are ONE class group: a component can carry only one of
  * them, and it conflicts with background-COLOUR utilities (a material IS the fill), in both directions; background
  * IMAGE utilities (gradients, `bg-none`, `bg-[url()]`) and the other `bg-*` properties are not in conflict. Without this a
- * later `bg-card` would silently sit next to `material-pane` and the cascade would pick one by source order.
+ * later `bg-card` would silently sit next to `material-milk` and the cascade would pick one by source order.
  */
 const twMerge = extendTailwindMerge<'material'>({
 	extend: {
 		classGroups: {
-			material: [{ material: ['bar', 'pane', 'sidebar', 'sidebar-bar'] }],
+			material: [
+				{
+					material: [
+						'bar',
+						'glass',
+						'milk',
+						'sidebar',
+						'sidebar-bar',
+						'sheet',
+						'clay',
+						'clay-sm',
+						'pebble',
+						'tray',
+						'trough'
+					]
+				}
+			],
 			// the legacy `bg-gradient-to-*` names are background IMAGES; tailwind-merge would take them for a colour
 			'bg-image': [{ bg: [{ 'gradient-to': ['t', 'tr', 'r', 'br', 'b', 'bl', 'l', 'tl'] }] }]
 		},

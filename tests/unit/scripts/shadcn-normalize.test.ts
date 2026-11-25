@@ -362,7 +362,7 @@ describe('shadcn normaliser: the scrim (plan G2)', () => {
 	});
 });
 
-describe('shadcn normaliser: the pane material (plan G5)', () => {
+describe('shadcn normaliser: the milk material (plan G5)', () => {
 	const ui = (family: string, file: string) => `src/lib/components/ui/${family}/${file}`;
 	const cls = (src: string, file: string) =>
 		(normalizeSource(src, { icons: ICONS, file }) as { out: string }).out;
@@ -378,10 +378,11 @@ describe('shadcn normaliser: the pane material (plan G5)', () => {
 		['dropdown-menu', 'dropdown-menu-sub-content.svelte'],
 		['select', 'select-content.svelte']
 	])(
-		'%s content: bg-popover becomes material-pane; shadow, ring and ring colour go; rounded-xl',
+		'%s content: bg-popover becomes material-milk; shadow, ring and ring colour go; rounded-xl',
 		(f, file) => {
 			const out = cls(CONTENT, ui(f, file));
-			expect(out).toContain('material-pane');
+			expect(out).toContain('material-milk');
+			expect(out).not.toContain('material-pane');
 			expect(out).toContain('text-popover-foreground');
 			expect(out).toContain('rounded-xl');
 			for (const gone of ['bg-popover', 'shadow-md', 'ring-1', 'ring-border', 'rounded-lg'])
@@ -394,7 +395,7 @@ describe('shadcn normaliser: the pane material (plan G5)', () => {
 			'<i class="bg-popover shadow-lg data-[side=bottom]:border-t data-[side=left]:border-s data-[side=right]:border-e data-[side=top]:border-b data-[side=left]:w-3/4"></i>',
 			ui('sheet', 'sheet-content.svelte')
 		);
-		expect(out).toContain('material-pane');
+		expect(out).toContain('material-milk');
 		expect(out).toContain('data-[side=left]:w-3/4');
 		expect(out).not.toMatch(/shadow-lg|border-[tseb]\b/);
 	});

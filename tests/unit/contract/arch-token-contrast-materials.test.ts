@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
 	AXES,
 	MATERIAL_LAYERS,
+	PAIRS,
+	PEBBLE_TOP,
 	check,
 	checkCss,
 	checkMaterials,
@@ -78,8 +80,8 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 
 	it('6. a missing material token fails, never skips', () => {
 		expect(
-			gate(base(), layer({ saturate: 'material-pane-saturate' })).problems.join('\n')
-		).toContain('--material-pane-saturate is not defined');
+			gate(base(), layer({ saturate: 'material-milk-saturate' })).problems.join('\n')
+		).toContain('--material-milk-saturate is not defined');
 		expect(gate(base(), layer({ fill: 'nope' })).problems.join('\n')).toContain(
 			'--nope is not defined'
 		);
@@ -148,10 +150,15 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 
 	it('every material utility has a layer, and every layer names a backdrop set, text and marks', () => {
 		const utilities = readFileSync('src/styles/utilities.css', 'utf8');
-		const used = [...utilities.matchAll(/@utility (material-(?:bar|pane|sidebar)) \{/g)].map(
+		const used = [...utilities.matchAll(/@utility (material-(?:bar|glass|milk|sidebar)) \{/g)].map(
 			(m) => m[1]
 		);
-		expect(used.sort()).toEqual(['material-bar', 'material-pane', 'material-sidebar']);
+		expect(used.sort()).toEqual([
+			'material-bar',
+			'material-glass',
+			'material-milk',
+			'material-sidebar'
+		]);
 		type L = { layer: string; fill: string; backdrops: string[]; text: string[]; marks: string[] };
 		for (const u of used)
 			expect(
@@ -184,6 +191,94 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 		expect(by('overlay').under).toBe('scrim');
 		expect(by('sidebar-mobile').under).toBe('scrim');
 		expect(by('topbar').under).toBeUndefined();
+	});
+});
+
+describe('Pebble World materials in the gate (Task 3)', () => {
+	it('a solid layer (milk) is not held to the glass limit, but must not rely on a filter', () => {
+		// 95% is not glass: the glass check would reject it ...
+		expect(gate(base('', 95), layer()).problems.join('\n')).toContain('is not glass');
+		// ... a solid layer is exempt from that, and is held to filter tokens of 1 instead
+		expect(gate(base('', 95), layer({ solid: true })).problems).toEqual([]);
+		const problems = gate(base('--bar-con: 0.6;', 95), layer({ solid: true })).problems.join('\n');
+		expect(problems).toContain('bar-con is not 1');
+		expect(problems).toContain('never blurs');
+	});
+
+	it('the real milk layers are solid, the glass layers are not, and the auth card is large glass', () => {
+		type L = { layer: string; fill: string; solid?: boolean };
+		const layers = MATERIAL_LAYERS as L[];
+		for (const l of layers.filter((x) => x.fill === 'material-milk-fill'))
+			expect(l.solid, l.layer).toBe(true);
+		for (const l of layers.filter((x) => x.fill !== 'material-milk-fill'))
+			expect(l.solid, l.layer).toBeUndefined();
+		expect(layers.find((l) => l.layer === 'auth-card')!.fill).toBe('material-glass-fill');
+	});
+
+	it('PEBBLE_TOP is the --pebble-top-mix of materials.css', () => {
+		const css = readFileSync('src/styles/theme/materials.css', 'utf8');
+		const mix = /--pebble-top-mix:\s*(\d+)%/.exec(css)![1];
+		expect(PEBBLE_TOP).toBeCloseTo(Number(mix) / 100, 6);
+	});
+
+	it('every app colour is measured on the glossy top of its pebble, at 3:1', () => {
+		const pebble = (PAIRS as Array<{ fg: string; bg: string; min: number; alpha?: number }>).filter(
+			(p) => p.alpha === PEBBLE_TOP
+		);
+		expect(pebble.map((p) => p.bg).sort()).toEqual(
+			(PAIRS as Array<{ fg: string; bg: string; alpha?: number }>)
+				.filter((p) => p.fg === 'app-glyph' && p.alpha === undefined)
+				.map((p) => p.bg)
+				.sort()
+		);
+		expect(pebble.length).toBeGreaterThanOrEqual(11);
+		for (const p of pebble) expect(p.min, p.bg).toBe(3);
+	});
+
+	const realFiles = (mutate: (name: string, css: string) => string) =>
+		['palettes', 'semantic', 'materials', 'layouts'].map(
+			(n) =>
+				[
+					`src/styles/theme/${n}.css`,
+					mutate(n, readFileSync(`src/styles/theme/${n}.css`, 'utf8'))
+				] as [string, string]
+		);
+
+	it('mutation: the unmodified Leads orange (the reference value) fails on the pebble top', () => {
+		const files = realFiles((n, css) =>
+			n === 'palettes'
+				? css.replace(
+						'--app-leads: oklch(0.61 0.1644 47.51)',
+						'--app-leads: oklch(0.6398 0.1644 47.51)'
+					)
+				: css
+		);
+		const r = checkCss(files, { layers: [] });
+		expect(r.problems.join('\n')).toContain('app-glyph on app-leads');
+		expect(r.problems.join('\n')).toContain('white glyph on the pebble top');
+	});
+
+	it('mutation: a pale field border fails on the trough and on the tray', () => {
+		const files = realFiles((n, css) =>
+			n === 'semantic'
+				? css.replace(
+						'--field-border: light-dark(oklch(0.55 0.02 262)',
+						'--field-border: light-dark(oklch(0.8 0.02 262)'
+					)
+				: css
+		);
+		const text = checkCss(files, { layers: [] }).problems.join('\n');
+		expect(text).toContain('field-border on trough');
+		expect(text).toContain('field-border on tray');
+	});
+
+	it('the tray and the trough carry the text levels at 4.5', () => {
+		const need = (PAIRS as Array<{ fg: string; bg: string; min: number }>).filter(
+			(p) => p.bg === 'tray' || p.bg === 'trough'
+		);
+		for (const bg of ['tray', 'trough'])
+			for (const fg of ['foreground', 'muted-foreground'])
+				expect(need.find((p) => p.fg === fg && p.bg === bg)?.min, `${fg} on ${bg}`).toBe(4.5);
 	});
 });
 

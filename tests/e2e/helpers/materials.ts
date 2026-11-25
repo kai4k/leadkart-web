@@ -77,7 +77,7 @@ export async function hasFixedDescendant(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
 		const bad: string[] = [];
 		const material = document.querySelectorAll(
-			'.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar'
+			'.material-bar, .material-glass, .material-sidebar, .material-sidebar-bar'
 		);
 		for (const m of material) {
 			for (const d of m.querySelectorAll('*')) {
@@ -202,6 +202,11 @@ export const glass = (p: Paint, what: string) => {
 	expect(p.filter, what).toContain('blur(');
 	expect(p.alpha, `${what} fill alpha`).toBeLessThan(0.9);
 	expect(p.alpha, `${what} fill alpha`).toBeGreaterThan(0.5);
+};
+/** Milk (menus, dialogs, sheets, toasts): near-opaque and never blurred, so no backdrop filter at all. */
+export const milk = (p: Paint, what: string) => {
+	expect(p.filter, `${what} backdrop-filter`).toBe('none');
+	expect(p.alpha, `${what} fill alpha`).toBeGreaterThanOrEqual(0.94);
 };
 export const opaque = (p: Paint, what: string) => {
 	expect(p.filter, `${what} backdrop-filter`).toBe('none');

@@ -123,11 +123,11 @@
 	}
 	@media (hover: hover) {
 		.interactive:hover {
-			transform: translate3d(0, var(--motion-hover-lift), 0) scale(var(--motion-hover-scale));
+			transform: translate3d(0, calc(var(--lift) * -1), 0) scale(var(--motion-hover-scale));
 		}
 	}
 	.interactive:active {
-		transform: translate3d(0, 0, 0) scale(var(--motion-press-scale));
+		transform: translate3d(0, 0, 0) scale(var(--press-scale));
 		transition-duration: var(--duration-fast);
 	}
 
@@ -152,11 +152,12 @@
 }
 
 /* ═══ Materials (plan G2): the ONE source of glass ═════════════════════════════════════════════
- * No component and no SVG draws glass; a surface says `material-bar`, `material-pane`, `material-sidebar`
- * or `material-sidebar-bar`. Fill, filter, edge and shadow come from theme/materials.css (gated, with its
+ * No component and no SVG draws glass; a surface says `material-bar`, `material-glass`, `material-milk`,
+ * `material-sidebar` or `material-sidebar-bar` (and the solid `material-sheet|clay|clay-sm|pebble|tray|trough` further down).
+ * Fill, filter, edge and shadow come from theme/materials.css (gated, with its
  * opaque fallbacks). The scoped re-declarations make everything INSIDE the material read the
  * tokens readable on the material (the way the pattern topbar re-declares tokens in layouts.css): on a
- * bar or a pane the third text level collapses into the muted one, the ring is the readable one, and
+ * bar or a milk surface the third text level collapses into the muted one, the ring is the readable one, and
  * `bg-muted` / `bg-accent` become the translucent control fills; on a SIDEBAR material they are the sidebar's
  * own tokens (the sidebar colour axis is independent of the page mode, so the neutral material values
  * would be invisible on a dark, brand, purple or sky sidebar). Every re-declared token appears in the
@@ -186,14 +187,36 @@
 		border: 1px solid CanvasText;
 	}
 }
-@utility material-pane {
-	background-color: var(--material-pane-fill);
-	-webkit-backdrop-filter: var(--material-pane-filter);
-	backdrop-filter: var(--material-pane-filter);
+/* milk: popovers, menus, dialogs, sheets and toasts. Near-opaque and NEVER blurred (no backdrop-filter at all:
+ * the blur budget is for glass), so a milk surface may open over anything without being glass on glass. */
+@utility material-milk {
+	background-color: var(--material-milk-fill);
 	box-shadow:
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
-		var(--material-pane-shadow);
+		var(--material-milk-shadow);
+	--muted-foreground: var(--material-muted-foreground);
+	--subtle-foreground: var(--material-muted-foreground);
+	--ring: var(--material-ring);
+	--muted: var(--material-control);
+	--accent: var(--material-control-hover);
+	--input-fill: var(--material-input-fill);
+	--primary-text: var(--material-primary-text);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
+/* large glass: the auth card, and the command palette, notifications and New overlays. The pane recipe (24px
+ * blur, 84-88% fill), opaque on a coarse pointer through its tokens. */
+@utility material-glass {
+	background-color: var(--material-glass-fill);
+	-webkit-backdrop-filter: var(--material-glass-filter);
+	backdrop-filter: var(--material-glass-filter);
+	box-shadow:
+		inset 0 1px 0 0 var(--material-highlight),
+		0 0 0 1px var(--material-edge),
+		var(--material-glass-shadow);
 	--muted-foreground: var(--material-muted-foreground);
 	--subtle-foreground: var(--material-muted-foreground);
 	--ring: var(--material-ring);
@@ -208,12 +231,12 @@
 }
 @utility material-sidebar {
 	background-color: var(--material-sidebar-fill);
-	-webkit-backdrop-filter: var(--material-pane-filter);
-	backdrop-filter: var(--material-pane-filter);
+	-webkit-backdrop-filter: var(--material-glass-filter);
+	backdrop-filter: var(--material-glass-filter);
 	box-shadow:
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
-		var(--material-pane-shadow);
+		var(--material-glass-shadow);
 	--muted-foreground: var(--sidebar-muted-foreground);
 	--subtle-foreground: var(--sidebar-muted-foreground);
 	--ring: var(--sidebar-ring);
@@ -248,38 +271,71 @@
 	}
 }
 
-/* No glass on glass, structurally. Two cases: (a) a material element INSIDE another material element; (b) a
- * material opened over an open modal surface (a menu, a popover or a toast is portalled to <body>, so it is not
- * a DOM descendant of the dialog it is above). The inner one is OPAQUE and has no filter (the `off` look), and
- * each falls back to ITS OWN opaque surface (the values its transparency-off fallback uses): a nested sidebar
- * material would otherwise show light sidebar text on a light popover. The control fills inside stay translucent
- * over that opaque fill, which is the easy case of the gate (a pane at alpha 1). */
-:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-bar {
+/* The solid materials (spec 4.3): sheet, clay, clay-sm, pebble, tray, trough. Each is opaque, draws its depth
+ * with the shadow tokens of theme/materials.css, and carries a transparent 1px border: forced colours drops
+ * every shadow and turns that border into a system-colour edge, so the shape still reads. Radius is not here
+ * (`rounded-sheet`, `rounded-card`, `rounded-control`); the pebble is the exception, a squircle by definition. */
+@utility material-sheet {
+	background-color: var(--card);
+	box-shadow: var(--shadow-sheet);
+	border: 1px solid transparent;
+}
+@utility material-clay {
+	background-color: var(--card);
+	box-shadow: var(--shadow-clay);
+	border: 1px solid transparent;
+}
+@utility material-clay-sm {
+	background-color: var(--card);
+	box-shadow: var(--shadow-clay-sm);
+	border: 1px solid transparent;
+}
+/* the app colour in scope (`.app-<key>`, `--app-accent`), lit from above; the glyph on it is the white `--app-glyph`.
+ * `background-origin` keeps the 1px transparent border from tiling the far end of the gradient. */
+@utility material-pebble {
+	background-image: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--app-accent) var(--pebble-top-mix), white),
+		var(--app-accent) 58%,
+		color-mix(in srgb, var(--app-accent) 90%, black)
+	);
+	background-origin: border-box;
+	color: var(--app-glyph);
+	border-radius: var(--radius-pebble);
+	box-shadow: var(--shadow-pebble);
+	border: 1px solid transparent;
+}
+@utility material-tray {
+	background-color: var(--tray);
+	box-shadow: var(--shadow-tray);
+	border: 1px solid transparent;
+}
+@utility material-trough {
+	background-color: var(--trough);
+	box-shadow:
+		var(--shadow-inset),
+		inset 0 0 0 1px var(--field-border);
+	border: 1px solid transparent;
+}
+
+/* No glass on glass, structurally: a glass element INSIDE another glass element is OPAQUE and has no filter (the
+ * `off` look), and each falls back to ITS OWN opaque surface (the values its transparency-off fallback uses): a
+ * nested sidebar material would otherwise show light sidebar text on a light popover. Milk never blurs, so it
+ * is neither an outer nor an inner case. The control fills inside stay translucent over that opaque fill,
+ * which is the easy case of the gate (a layer at alpha 1). */
+:is(.material-bar, .material-glass, .material-sidebar, .material-sidebar-bar) .material-bar {
 	background-color: var(--card);
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
-:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-pane,
-body:has(
-		:is(
-			[data-slot='dialog-content'],
-			[data-slot='sheet-content'],
-			[data-slot='alert-dialog-content']
-		)[data-state='open']
-	)
-	.material-pane:not(
-		:is(
-			[data-slot='dialog-content'],
-			[data-slot='sheet-content'],
-			[data-slot='alert-dialog-content']
-		)
-	) {
+:is(.material-bar, .material-glass, .material-sidebar, .material-sidebar-bar) .material-glass {
 	background-color: var(--popover);
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
 }
-:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-sidebar,
-:is(.material-bar, .material-pane, .material-sidebar, .material-sidebar-bar) .material-sidebar-bar {
+:is(.material-bar, .material-glass, .material-sidebar, .material-sidebar-bar) .material-sidebar,
+:is(.material-bar, .material-glass, .material-sidebar, .material-sidebar-bar)
+	.material-sidebar-bar {
 	background-color: var(--sidebar);
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
@@ -301,29 +357,6 @@ body:has(
 	background-color: var(--popover);
 	-webkit-backdrop-filter: none;
 	backdrop-filter: none;
-}
-
-/* The neutral toast (`data-type="default"`, or "loading") is `data-[type=default]:material-pane!` (sonner paints its own background unlayered, so the
- * material is `!important`), which the class-based rules above cannot reach; over an open modal it is opaque too.
- * It MUST be inside `@layer utilities`: the toast's material is important inside that layer, and for
- * `!important` declarations a layered one beats an unlayered one whatever the specificity, so an unlayered
- * override never wins. In the same layer it wins on specificity (0,4,1 against 0,2,0). */
-@layer utilities {
-	body:has(
-			:is(
-				[data-slot='dialog-content'],
-				[data-slot='sheet-content'],
-				[data-slot='alert-dialog-content']
-			)[data-state='open']
-		)
-		[data-sonner-toast]:is([data-type='default'], [data-type='loading']) {
-		/* stylelint-disable-next-line declaration-no-important -- must beat the toast's own `!important` material */
-		background-color: var(--popover) !important;
-		/* stylelint-disable-next-line declaration-no-important -- same */
-		-webkit-backdrop-filter: none !important;
-		/* stylelint-disable-next-line declaration-no-important -- same */
-		backdrop-filter: none !important;
-	}
 }
 
 /* The app in scope: `.app-<key>` points --app-accent (semantic.css, `bg-app-accent`) at that app's identity colour

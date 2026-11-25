@@ -149,6 +149,10 @@
 	--focus-ring: light-dark(var(--primary-ring), var(--primary-on-dark));
 	--ring: var(--focus-ring);
 	--field-border: light-dark(oklch(0.55 0.02 262), var(--dark-400));
+	/* the two solid fills under a sheet: a tray groups an area (barely off the sheet), a trough is sunken
+	   (inputs, search, the tracks). Both carry text at 4.5 and the field border at 3 (the gate). */
+	--tray: light-dark(oklch(0.968 0.005 268), var(--dark-850));
+	--trough: light-dark(oklch(0.953 0.008 268), var(--dark-950));
 	/* the empty part of a meter, against the fill (--primary-indicator) at 3:1 */
 	--meter-track: light-dark(oklch(0.93 0.008 262), var(--dark-800));
 	/* the fill of a form field: transparent in light (it sits on the surface), one opaque step in

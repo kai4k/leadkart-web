@@ -348,7 +348,7 @@ describe('check-tokens (m6, fix round E): no destructive text on a control fill 
 	});
 	it('the file scope is derived, not listed: a material utility, an overlay import, or an overlay primitive file', () => {
 		const pair = '<i class="bg-muted text-destructive"></i>';
-		expect(hits(`<div class="material-pane">${pair}</div>`)).toHaveLength(1);
+		expect(hits(`<div class="material-milk">${pair}</div>`)).toHaveLength(1);
 		expect(
 			hits(`<script lang="ts">import { Sheet } from '#lib/components/ui/index.ts';</script>${pair}`)
 		).toHaveLength(1);

@@ -20,8 +20,8 @@
  *      sheet, alert-dialog) `--z-modal` for panel AND scrim, so a modal opened later covers an
  *      earlier one; sidebar and sticky parts `--z-sticky`; floating content (popover, select,
  *      dropdown, calendar popups) `--z-popover`
- *   8. the pane material (plan G5, `MATERIAL_BY_FAMILY`): the content of a dialog, alert dialog, sheet, popover,
- *      dropdown menu and select is `material-pane` (its `bg-popover`, shadow, ring and ring colour go, the radius
+ *   8. the milk material (plan G5, `MATERIAL_BY_FAMILY`): the content of a dialog, alert dialog, sheet, popover,
+ *      dropdown menu and select is `material-milk` (its `bg-popover`, shadow, ring and ring colour go, the radius
  *      is `rounded-xl`; a sheet's side borders go, the material's edge replaces them); the items are `rounded-lg`;
  *      the command root is transparent (the dialog or popover around it is the material)
  *   9. FAILS on any `/<alpha>` modifier left on a text, ring, border-input or solid-fill colour
@@ -125,23 +125,23 @@ const INDICATOR = [
 ];
 
 /**
- * Plan G5: which ui folders sit on the pane material, and what the content file and the item files of each become.
+ * Plan G5: which ui folders sit on the milk material, and what the content file and the item files of each become.
  * `content` files are `*-content.svelte`; `item` files are the rows inside it. The rules apply to class tokens only
  * (`rewriteToken`), with the variant chain kept.
  */
 const MATERIAL_BY_FAMILY = {
-	dialog: 'pane',
-	'alert-dialog': 'pane',
-	sheet: 'pane',
-	popover: 'pane',
-	'dropdown-menu': 'pane',
-	select: 'pane',
+	dialog: 'milk',
+	'alert-dialog': 'milk',
+	sheet: 'milk',
+	popover: 'milk',
+	'dropdown-menu': 'milk',
+	select: 'milk',
 	command: 'root'
 };
 const CONTENT_FILE = /-content\.svelte$/;
 const ITEM_FILE = /(?:-item|-checkbox-item|-radio-item|-sub-trigger)\.svelte$/;
 const MATERIAL_CONTENT = [
-	[/^bg-popover$/, 'material-pane'],
+	[/^bg-popover$/, 'material-milk'],
 	[/^rounded-(?:lg|md)$/, 'rounded-xl']
 ];
 /** Dropped from a material's content: the material draws its own shadow and edge. */

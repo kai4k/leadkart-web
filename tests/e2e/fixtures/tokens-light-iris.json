@@ -128,6 +128,8 @@
 		"--success-foreground": "oklch(1 0 0)",
 		"--success-indicator": "oklch(0.5 0.15 145)",
 		"--success-soft": "oklch(0.97 0.03 145)",
+		"--tray": "oklch(0.968 0.005 268)",
+		"--trough": "oklch(0.953 0.008 268)",
 		"--wall-1": "oklab(0.941424 0.00162848 -0.0136308)",
 		"--wall-2": "oklab(0.897384 0.00379879 -0.0268115)",
 		"--wall-3": "oklab(0.921016 -0.00859077 -0.0119903)",

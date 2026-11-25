@@ -12,7 +12,7 @@
 
 	/**
 	 * FormDialog: a short form in a centred dialog (the same behaviour as FormSheet: reset on open, busy veto, one
-	 * banner, leave guard). The dialog is the `material-pane`; header and footer add no surface of their own.
+	 * banner, leave guard). The dialog is the `material-milk`; header and footer add no surface of their own.
 	 * `size` is the Dialog's named size (`md` 32rem, `lg` 48rem), never a `max-w-*` class.
 	 */
 	let {

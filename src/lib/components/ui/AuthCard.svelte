@@ -3,7 +3,7 @@
 	import { cn } from '#lib/utils/cn.ts';
 
 	/**
-	 * AuthCard: the sign-in card, a sheet over the decorative backdrop, on the pane material (`material-pane`:
+	 * AuthCard: the sign-in card, a sheet over the decorative backdrop, on the large glass material (`material-glass`:
 	 * glass over the backdrop, opaque under Solid), with padding and an entrance animation of its own.
 	 *
 	 * API:
@@ -34,7 +34,7 @@
 	}: Props = $props();
 </script>
 
-<div class={cn('lk-auth-card material-pane rounded-xl', className)}>
+<div class={cn('lk-auth-card material-glass rounded-xl', className)}>
 	<div class={cn(layoutClass)}>
 		<header class="stack stack-tight text-center">
 			<h1 class="h2 text-foreground">{title}</h1>

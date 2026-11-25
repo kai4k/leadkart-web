@@ -174,11 +174,29 @@ describe('fix round D: the five mutants of the material gate, each killed by one
 describe('fix round D: the utilities and the gate describe the same surfaces (item 12)', () => {
 	const css = readFileSync('src/styles/utilities.css', 'utf8');
 	const utilities = [...css.matchAll(/@utility (material-[\w-]+) \{([\s\S]*?)\n\}/g)];
-	/** layers a utility is used on: the fill tells the material, the filter tells bar from pane recipe */
+	/** the translucent or tinted materials the gate has layers for; the solid ones are proved by pairs (next describe) */
+	const LAYERED = [
+		'material-bar',
+		'material-glass',
+		'material-milk',
+		'material-sidebar',
+		'material-sidebar-bar'
+	];
+	const SOLID = [
+		'material-sheet',
+		'material-clay',
+		'material-clay-sm',
+		'material-pebble',
+		'material-tray',
+		'material-trough'
+	];
+	/** layers a utility is used on: the fill tells the material, the filter tells bar from sidebar recipe */
 	const layersOf = (u: string) =>
 		LAYERS.filter((l) => {
+			if (SOLID.includes(u)) return false;
 			if (u === 'material-bar') return l.fill === 'material-bar-fill';
-			if (u === 'material-pane') return l.fill === 'material-pane-fill';
+			if (u === 'material-milk') return l.fill === 'material-milk-fill';
+			if (u === 'material-glass') return l.fill === 'material-glass-fill';
 			const bar = l.saturate === 'material-bar-saturate';
 			return l.fill === 'material-sidebar-fill' && (u === 'material-sidebar-bar' ? bar : !bar);
 		});
@@ -188,37 +206,45 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 		'--brand-capsule': 'the logo is drawn only in the topbar; gated on that layer (next test)'
 	};
 
-	it('there are four utilities and each has at least one layer', () => {
-		expect(utilities.map((m) => m[1]).sort()).toEqual([
-			'material-bar',
-			'material-pane',
-			'material-sidebar',
-			'material-sidebar-bar'
-		]);
-		for (const [, name] of utilities) expect(layersOf(name).length, name).toBeGreaterThan(0);
+	it('there are five layered utilities, each with at least one layer, and six solid ones that no layer measures', () => {
+		expect(utilities.map((m) => m[1]).sort()).toEqual([...LAYERED, ...SOLID].sort());
+		for (const name of LAYERED) expect(layersOf(name).length, name).toBeGreaterThan(0);
+		for (const name of SOLID) expect(layersOf(name).length, name).toBe(0);
 	});
 
-	it.each(['material-bar', 'material-pane', 'material-sidebar', 'material-sidebar-bar'])(
-		'%s: every re-declared token is gated on each of its layers',
-		(name) => {
+	it('the solid utilities never read a glass token and never blur', () => {
+		for (const name of SOLID) {
 			const body = utilities.find((m) => m[1] === name)![2];
-			const redeclared = [...body.matchAll(/^\s*(--[\w-]+):\s*var\(--([\w-]+)\);/gm)];
-			expect(redeclared.length).toBeGreaterThan(4);
-			for (const [, prop, token] of redeclared) {
-				if (NO_CONTRAST[prop]) continue;
-				for (const l of layersOf(name)) {
-					const checked = new Set([
-						...l.text,
-						...l.marks.map((m) => (typeof m === 'string' ? m : m.token)),
-						...(l.onControl ?? []).flatMap((o) => [o.control, ...o.text])
-					]);
-					expect(checked.has(token), `${name}: ${prop} -> ${token} not gated on ${l.layer}`).toBe(
-						true
-					);
-				}
+			expect(body, name).not.toMatch(/backdrop-filter|--material-/);
+			expect(body, name).toContain('border: 1px solid transparent');
+		}
+	});
+
+	it('the milk utility has no filter at all, and its layers are solid with the filter tokens at 1', () => {
+		const body = utilities.find((m) => m[1] === 'material-milk')![2];
+		expect(body).not.toMatch(/backdrop-filter/);
+		for (const l of layersOf('material-milk'))
+			expect((l as { solid?: boolean }).solid, l.layer).toBe(true);
+	});
+
+	it.each(LAYERED)('%s: every re-declared token is gated on each of its layers', (name) => {
+		const body = utilities.find((m) => m[1] === name)![2];
+		const redeclared = [...body.matchAll(/^\s*(--[\w-]+):\s*var\(--([\w-]+)\);/gm)];
+		expect(redeclared.length).toBeGreaterThan(4);
+		for (const [, prop, token] of redeclared) {
+			if (NO_CONTRAST[prop]) continue;
+			for (const l of layersOf(name)) {
+				const checked = new Set([
+					...l.text,
+					...l.marks.map((m) => (typeof m === 'string' ? m : m.token)),
+					...(l.onControl ?? []).flatMap((o) => [o.control, ...o.text])
+				]);
+				expect(checked.has(token), `${name}: ${prop} -> ${token} not gated on ${l.layer}`).toBe(
+					true
+				);
 			}
 		}
-	);
+	});
 
 	it('the logo tokens the bar re-declares are gated on the topbar layer, and nowhere else (bulk bar and hnav draw no logo)', () => {
 		const marks = (n: string) => by(n).marks.map((m) => (typeof m === 'string' ? m : m.token));
@@ -345,7 +371,7 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 });
 
 describe('fix round E: a link in the primary colour is readable on every material and its control fills', () => {
-	it('material-primary-text is checked on the bar and pane layers, on the fill and on both control fills', () => {
+	it('material-primary-text is checked on the bar and milk layers, on the fill and on both control fills', () => {
 		for (const n of ['topbar', 'bulk-bar', 'overlay', 'float', 'auth-card']) {
 			expect(by(n).text, n).toContain('material-primary-text');
 			expect(by(n).text, n).not.toContain('primary-text');

@@ -264,23 +264,23 @@ The primary colour has three roles and the normaliser (`scripts/shadcn/normalize
 `dialog/dialog-overlay`, `alert-dialog/alert-dialog-overlay` and `sheet/sheet-overlay` read `bg-scrim`
 (the `--scrim` token: 35% light, 55% dark, never blurred) instead of shadcn's
 `bg-black/50 supports-backdrop-filter:backdrop-blur-xs`. The normaliser rewrites both classes
-(`bg-black/10|50` -> `bg-scrim`; the blur class is dropped). The panels move to `material-pane` in G5.
+(`bg-black/10|50` -> `bg-scrim`; the blur class is dropped). The panels move to the milk material (first `material-pane`, now `material-milk`).
 
-## Pane material (plan G5)
+## Milk material (plan G5; `material-pane` became `material-milk` in the Pebble World rework)
 
 `scripts/shadcn/normalize.mjs` has a `MATERIAL_BY_FAMILY` map. In the `dialog`, `alert-dialog`, `sheet`, `popover`, `dropdown-menu` and `select` folders:
 
-- a content file (`*-content.svelte`): `bg-popover` becomes `material-pane`; `shadow-md`, `shadow-lg`, `ring-1` and `ring-border` go (the material draws its own edge and shadow); `rounded-lg|md` becomes `rounded-xl`. A sheet also loses its `data-[side=*]:border-*` classes (the edge replaces them);
+- a content file (`*-content.svelte`): `bg-popover` becomes `material-milk`; `shadow-md`, `shadow-lg`, `ring-1` and `ring-border` go (the material draws its own edge and shadow); `rounded-lg|md` becomes `rounded-xl`. A sheet also loses its `data-[side=*]:border-*` classes (the edge replaces them);
 - an item file (`*-item`, `*-checkbox-item`, `*-radio-item`, `*-sub-trigger`, and `command-item` / `command-link-item`): `rounded-sm|md` becomes `rounded-lg`;
 - `command/command.svelte`: the root `bg-popover` becomes `bg-transparent` (the command dialog, or the popover a combobox list sits in, is the material). Select's scroll buttons keep the opaque `bg-popover`: they must hide the rows that scroll under them.
 
-Hand edit, recorded: `sonner/sonner.svelte`. The neutral toast is `not-data-[type]:material-pane!` (sonner paints its own background unlayered, so the material needs `!`; a typed toast has `data-type` and keeps its soft status fill). `--normal-bg` is no longer set; `--normal-border` is transparent (the material draws the edge).
+Hand edit, recorded: `sonner/sonner.svelte`. The neutral toast is `not-data-[type]:material-milk!` (sonner paints its own background unlayered, so the material needs `!`; a typed toast has `data-type` and keeps its soft status fill). `--normal-bg` is no longer set; `--normal-border` is transparent (the material draws the edge).
 
-`cn()` treats the four material utilities as one class group that conflicts with `bg-*`, so a caller's `class` cannot leave two backgrounds on one element. Tests: `tests/unit/components/material-surfaces.test.ts`, `tests/unit/utils/cn.test.ts`, `tests/unit/scripts/shadcn-normalize.test.ts`.
+`cn()` treats the eleven material utilities (bar, glass, milk, sidebar, sidebar-bar, sheet, clay, clay-sm, pebble, tray, trough) as one class group that conflicts with `bg-*`, so a caller's `class` cannot leave two backgrounds on one element. Tests: `tests/unit/components/material-surfaces.test.ts`, `tests/unit/utils/cn.test.ts`, `tests/unit/scripts/shadcn-normalize.test.ts`.
 
 ## Shell on materials (plan G6)
 
-Hand edit, recorded: `sidebar/sidebar.svelte`. The desktop `[data-slot=sidebar-inner]` and the mobile `Sheet.Content` are `material-sidebar` (the sidebar colour as glass; five sidebar colours are five tinted glasses). The inner element lost `bg-sidebar` and its `border-e` / `border-s` / semibox `border` classes (the material's edge replaces them); the floating variant keeps its radius. The mobile sheet's `material-sidebar` replaces the `material-pane` the sheet content carries (`cn()` treats the four material utilities as one class group). `collapsible="none"` keeps its opaque `bg-sidebar`.
+Hand edit, recorded: `sidebar/sidebar.svelte`. The desktop `[data-slot=sidebar-inner]` and the mobile `Sheet.Content` are `material-sidebar` (the sidebar colour as glass; five sidebar colours are five tinted glasses). The inner element lost `bg-sidebar` and its `border-e` / `border-s` / semibox `border` classes (the material's edge replaces them); the floating variant keeps its radius. The mobile sheet's `material-sidebar` replaces the `material-milk` the sheet content carries (`cn()` treats the material utilities as one class group). `collapsible="none"` keeps its opaque `bg-sidebar`.
 
 `sidebar/sidebar-menu-button.svelte` is unchanged: the active and hover fill is already the opaque `sidebar-accent` with `sidebar-accent-foreground` and `font-medium`.
 

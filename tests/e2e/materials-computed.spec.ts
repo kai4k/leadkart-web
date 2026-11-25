@@ -2,21 +2,18 @@ import { expect, test, type Page } from './helpers/test';
 import { signInAsTier } from './helpers/sign-in';
 import { resetMock, registerMocks } from './helpers/mock';
 import { fakeTenantDto, TEST_TENANT_ID, TEST_TENANT_SLUG } from './helpers/fake-jwt';
-import { glass, leads, opaque, overlay, paint, setPrefs } from './helpers/materials';
+import { glass, leads, milk, opaque, overlay, paint, setPrefs } from './helpers/materials';
 
 /**
  * The materials, read from COMPUTED styles on the built app (fix round E). The unit tests read source text; this
  * spec cannot pass with the feature broken: a cascade mistake (a layered `!important` losing to an unlayered one,
  * a utility that compiles to nothing) shows up here as a wrong `backdrop-filter` or a wrong alpha.
  *
- * Glass: topbar, sidebar, bulk bar, auth card, dialog, sheet and menu have a real backdrop filter and a
- * translucent fill. Solid, the OS Reduce Transparency setting and forced colours: no filter and an opaque fill.
- * A neutral toast fired over an open dialog is opaque (the review's I1). A material inside a material is opaque.
- * The tenant banner is opaque in every case. The user menu's items all carry an icon.
- *
- * The toast and the nested pane are carried by synthetic elements that wear the real compiled classes (the toast
- * is `not-data-[type]:material-pane!` on a `[data-sonner-toast]`, as in ui/sonner/sonner.svelte): the cascade being
- * tested is the real one, and firing a neutral toast needs no feature flow.
+ * Glass: topbar, sidebar, bulk bar and auth card have a real backdrop filter and a translucent fill. Milk
+ * (dialog, sheet, menu, toast) is near-opaque and has NO filter. Solid, the OS Reduce Transparency setting and
+ * forced colours: no filter and an opaque fill on both. A stacked modal is opaque. The tenant banner is opaque in
+ * every case. The user menu's items all carry an icon. The solid materials (clay, trough, ...) keep a visible
+ * edge in forced colours and keep their shape when glass turns solid.
  */
 
 const SURFACES = {
@@ -37,14 +34,19 @@ async function closeOverlay(page: Page) {
 }
 
 /** Every surface, with the page in the state given: assert glass or opaque. */
-async function everySurface(page: Page, expectation: typeof glass, label: string) {
+async function everySurface(
+	page: Page,
+	expectation: typeof glass,
+	label: string,
+	overlayExpectation: typeof glass = expectation
+) {
 	await openBulk(page);
 	for (const [name, sel] of Object.entries(SURFACES))
 		expectation(await paint(page.locator(sel)), `${label} ${name}`);
 	for (const kind of ['menu', 'dialog', 'sheet'] as const) {
 		const loc = await overlay(page, kind);
 		await page.waitForTimeout(300); // the open animation settles
-		expectation(await paint(loc), `${label} ${kind}`);
+		overlayExpectation(await paint(loc), `${label} ${kind}`);
 		await closeOverlay(page);
 	}
 }
@@ -55,11 +57,11 @@ test.describe('materials: computed styles on the built app', () => {
 	});
 
 	for (const mode of ['light', 'dark']) {
-		test(`Glass (${mode}): topbar, sidebar, bulk bar, dialog, sheet and menu are blurred and translucent`, async ({
+		test(`Glass (${mode}): topbar, sidebar and bulk bar are blurred and translucent; dialog, sheet and menu are milk (no blur)`, async ({
 			page
 		}) => {
 			await leads(page, { mode });
-			await everySurface(page, glass, `glass/${mode}`);
+			await everySurface(page, glass, `glass/${mode}`, milk);
 		});
 	}
 
@@ -142,7 +144,7 @@ test.describe('materials: computed styles on the built app', () => {
 			await page.waitForTimeout(400);
 		}
 
-		test('a real neutral toast (data-type="default") is the pane material; a typed toast keeps its opaque status fill', async ({
+		test('a real neutral toast (data-type="default") is milk; a typed toast keeps its opaque status fill', async ({
 			page
 		}) => {
 			await guide(page);
@@ -150,14 +152,16 @@ test.describe('materials: computed styles on the built app', () => {
 			const neutral = page.locator('[data-sonner-toast][data-type="default"]');
 			await expect(neutral).toBeVisible();
 			await expect(neutral).toHaveAttribute('data-mounted', 'true');
-			glass(await paint(neutral), 'neutral toast at rest');
+			milk(await paint(neutral), 'neutral toast at rest');
 			await page.getByRole('button', { name: 'Success', exact: true }).click();
 			const typed = page.locator('[data-sonner-toast][data-type="success"]');
 			await expect(typed).toBeVisible();
 			opaque(await paint(typed), 'success toast');
 		});
 
-		test('a real neutral toast fired over an open modal is opaque', async ({ page }) => {
+		test('a real neutral toast fired over an open modal is milk too: no blur, so no override is needed', async ({
+			page
+		}) => {
 			await guide(page);
 			await stack(page);
 			await page.getByRole('button', { name: 'Toast from the dialog' }).click();
@@ -165,10 +169,10 @@ test.describe('materials: computed styles on the built app', () => {
 			await expect(toast).toBeVisible();
 			// sonner's own mount transition (data-mounted) is over before the paint is read
 			await expect(toast).toHaveAttribute('data-mounted', 'true');
-			opaque(await paint(toast), 'neutral toast over a modal');
+			milk(await paint(toast), 'neutral toast over a modal');
 		});
 
-		test('a dialog opened over a sheet is opaque while the sheet beneath stays glass', async ({
+		test('a dialog opened over a sheet is opaque while the sheet beneath stays milk', async ({
 			page
 		}) => {
 			await guide(page);
@@ -176,22 +180,93 @@ test.describe('materials: computed styles on the built app', () => {
 			const sheet = page.locator('[data-slot="sheet-content"]');
 			await expect(sheet).toBeVisible();
 			await page.waitForTimeout(400);
-			glass(await paint(sheet), 'sheet on its own');
+			milk(await paint(sheet), 'sheet on its own');
 			await page.getByRole('button', { name: 'Open confirm over the sheet' }).click();
 			const dialog = page.locator('[data-slot="dialog-content"]');
 			await expect(dialog).toBeVisible();
 			await page.waitForTimeout(400);
 			opaque(await paint(dialog), 'dialog over a sheet');
-			glass(await paint(sheet), 'the sheet beneath keeps its material');
+			milk(await paint(sheet), 'the sheet beneath keeps its material');
 		});
 
-		test('a real dropdown menu opened inside a dialog is opaque', async ({ page }) => {
+		test('a real dropdown menu opened inside a dialog is milk: near-opaque, no blur', async ({
+			page
+		}) => {
 			await guide(page);
 			await stack(page);
 			await page.getByRole('button', { name: 'Open a menu in the dialog' }).click();
 			const menu = page.locator('[data-slot="dropdown-menu-content"]');
 			await expect(menu).toBeVisible();
-			opaque(await paint(menu), 'menu inside a dialog');
+			milk(await paint(menu), 'menu inside a dialog');
+		});
+	});
+
+	// The solid materials (clay, pebble, tray, trough, sheet) on the styleguide's swatches.
+	test.describe('the solid materials on /styleguide', () => {
+		const MATERIALS = ['sheet', 'clay', 'clay-sm', 'tray', 'trough', 'pebble'];
+		const edge = (page: Page, name: string) =>
+			page.locator(`[data-material="${name}"]`).evaluate((el) => {
+				const cs = getComputedStyle(el);
+				return {
+					width: cs.borderTopWidth,
+					style: cs.borderTopStyle,
+					color: cs.borderTopColor,
+					filter: cs.backdropFilter || 'none',
+					shadow: cs.boxShadow
+				};
+			});
+		async function guide(page: Page, extra: Record<string, string> = {}) {
+			await setPrefs(page, extra);
+			await page.setViewportSize({ width: 1280, height: 800 });
+			await page.goto('/styleguide');
+			await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
+		}
+
+		test('every solid material has a 1px transparent border, no filter and a shadow', async ({
+			page
+		}) => {
+			await guide(page);
+			for (const name of MATERIALS) {
+				const e = await edge(page, name);
+				expect(e.width, name).toBe('1px');
+				expect(e.style, name).toBe('solid');
+				expect(e.color, name).toBe('rgba(0, 0, 0, 0)');
+				expect(e.filter, name).toBe('none');
+				expect(e.shadow, name).not.toBe('none');
+			}
+		});
+
+		test('forced colours: a trough (and every clay) draws a visible edge, not a transparent one', async ({
+			page
+		}) => {
+			await guide(page);
+			await page.emulateMedia({ forcedColors: 'active' });
+			for (const name of MATERIALS) {
+				const e = await edge(page, name);
+				expect(e.width, name).toBe('1px');
+				expect(e.color, `${name} border colour`).not.toBe('rgba(0, 0, 0, 0)');
+				expect(e.shadow, `${name} shadow (forced colours drops it)`).toBe('none');
+			}
+		});
+
+		test('reduced transparency: glass turns opaque and the solid materials keep their shape', async ({
+			page,
+			browserName
+		}) => {
+			test.skip(browserName !== 'chromium', 'CDP media emulation exists in Chromium only');
+			await guide(page);
+			const glassSwatch = page.locator('[data-material="glass"]');
+			const milkSwatch = page.locator('[data-material="milk"]');
+			glass(await paint(glassSwatch), 'glass swatch before');
+			milk(await paint(milkSwatch), 'milk swatch before');
+			const before = await edge(page, 'clay');
+			const cdp = await page.context().newCDPSession(page);
+			await cdp.send('Emulation.setEmulatedMedia', {
+				features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }]
+			});
+			opaque(await paint(glassSwatch), 'glass swatch under reduced transparency');
+			opaque(await paint(milkSwatch), 'milk swatch under reduced transparency');
+			expect(await edge(page, 'clay')).toEqual(before);
 		});
 	});
 

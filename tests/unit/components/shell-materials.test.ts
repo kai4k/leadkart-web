@@ -2,7 +2,7 @@
  * G6: the shell is on materials, and what must stay opaque stays opaque (GD12). Read from the sources so the
  * classes are pinned without mounting the whole shell: the topbar and the bulk bar are the bar material, the
  * horizontal nav is the sidebar colour on a bar, the sidebar (desktop and the mobile sheet) is the sidebar
- * material, the auth card is a pane; the context banners, the sticky table header and the tooltip take none.
+ * material, the auth card is glass; the context banners, the sticky table header and the tooltip take none.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -52,12 +52,12 @@ describe('the shell on materials', () => {
 		);
 	});
 
-	it('the bulk bar is a floating capsule on the bar material and the auth card is a pane', () => {
+	it('the bulk bar is a floating capsule on the bar material and the auth card is glass', () => {
 		const bulk = src('src/lib/components/data/BulkActionBar.svelte');
 		expect(bulk).toContain("'material-bar rounded-full sticky");
 		expect(bulk).toContain('role="status"');
 		expect(src('src/lib/components/ui/AuthCard.svelte')).toContain(
-			"'lk-auth-card material-pane rounded-xl'"
+			"'lk-auth-card material-glass rounded-xl'"
 		);
 	});
 
@@ -69,10 +69,10 @@ describe('the shell on materials', () => {
 			'src/lib/components/ui/table/table-header.svelte',
 			'src/lib/components/ui/tooltip/tooltip-content.svelte'
 		])
-			expect(src(p), p).not.toMatch(/material-(bar|pane|sidebar)/);
+			expect(src(p), p).not.toMatch(/material-(bar|glass|milk|sidebar)/);
 		// the typed toast keeps its soft fill: the neutral toast is the only one the material is applied to
 		expect(src('src/lib/components/ui/sonner/sonner.svelte')).toContain(
-			'data-[type=default]:material-pane!'
+			'data-[type=default]:material-milk!'
 		);
 	});
 });

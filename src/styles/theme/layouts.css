@@ -66,6 +66,22 @@
 	--shell-page-pad-x: var(--spacing-5);
 	--shell-content-max: none;
 
+	/* PEBBLE WORLD geometry (reference 20-shell.css `--world-*`): every size of the OS shell is a clamp() of the
+	   `desk` size container, so the bar, the rail and the dock scale with the room they have and never with the
+	   window. `cqw` / `cqh` resolve where the token is READ (inside the desk), not here. Nothing reads these
+	   until the shell tasks; they are declared first so the shell is built from tokens only. */
+	--shell-pad: clamp(0.5rem, 1.2cqw, 1.125rem);
+	--shell-gut: clamp(0.5rem, 1.1cqw, 1rem);
+	/* the vertical gutter: the horizontal one, squeezed on a short desk so the dock keeps its band */
+	--shell-gut-v: min(var(--shell-gut), max(0.375rem, calc(4.4cqh - 1rem)));
+	/* the top bar's height; the rail is the side dock's width */
+	--shell-bar: clamp(2.75rem, 7.4cqh, 3.5rem);
+	--shell-rail: clamp(3.75rem, 5.6cqw, 4.625rem);
+	/* one dock pebble, and the band the dock keeps for itself (pebble + its label row + the gutter): content
+	   never sits under it */
+	--shell-dock-pebble: clamp(2rem, 5.6cqh, 2.875rem);
+	--shell-dock-band: calc(var(--shell-dock-pebble) + 2.3125rem + 1.75 * var(--shell-gut-v));
+
 	/* the customizer sheet (Domiex modal-xl) */
 	--customizer-width: 52rem;
 }

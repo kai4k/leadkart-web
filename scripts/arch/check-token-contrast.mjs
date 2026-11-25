@@ -106,6 +106,8 @@ const APPS = [
 	'people'
 ];
 const SURFACES = ['background', 'card', 'muted'];
+/** The share of the app colour at the lit end of a pebble's gradient: `--pebble-top-mix` in materials.css. */
+export const PEBBLE_TOP = 0.82;
 
 /**
  * @typedef {{ fg: string, bg: string, min: number, label: string, alpha?: number,
@@ -277,7 +279,21 @@ const RAW_PAIRS = [
 	...['wall-1', 'wall-2', 'wall-3'].flatMap((w) =>
 		['foreground', 'muted-foreground'].map((fg) => [fg, w, TEXT, { note: 'text on the wallpaper' }])
 	),
-	...APPS.map((a) => ['app-glyph', `app-${a}`, UI, { note: 'white glyph on the app colour' }])
+	...APPS.map((a) => ['app-glyph', `app-${a}`, UI, { note: 'white glyph on the app colour' }]),
+	// the pebble (Task 3): the glyph sits on a gradient lit from above, so the worst place is its glossy top, the
+	// app colour kept at PEBBLE_TOP toward white (materials.css `--pebble-top-mix`; a unit test keeps them equal)
+	...APPS.map((a) => [
+		'app-glyph',
+		`app-${a}`,
+		UI,
+		{ alpha: PEBBLE_TOP, alphaOn: 'bg', over: 'app-glyph', note: 'white glyph on the pebble top' }
+	]),
+	// the solid fills under a sheet: text and the field border on the tray and the trough (the card is `over`
+	// nothing: both are opaque, so there is no backdrop to vary)
+	...['tray', 'trough'].flatMap((s) =>
+		['foreground', 'muted-foreground'].map((fg) => [fg, s, TEXT, { note: `text on the ${s}` }])
+	),
+	...['tray', 'trough'].map((s) => ['field-border', s, UI, { note: `field border on the ${s}` }])
 ];
 
 /** @type {Pair[]} */
@@ -490,7 +506,7 @@ const WHITE = { mode: 'rgb', r: 1, g: 1, b: 1 };
 /**
  * @typedef {{ control: string, text: string[], min?: number }} OnControl
  * @typedef {{ layer: string, fill: string, surface: string, saturate: string, contrast: string,
- *   backdrops: string[], under?: string, text: string[], marks: Array<string | { token: string, min: number }>, onControl?: OnControl[] }} MaterialLayer
+ *   backdrops: string[], under?: string, solid?: boolean, text: string[], marks: Array<string | { token: string, min: number }>, onControl?: OnControl[] }} MaterialLayer
  * `surface` is the opaque token the fill is `N%` of (the `--needs` table solves for N).
  * `backdrops` are tokens (resolved for the combination) and the literals '#000' / '#fff': any image,
  * avatar, logo or the auth particles count as black and white. `under` is a token (the scrim)
@@ -570,17 +586,29 @@ const SIDEBAR_BAR = {
 		}
 	]
 };
-const PANE = {
-	fill: 'material-pane-fill',
+/**
+ * Milk (popovers, menus, dialogs, sheets, toasts): near-opaque and never blurred. `solid` exempts the layer from the
+ * "is it glass" alpha limit and holds it to the opposite: its filter tokens must be 1 (no compression is relied on).
+ */
+const MILK = {
+	fill: 'material-milk-fill',
 	surface: 'popover',
-	saturate: 'material-pane-saturate',
-	contrast: 'material-pane-contrast'
+	saturate: 'material-milk-saturate',
+	contrast: 'material-milk-contrast',
+	solid: true
+};
+/** Large glass (the auth card, the palette and notification overlays): the old pane recipe, opaque on touch. */
+const GLASS = {
+	fill: 'material-glass-fill',
+	surface: 'popover',
+	saturate: 'material-glass-saturate',
+	contrast: 'material-glass-contrast'
 };
 const SIDEBAR = {
 	fill: 'material-sidebar-fill',
 	surface: 'sidebar',
-	saturate: 'material-pane-saturate',
-	contrast: 'material-pane-contrast',
+	saturate: 'material-glass-saturate',
+	contrast: 'material-glass-contrast',
 	text: ['sidebar-foreground', 'sidebar-muted-foreground', 'sidebar-accent-foreground'],
 	marks: [
 		'sidebar-ring',
@@ -612,20 +640,20 @@ const OVERLAY_TEXT = [
 	'info'
 ];
 /**
- * Text that sits on the highlighted / hovered control fill of a pane (menu items, list rows, chips).
+ * Text that sits on the highlighted / hovered control fill of an overlay (menu items, list rows, chips).
  * `primary-text` and `destructive` are NOT here: on a control fill they reach 2.8-4.3 (dark destructive, violet
  * primary text) and no component needs them there (a destructive menu item highlights with its own opaque
  * `destructive-soft`). check-tokens rule m6 refuses the class combination in the material families instead.
  */
-const PANE_CONTROL_TEXT = [
+const OVERLAY_CONTROL_TEXT = [
 	'foreground',
 	'material-muted-foreground',
 	'accent-foreground',
 	'material-primary-text'
 ];
-const PANE_CONTROLS = [
-	{ control: 'material-control', text: PANE_CONTROL_TEXT },
-	{ control: 'material-control-hover', text: PANE_CONTROL_TEXT },
+const OVERLAY_CONTROLS = [
+	{ control: 'material-control', text: OVERLAY_CONTROL_TEXT },
+	{ control: 'material-control-hover', text: OVERLAY_CONTROL_TEXT },
 	INPUT_WELL
 ];
 
@@ -643,24 +671,25 @@ export const MATERIAL_LAYERS = [
 	{ layer: 'sidebar-mobile', ...SIDEBAR, backdrops: ['#000', '#fff'], under: 'scrim' },
 	{
 		layer: 'overlay',
-		...PANE,
+		...MILK,
 		backdrops: ['#000', '#fff'],
 		under: 'scrim',
 		text: OVERLAY_TEXT,
 		marks: ['material-ring', 'input', 'primary-indicator'],
-		onControl: PANE_CONTROLS
+		onControl: OVERLAY_CONTROLS
 	},
 	{
 		layer: 'float',
-		...PANE,
+		...MILK,
 		backdrops: FLOAT_BACKDROPS,
 		text: OVERLAY_TEXT,
 		marks: ['material-ring', 'primary-indicator'],
-		onControl: PANE_CONTROLS
+		onControl: OVERLAY_CONTROLS
 	},
+	// the auth card is large glass (spec 4.3) over the decorative backdrop
 	{
 		layer: 'auth-card',
-		...PANE,
+		...GLASS,
 		backdrops: [
 			'background',
 			'primary-100',
@@ -673,7 +702,7 @@ export const MATERIAL_LAYERS = [
 		],
 		text: ['foreground', 'material-muted-foreground', 'material-primary-text', 'destructive'],
 		marks: ['material-ring', 'input'],
-		onControl: PANE_CONTROLS
+		onControl: OVERLAY_CONTROLS
 	}
 ];
 
@@ -755,7 +784,14 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 				throw new Error(`layer "${layer.layer}" declares no text and no marks`);
 			const cs = layerCorners(props, mode, layer);
 
-			if (transparency === 'glass') {
+			if (layer.solid) {
+				// milk: no filter, so no luminosity compression may be relied on (the bound is then plain compositing)
+				for (const t of [layer.saturate, layer.contrast])
+					if (numberToken(props, t) !== 1)
+						problems.push(
+							`${label} · ${layer.layer}: ${t} is not 1: a solid layer never blurs, so it must not rely on a filter · ${numberToken(props, t)} != 1`
+						);
+			} else if (transparency === 'glass') {
 				const alpha = fillAlpha(resolve, layer.fill);
 				if (alpha >= GLASS_MAX_ALPHA - 1e-9)
 					problems.push(

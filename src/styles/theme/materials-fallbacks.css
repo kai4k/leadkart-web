@@ -1,20 +1,23 @@
 /* MATERIAL FALLBACKS — every condition under which glass must degrade to an opaque surface (plan G2).
  * Not gated: each block only resolves to the gated `off` values of materials.css (a unit test,
  * tests/unit/styles/materials.test.ts, proves every block repeats the `off` declarations exactly).
+ * Clay, pebble, tray and trough are solid in every state, so no block touches them: they keep their shape
+ * and their transparent 1px border (which forced colours turn into a visible edge).
  *
  * `:root:root` has the same specificity as `:root[data-transparency]` (0,2,0) and comes later, so the
  * OS setting wins over the customizer. That is deliberate: Apple's system settings apply across the board. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
 	:root:root {
 		--material-bar-fill: var(--card);
-		--material-pane-fill: var(--popover);
+		--material-milk-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
 		--material-bar-filter: none;
-		--material-pane-filter: none;
+		--material-glass-filter: none;
 		--material-bar-saturate: 1;
 		--material-bar-contrast: 1;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-control: var(--muted);
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
@@ -24,14 +27,15 @@
 @media (prefers-reduced-transparency: reduce) {
 	:root:root {
 		--material-bar-fill: var(--card);
-		--material-pane-fill: var(--popover);
+		--material-milk-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
 		--material-bar-filter: none;
-		--material-pane-filter: none;
+		--material-glass-filter: none;
 		--material-bar-saturate: 1;
 		--material-bar-contrast: 1;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-control: var(--muted);
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
@@ -41,14 +45,15 @@
 @media (prefers-contrast: more) {
 	:root:root {
 		--material-bar-fill: var(--card);
-		--material-pane-fill: var(--popover);
+		--material-milk-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
 		--material-bar-filter: none;
-		--material-pane-filter: none;
+		--material-glass-filter: none;
 		--material-bar-saturate: 1;
 		--material-bar-contrast: 1;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-control: var(--muted);
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
@@ -60,14 +65,15 @@
 @media (forced-colors: active) {
 	:root:root {
 		--material-bar-fill: var(--card);
-		--material-pane-fill: var(--popover);
+		--material-milk-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
 		--material-bar-filter: none;
-		--material-pane-filter: none;
+		--material-glass-filter: none;
 		--material-bar-saturate: 1;
 		--material-bar-contrast: 1;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-control: var(--muted);
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
@@ -77,32 +83,35 @@
 @media print {
 	:root:root {
 		--material-bar-fill: var(--card);
-		--material-pane-fill: var(--popover);
+		--material-milk-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
 		--material-bar-filter: none;
-		--material-pane-filter: none;
+		--material-glass-filter: none;
 		--material-bar-saturate: 1;
 		--material-bar-contrast: 1;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-control: var(--muted);
 		--material-control-hover: var(--accent);
 		--brand-plate-glass: 0;
 		--brand-plate-solid: 1;
 		/* a transparent shadow, never `none`: `none` inside the comma list invalidates the whole box-shadow and the 1px edge goes with it */
 		--material-bar-shadow: 0 0 transparent;
-		--material-pane-shadow: 0 0 transparent;
+		--material-milk-shadow: 0 0 transparent;
+		--material-glass-shadow: 0 0 transparent;
 	}
 }
-/* Mid-range Android budget (plan section 5): large panes are opaque on touch-first devices; bars keep
-   glass with a smaller blur. Only the pane subset of the `off` block. */
+/* Mid-range Android budget (plan section 5): the large glass (the auth card, the overlays and the sidebar) is
+   opaque on touch-first devices; bars keep glass with a smaller blur. Milk has no filter, so it needs no rule
+   here. Only the large-glass subset of the `off` block. */
 @media (pointer: coarse) {
 	:root:root:not([data-transparency='off']) {
-		--material-pane-fill: var(--popover);
+		--material-glass-fill: var(--popover);
 		--material-sidebar-fill: var(--sidebar);
-		--material-pane-filter: none;
-		--material-pane-saturate: 1;
-		--material-pane-contrast: 1;
+		--material-glass-filter: none;
+		--material-glass-saturate: 1;
+		--material-glass-contrast: 1;
 		--material-bar-blur: 12px;
 	}
 }
