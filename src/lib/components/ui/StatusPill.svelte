@@ -90,6 +90,12 @@
 	const currentLabel = $derived(currentOption?.label ?? value);
 </script>
 
+{#snippet glyph()}
+	<!-- the status dot: decorative, in the pill's own ink (the word carries the meaning) -->
+	<span data-slot="status-glyph" aria-hidden="true" class="size-2 shrink-0 rounded-full bg-current"
+	></span>
+{/snippet}
+
 {#if isInteractive && options}
 	<Dropdown.Root>
 		<Dropdown.Trigger
@@ -103,7 +109,7 @@
 		>
 			<Badge variant={currentVariant}>
 				<span class="inline-flex items-center gap-1">
-					<span>{currentLabel}</span>
+					{@render glyph()}<span>{currentLabel}</span>
 					<Icon icon={ChevronDown} size="xs" />
 				</span>
 			</Badge>
@@ -125,6 +131,6 @@
 	</Dropdown.Root>
 {:else}
 	<span class={className}>
-		<Badge variant={currentVariant}>{currentLabel}</Badge>
+		<Badge variant={currentVariant}>{@render glyph()}{currentLabel}</Badge>
 	</span>
 {/if}

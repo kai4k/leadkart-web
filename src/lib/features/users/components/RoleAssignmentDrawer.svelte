@@ -150,7 +150,7 @@
 		<Sheet.Footer class="flex-row justify-end border-t border-border">
 			<Sheet.Close>
 				{#snippet child({ props })}
-					<Button {...props} variant="outline">Done</Button>
+					<Button {...props} variant="secondary">Done</Button>
 				{/snippet}
 			</Sheet.Close>
 		</Sheet.Footer>

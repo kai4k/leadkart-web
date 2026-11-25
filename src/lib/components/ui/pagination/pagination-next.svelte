@@ -15,7 +15,7 @@
 <PaginationPrimitive.NextButton
 	bind:ref
 	aria-label={$_('common.pagination.goToNext')}
-	class={cn(buttonVariants({ variant: 'ghost', size: 'default' }), 'pe-1.5!', className)}
+	class={cn(buttonVariants({ variant: 'ghost', size: 'md' }), 'pe-1.5!', className)}
 	{...restProps}
 >
 	<span class="hidden sm:block">Next</span>

@@ -67,13 +67,15 @@
 				<p class="body-base">Opened over the sheet.</p>
 				<div class="cluster">
 					<DropdownMenu.Root>
-						<DropdownMenu.Trigger variant="outline">Open a menu in the dialog</DropdownMenu.Trigger>
+						<DropdownMenu.Trigger variant="secondary"
+							>Open a menu in the dialog</DropdownMenu.Trigger
+						>
 						<DropdownMenu.Content>
 							<DropdownMenu.Item>First choice</DropdownMenu.Item>
 							<DropdownMenu.Item>Second choice</DropdownMenu.Item>
 						</DropdownMenu.Content>
 					</DropdownMenu.Root>
-					<Button variant="outline" onclick={() => toast('Saved to drafts.')}
+					<Button variant="secondary" onclick={() => toast('Saved to drafts.')}
 						>Toast from the dialog</Button
 					>
 				</div>
@@ -113,7 +115,7 @@
 				bind:value={form.values.name}
 				error={form.errors.name}
 			/>
-			<Button variant="outline" onclick={() => (reasonOpen = true)}>Delete the demo</Button>
+			<Button variant="secondary" onclick={() => (reasonOpen = true)}>Delete the demo</Button>
 		{/snippet}
 	</FormSheet>
 	<ReasonConfirmDialog
@@ -133,13 +135,15 @@
 
 	{@render row('Toasts', 'One of each type; the default one is the pane material.')}
 	<div class="cluster">
-		<Button variant="outline" onclick={() => toast('Saved to drafts.')}>Default</Button>
-		<Button variant="outline" onclick={() => toast.success('Saved the demo.')}>Success</Button>
-		<Button variant="outline" onclick={() => toast.error('Could not save the demo.')}>Error</Button>
-		<Button variant="outline" onclick={() => toast.warning('This demo is almost full.')}
+		<Button variant="secondary" onclick={() => toast('Saved to drafts.')}>Default</Button>
+		<Button variant="secondary" onclick={() => toast.success('Saved the demo.')}>Success</Button>
+		<Button variant="secondary" onclick={() => toast.error('Could not save the demo.')}
+			>Error</Button
+		>
+		<Button variant="secondary" onclick={() => toast.warning('This demo is almost full.')}
 			>Warning</Button
 		>
-		<Button variant="outline" onclick={() => toast.info('A new demo is available.')}>Info</Button>
+		<Button variant="secondary" onclick={() => toast.info('A new demo is available.')}>Info</Button>
 	</div>
 
 	{@render row('Table rows', 'Normal, hover (move the pointer over a row) and selected.')}

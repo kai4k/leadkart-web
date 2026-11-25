@@ -11,7 +11,7 @@
 		{
 			variants: {
 				size: {
-					sm: 'size-7 text-[var(--text-2xs)]',
+					sm: 'size-7 text-xs',
 					md: 'size-10 text-sm',
 					lg: 'size-14 text-base'
 				}

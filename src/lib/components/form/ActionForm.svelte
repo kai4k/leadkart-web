@@ -339,7 +339,7 @@
 				loading={submitting}
 				disabled={submitDisabled}
 				class={wide ? 'w-full' : undefined}
-				size={wide ? 'lg' : 'default'}>{submitLabel}</Button
+				size={wide ? 'lg' : 'md'}>{submitLabel}</Button
 			>
 		{:else if disallowedReason}
 			<p id="{id}-readonly" class="caption text-muted-foreground">{disallowedReason}</p>

@@ -112,7 +112,7 @@
 	const vc = $derived(VARIANT_CONFIG[variant]);
 	// Buttons.danger is the only "warm" variant we own; warning + info defer to `default` (a yellow CTA fails
 	// contrast targets: the warning's emphasis lives in the icon).
-	const buttonVariant = $derived(variant === 'danger' ? 'destructive' : 'default');
+	const buttonVariant = $derived(variant === 'danger' ? 'destructive' : 'primary');
 </script>
 
 <AlertDialog.Root bind:open busy={loading} {onOpenChange}>

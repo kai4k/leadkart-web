@@ -106,7 +106,7 @@
 		{/if}
 		{#snippet action({ stale })}
 			<Button
-				variant="outline"
+				variant="secondary"
 				size="sm"
 				loading={ending}
 				aria-disabled={stale ? 'true' : undefined}
@@ -128,7 +128,7 @@
 		>
 		{#snippet action({ stale })}
 			<Button
-				variant="outline"
+				variant="secondary"
 				size="sm"
 				loading={impersonation.status === 'loading'}
 				aria-disabled={stale ? 'true' : undefined}

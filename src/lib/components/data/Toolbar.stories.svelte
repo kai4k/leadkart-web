@@ -26,11 +26,11 @@
 				<TextField placeholder="Search by name or GSTIN…" leadingIcon={Search} />
 			{/snippet}
 			{#snippet actions()}
-				<Button variant="outline">
+				<Button variant="secondary">
 					<Filter size={14} />
 					Filters
 				</Button>
-				<Button variant="outline">
+				<Button variant="secondary">
 					<Download size={14} />
 					Export
 				</Button>

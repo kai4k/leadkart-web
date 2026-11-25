@@ -37,7 +37,7 @@
 		{/if}
 		{#snippet action({ stale })}
 			<Button
-				variant="outline"
+				variant="secondary"
 				size="sm"
 				loading={exit.isPending}
 				aria-disabled={stale ? 'true' : undefined}

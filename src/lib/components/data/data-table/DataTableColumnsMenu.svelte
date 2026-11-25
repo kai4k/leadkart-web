@@ -18,7 +18,7 @@
 </script>
 
 <Dropdown.Root>
-	<Dropdown.Trigger variant="outline" size="sm">
+	<Dropdown.Trigger variant="secondary" size="sm">
 		{$_('dataTable.columns')}
 		<Icon icon={ChevronDown} size="xs" />
 	</Dropdown.Trigger>

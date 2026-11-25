@@ -97,7 +97,7 @@
 						The search could not be completed, so tenants and people are not shown.
 					</p>
 					<div>
-						<Button variant="outline" size="sm" onclick={() => void query.refetch()}>
+						<Button variant="secondary" size="sm" onclick={() => void query.refetch()}>
 							Try again
 						</Button>
 					</div>

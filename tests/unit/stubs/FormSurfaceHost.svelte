@@ -18,7 +18,7 @@
 		seed?: string;
 		onSubmit: (values: { name: string }) => Promise<void>;
 		onOpenChange: (open: boolean) => void;
-		submitVariant?: 'default' | 'destructive';
+		submitVariant?: 'primary' | 'destructive';
 		guardLeave?: boolean;
 	} = $props();
 

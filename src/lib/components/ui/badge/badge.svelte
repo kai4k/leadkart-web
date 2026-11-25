@@ -6,7 +6,8 @@
 	/**
 	 * shadcn-svelte `badge` (nova) with LeadKart edits: `cva`, no alpha, and the soft status
 	 * variants (`StatusVariant` in utils/status.ts): `neutral | info | success | warning | danger |
-	 * brand`. Each pair is checked by the token contrast gate.
+	 * brand`, plus the counts `count` (neutral) and `count-urgent` (danger). Each pair is checked by
+	 * the token contrast gate.
 	 */
 	export const badgeVariants = cva(
 		[
@@ -25,13 +26,18 @@
 					success: 'bg-success-soft text-success',
 					warning: 'bg-warning-soft text-warning',
 					danger: 'bg-destructive-soft text-destructive',
-					brand: 'bg-primary-soft text-primary-text'
+					brand: 'bg-primary-soft text-primary-text',
+					// a count on a pebble or tab: neutral, never a status colour; red (`count-urgent`) means overdue/at-risk only
+					count:
+						'h-5 min-w-5 justify-center rounded-full border-(--solid-edge) bg-badge-count px-1.5 py-0 font-bold text-badge-count-foreground tabular-nums shadow-(--shadow-clay-sm)',
+					'count-urgent':
+						'h-5 min-w-5 justify-center rounded-full border-(--solid-edge) bg-destructive px-1.5 py-0 font-bold text-destructive-foreground tabular-nums shadow-(--shadow-clay-sm)'
 				},
-				// `sm` is the compact badge of dense lists, status columns and card corners (what
-				// `size="sm"` was before Phase 2): the 2xs type step and tighter inline padding.
+				// `sm` is the compact badge of dense lists, status columns and card corners: tighter
+				// inline padding, same 12px type (nothing a person reads is under 12px).
 				size: {
 					default: '',
-					sm: 'px-1.5 text-2xs'
+					sm: 'px-1.5'
 				}
 			},
 			defaultVariants: { variant: 'neutral', size: 'default' }

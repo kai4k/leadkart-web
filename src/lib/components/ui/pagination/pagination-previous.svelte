@@ -15,7 +15,7 @@
 <PaginationPrimitive.PrevButton
 	bind:ref
 	aria-label={$_('common.pagination.goToPrevious')}
-	class={cn(buttonVariants({ variant: 'ghost', size: 'default' }), 'ps-1.5!', className)}
+	class={cn(buttonVariants({ variant: 'ghost', size: 'md' }), 'ps-1.5!', className)}
 	{...restProps}
 >
 	<ChevronLeftIcon data-icon="inline-start" class="rtl:rotate-180" />

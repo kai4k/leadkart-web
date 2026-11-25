@@ -21,7 +21,7 @@ export type FormSurfaceProps<S extends AnyObjectSchema, R = void> = {
 	description?: string;
 	submitLabel: string;
 	/** `destructive` for a form whose submit removes or revokes something. */
-	submitVariant?: 'default' | 'destructive';
+	submitVariant?: 'primary' | 'destructive';
 	schema: S;
 	/** Re-read every time the surface opens: a reopened form never shows the previous session's values. */
 	initial: () => z.input<S>;

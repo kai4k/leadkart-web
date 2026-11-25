@@ -39,12 +39,27 @@ describe('Badge', () => {
 		render({ variant: 'outline' });
 		expect(cls()).toContain('border-border');
 	});
-	it('size="sm" is the compact badge: tighter padding and the 2xs type step', () => {
+	it('size="sm" is the compact badge: tighter padding, never under the 12px type floor', () => {
 		render({ variant: 'success', size: 'sm' });
 		expect(cls()).toContain('px-1.5');
-		expect(cls()).toContain('text-2xs');
+		expect(cls()).toContain('text-xs');
+		expect(cls()).not.toContain('text-2xs');
 		expect(cls()).not.toContain('px-2 ');
-		expect(cls()).not.toContain('text-xs');
+	});
+	it('variant="count" is the neutral count: card fill, readable text, no status colour', () => {
+		render({ variant: 'count', 'aria-label': '12 unread' });
+		expect(cls()).toContain('bg-badge-count');
+		expect(cls()).toContain('text-badge-count-foreground');
+		expect(cls()).not.toMatch(/destructive|success|warning|info/);
+		const el = target.querySelector('[data-slot="badge"]')!;
+		expect(el.textContent).toBe('Active');
+		expect(el.getAttribute('aria-hidden')).toBeNull();
+		expect(el.getAttribute('aria-label')).toBe('12 unread');
+	});
+	it('variant="count-urgent" uses the danger tokens', () => {
+		render({ variant: 'count-urgent' });
+		expect(cls()).toContain('bg-destructive');
+		expect(cls()).toContain('text-destructive-foreground');
 	});
 	it('the default size keeps the regular padding and text-xs', () => {
 		render({ variant: 'success' });

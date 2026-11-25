@@ -37,7 +37,7 @@
 		<form method="POST" action="/auth/logout" onsubmit={signOut}>
 			<input type="hidden" name="csrf" value={csrfToken} />
 			<div class="form-footer">
-				<Button type="submit" variant="outline" size="sm">{$_('shell.userMenu.signOut')}</Button>
+				<Button type="submit" variant="secondary" size="sm">{$_('shell.userMenu.signOut')}</Button>
 			</div>
 		</form>
 	{/if}

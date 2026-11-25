@@ -54,7 +54,7 @@
 		<div class="flex flex-wrap items-center gap-3">
 			<Button href={homeHref}>{homeLabel}</Button>
 			{#if signInHref}
-				<Button href={signInHref} variant="outline">{$_('errors.route.signIn')}</Button>
+				<Button href={signInHref} variant="secondary">{$_('errors.route.signIn')}</Button>
 			{/if}
 		</div>
 	</Card.Content>

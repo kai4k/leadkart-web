@@ -23,16 +23,8 @@
 	import Foundations from './Foundations.svelte';
 	import Overlays from './Overlays.svelte';
 
-	const buttonVariants = [
-		'default',
-		'secondary',
-		'tonal',
-		'ghost',
-		'destructive',
-		'outline',
-		'link'
-	] as const;
-	const buttonSizes = ['sm', 'default', 'lg'] as const;
+	const buttonVariants = ['primary', 'tonal', 'secondary', 'ghost', 'destructive', 'link'] as const;
+	const buttonSizes = ['sm', 'md', 'lg'] as const;
 </script>
 
 <svelte:head>
@@ -59,8 +51,7 @@
 				<Card.Header>
 					<Card.Title>variant="{variant}"</Card.Title>
 					<Card.Description>
-						Sizes sm (h-8), default (h-10, the Domiex .btn), lg (h-12). Default + disabled + loading
-						states.
+						Sizes sm (h-9), md (h-11), lg (h-13). Default + disabled + loading states.
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>

@@ -2,47 +2,47 @@
 	import { cva, type VariantProps } from 'class-variance-authority';
 
 	/**
-	 * shadcn-svelte `button` (nova) with LeadKart edits: `cva` instead of tailwind-variants, the
-	 * Domiex sizes (h-10 px-6 default, h-8 sm, h-12 lg), opaque hover tokens (L37: never `/90`),
-	 * a solid `destructive`, a `tonal` variant, and `loading`. Capsule (`rounded-full`) on every variant but `link` (plan G7, Q1). See ui/CUSTOMIZATIONS.md.
+	 * Pebble World button (spec 7.1): a clay capsule. `primary | tonal | secondary | ghost |
+	 * destructive | link` (`default` is now `primary`, `outline` is now `secondary`), sizes `sm | md |
+	 * lg | icon` (+ `icon-sm`, the compact in-field icon), and `loading`. Opaque hover tokens (L37:
+	 * never `/90`). The clay variants squish to `--press-scale` and lift by `--lift`, both under
+	 * `motion-safe` only; the edge is `--solid-edge` (a system colour in forced colours). Capsule
+	 * (`rounded-full`) on every variant but `link` (plan G7, Q1). See ui/CUSTOMIZATIONS.md.
 	 */
+	// the clay body: the shadow is the token, not a re-drawn one (a `material-*` utility would also set a fill that fights the variant's)
+	const lift =
+		'rounded-full motion-safe:hover:-translate-y-(--lift) motion-safe:active:translate-y-0 motion-safe:active:scale-(--press-scale)';
+	const clay = `${lift} border-(--solid-edge) shadow-(--shadow-clay-sm)`;
 	export const buttonVariants = cva(
 		[
-			'group/button inline-flex shrink-0 items-center justify-center gap-2 border border-transparent text-sm font-medium whitespace-nowrap',
-			'transition-colors outline-none select-none',
+			'group/button inline-flex shrink-0 items-center justify-center gap-2 border border-transparent text-sm font-semibold whitespace-nowrap',
+			'transition-[transform,box-shadow,background-color,color,filter] duration-(--duration-fast) outline-none select-none',
 			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-			'active:not-aria-[haspopup]:translate-y-px',
 			'disabled:pointer-events-none disabled:opacity-60 aria-disabled:pointer-events-none aria-disabled:opacity-60',
-			'motion-reduce:transition-none motion-reduce:active:translate-y-0',
+			'motion-reduce:transition-none',
 			"[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
 		],
 		{
 			variants: {
 				variant: {
-					default: 'rounded-full bg-primary text-primary-foreground hover:bg-primary-hover',
-					destructive:
-						'rounded-full bg-destructive text-destructive-foreground hover:bg-destructive-hover',
-					outline:
-						'rounded-full border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted dark:border-input dark:bg-input-fill',
-					secondary:
-						'rounded-full bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary',
-					ghost: 'rounded-full hover:bg-muted hover:text-foreground aria-expanded:bg-muted',
-					link: 'text-primary-text underline-offset-4 hover:underline',
-					tonal: 'rounded-full border-border bg-muted text-foreground hover:bg-secondary'
+					primary: `${clay} bg-primary text-primary-foreground hover:bg-primary-hover`,
+					tonal: `${clay} bg-primary-tonal text-primary-tonal-foreground hover:brightness-95 dark:hover:brightness-110`,
+					secondary: `${lift} material-clay-sm text-foreground hover:bg-muted aria-expanded:bg-muted`,
+					ghost:
+						'rounded-full text-primary-text hover:bg-primary-soft aria-expanded:bg-primary-soft motion-safe:active:scale-(--press-scale)',
+					destructive: `${clay} bg-destructive text-destructive-foreground hover:bg-destructive-hover`,
+					link: 'text-primary-text underline-offset-4 hover:underline'
 				},
 				size: {
-					default: 'h-10 px-6',
-					xs: 'h-6 gap-1 px-2 text-xs [&_svg:not([class*="size-"])]:size-3',
-					sm: 'h-8 px-3 text-xs',
-					lg: 'h-12 px-7',
-					icon: 'size-10',
-					'icon-xs': 'size-6 [&_svg:not([class*="size-"])]:size-3',
-					'icon-sm': 'size-8',
-					'icon-lg': 'size-12'
+					sm: 'h-9 px-4',
+					md: 'h-11 px-5',
+					lg: 'h-13 px-6 text-base',
+					icon: 'size-11',
+					'icon-sm': 'size-9'
 				}
 			},
 			compoundVariants: [{ variant: 'link', class: 'h-auto p-0' }],
-			defaultVariants: { variant: 'default', size: 'default' }
+			defaultVariants: { variant: 'primary', size: 'md' }
 		}
 	);
 
@@ -72,8 +72,8 @@
 
 	let {
 		class: className,
-		variant = 'default',
-		size = 'default',
+		variant = 'primary',
+		size = 'md',
 		loading = false,
 		focusableWhileLoading = false,
 		ref = $bindable(null),

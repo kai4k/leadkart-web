@@ -102,7 +102,7 @@
 		</div>
 
 		<Sheet.Footer class="border-border border-t">
-			<Button variant="outline" onclick={() => prefs.reset()}>
+			<Button variant="secondary" onclick={() => prefs.reset()}>
 				<Icon icon={RotateCcw} size="sm" />
 				{$_('customizer.reset')}
 			</Button>

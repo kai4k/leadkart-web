@@ -24,7 +24,7 @@
 		title,
 		description,
 		submitLabel,
-		submitVariant = 'default',
+		submitVariant = 'primary',
 		schema,
 		initial,
 		onSubmit,
@@ -81,7 +81,7 @@
 			<Sheet.Footer class="flex-row justify-end border-t border-border">
 				<Sheet.Close>
 					{#snippet child({ props })}
-						<Button {...props} variant="outline" disabled={form.isSubmitting}
+						<Button {...props} variant="secondary" disabled={form.isSubmitting}
 							>{$_('common.cancel')}</Button
 						>
 					{/snippet}

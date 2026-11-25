@@ -114,7 +114,7 @@
 	<div class="cluster" role="group" aria-label="Transparency">
 		{#each PREFERENCE_VALUES.transparency as value (value)}
 			<Button
-				variant={prefs.transparency === value ? 'default' : 'outline'}
+				variant={prefs.transparency === value ? 'primary' : 'secondary'}
 				size="sm"
 				aria-pressed={prefs.transparency === value}
 				onclick={() => prefs.set({ transparency: value })}
@@ -126,7 +126,7 @@
 	<div class="cluster" role="group" aria-label="Density">
 		{#each ['compact', 'default'] as const as value (value)}
 			<Button
-				variant={density === value ? 'default' : 'outline'}
+				variant={density === value ? 'primary' : 'secondary'}
 				size="sm"
 				aria-pressed={density === value}
 				onclick={() => (density = value)}

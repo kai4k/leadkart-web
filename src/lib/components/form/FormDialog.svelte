@@ -21,7 +21,7 @@
 		title,
 		description,
 		submitLabel,
-		submitVariant = 'default',
+		submitVariant = 'primary',
 		schema,
 		initial,
 		onSubmit,
@@ -78,7 +78,7 @@
 			<Dialog.Footer class="border-t border-border">
 				<Dialog.Close>
 					{#snippet child({ props })}
-						<Button {...props} variant="outline" disabled={form.isSubmitting}
+						<Button {...props} variant="secondary" disabled={form.isSubmitting}
 							>{$_('common.cancel')}</Button
 						>
 					{/snippet}

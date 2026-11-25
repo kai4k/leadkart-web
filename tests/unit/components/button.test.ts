@@ -59,10 +59,11 @@ describe('Button', () => {
 		expect(onclick).toHaveBeenCalledOnce();
 	});
 
-	it('variant="tonal" adds the tonal classes', () => {
+	it('variant="tonal" is the soft brand button', () => {
 		render({ variant: 'tonal' });
-		expect(target.querySelector('button')!.className).toContain('bg-muted');
-		expect(target.querySelector('button')!.className).toContain('border-border');
+		const cls = target.querySelector('button')!.className;
+		expect(cls).toContain('bg-primary-tonal');
+		expect(cls).toContain('text-primary-tonal-foreground');
 	});
 
 	it('uses the opaque hover token, never an alpha', () => {
@@ -80,14 +81,60 @@ describe('Button', () => {
 	});
 });
 
+describe('Button variants (Pebble World)', () => {
+	const classesOf = (props: Record<string, unknown>) => {
+		render(props);
+		const cls = (target.querySelector('[data-slot="button"]') as HTMLElement).className;
+		if (component) unmount(component);
+		component = undefined;
+		target.remove();
+		return cls;
+	};
+	it('defaults to primary', () => {
+		expect(classesOf({})).toBe(classesOf({ variant: 'primary' }));
+	});
+	it.each([
+		['primary', 'bg-primary text-primary-foreground'],
+		['secondary', 'material-clay-sm'],
+		['ghost', 'text-primary-text'],
+		['destructive', 'bg-destructive text-destructive-foreground'],
+		['link', 'underline-offset-4']
+	])('variant=%s renders its class set', (variant, expected) => {
+		const cls = classesOf({ variant });
+		for (const c of expected.split(' ')) expect(cls.split(/\s+/)).toContain(c);
+	});
+	it('the retired variant names are gone', () => {
+		for (const variant of ['default', 'outline'])
+			expect(classesOf({ variant }), variant).not.toContain('bg-primary ');
+	});
+	it('the clay variants press with --press-scale and lift, under motion-safe only', () => {
+		for (const variant of ['primary', 'tonal', 'secondary', 'destructive']) {
+			const parts = classesOf({ variant }).split(/\s+/);
+			expect(parts, variant).toContain('motion-safe:active:scale-(--press-scale)');
+			expect(parts, variant).toContain('motion-safe:hover:-translate-y-(--lift)');
+			expect(
+				parts.filter((c) => /^(active|hover):.*(scale|translate)/.test(c)),
+				variant
+			).toEqual([]);
+		}
+	});
+	it('every size renders a height', () => {
+		for (const size of ['sm', 'md', 'lg', 'icon'])
+			expect(classesOf({ size }), size).toMatch(/\b(h|size)-\d+/);
+	});
+	it('the clay variants carry the solid edge so forced colours keeps an outline', () => {
+		expect(classesOf({ variant: 'primary' })).toContain('border-(--solid-edge)');
+	});
+});
+
 describe('Button shape (plan G7, Q1)', () => {
 	const classesOf = (props: Record<string, unknown>) => {
 		render(props);
 		return (target.querySelector('[data-slot="button"]') as HTMLElement).className.split(/\s+/);
 	};
 	it('every variant but link is a capsule, at every size', () => {
-		for (const variant of ['default', 'destructive', 'outline', 'secondary', 'ghost', 'tonal'])
-			for (const size of ['default', 'sm', 'lg', 'icon', 'icon-sm'] as const) {
+		for (const variant of ['primary', 'destructive', 'secondary', 'ghost', 'tonal'])
+			for (const size of ['md', 'sm', 'lg', 'icon', 'icon-sm'] as const) {
 				expect(classesOf({ variant, size }), `${variant}/${size}`).toContain('rounded-full');
 				expect(classesOf({ variant, size })).not.toContain('rounded-md');
 				if (component) unmount(component);

@@ -142,7 +142,8 @@ describe.each(['sheet', 'dialog'] as const)('Form surface: %s', (surface) => {
 		const content = document.querySelector(`[data-slot="${surface}-content"]`)!;
 		expect(content.classList.contains('material-milk')).toBe(true);
 		const inner = [...content.querySelectorAll('*')].filter((el) =>
-			[...el.classList].some((c) => c.startsWith('material-'))
+			// the blurring materials; the solid clay of a button inside the sheet is not glass
+			[...el.classList].some((c) => /^material-(bar|glass|milk|sidebar|sidebar-bar)$/.test(c))
 		);
 		expect(inner).toEqual([]);
 	});

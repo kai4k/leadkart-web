@@ -10,8 +10,8 @@
 		{
 			variants: {
 				size: {
-					xs: 'size-5 text-[var(--text-2xs)]',
-					sm: 'size-7 text-[var(--text-2xs)]',
+					xs: 'size-6 text-xs',
+					sm: 'size-7 text-xs',
 					md: 'size-9 text-xs',
 					lg: 'size-12 text-sm'
 				}

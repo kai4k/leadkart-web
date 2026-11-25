@@ -220,7 +220,7 @@
 
 	<div class="flex items-stretch gap-1">
 		<Button
-			variant="outline"
+			variant="secondary"
 			size="icon"
 			aria-label={$_('form.number.decrement')}
 			disabled={disabled || isAtMin}
@@ -278,7 +278,7 @@
 		</div>
 
 		<Button
-			variant="outline"
+			variant="secondary"
 			size="icon"
 			aria-label={$_('form.number.increment')}
 			disabled={disabled || isAtMax}
