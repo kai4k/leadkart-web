@@ -1,7 +1,7 @@
 import { existsSync, globSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { TENANT_SECTIONS } from '#lib/features/tenant/server.ts';
-import { findEndpoint, normalizePath } from '../../e2e/helpers/contract.ts';
+import { findEndpoint, normalizePath, segmentsMatch } from '../../e2e/helpers/contract.ts';
 
 /**
  * Every Go call the web makes (gateways under src/lib/features, server-side
@@ -145,6 +145,25 @@ for (const file of routeFiles) {
 
 const unknown = calls.filter((c) => !findEndpoint(c.method, `/api${c.path}`));
 const debt = (c: Call) => KNOWN_DEBT.find((d) => d.pattern.test(normalizePath(`/api${c.path}`)));
+
+describe('the route matcher: a literal segment is not an id when the verb is unknown', () => {
+	it('ANY never lets a literal segment fill a {param}', () => {
+		expect(findEndpoint('ANY', '/api/v1/inventory/products/export')).toBeUndefined();
+		expect(findEndpoint('ANY', '/api/v1/inventory/products/{}')).toBeDefined();
+	});
+
+	it('a known verb still takes a concrete id for a {param}', () => {
+		expect(findEndpoint('GET', '/api/v1/inventory/products/7c1e0f4a')).toBeDefined();
+		expect(findEndpoint('GET', '/api/v1/inventory/products/export')).toBeDefined();
+	});
+
+	it('segmentsMatch: strictLiterals refuses a literal against a param, and not a param against a param', () => {
+		expect(segmentsMatch(['a', 'export'], ['a', '{}'])).toBe(true);
+		expect(segmentsMatch(['a', 'export'], ['a', '{}'], false, true)).toBe(false);
+		expect(segmentsMatch(['a', '{}'], ['a', '{}'], false, true)).toBe(true);
+		expect(segmentsMatch(['a', 'export'], ['a', 'export'], false, true)).toBe(true);
+	});
+});
 
 describe('every web call targets a route in leadkart-go api/openapi.yaml', () => {
 	it('finds the gateway and server-side calls', () => {

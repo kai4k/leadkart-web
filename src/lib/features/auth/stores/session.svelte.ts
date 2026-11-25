@@ -34,6 +34,8 @@ export interface Session {
 	readonly capabilities: Capabilities | null;
 	/** An operator is acting inside another tenant (the BFF sends the scope header). */
 	readonly inTenantContext: boolean;
+	/** Acting inside a COMPANY: a tenant context that is not LeadKart's own tenant (the layout sends `isPlatform`). */
+	readonly inCompanyScope: boolean;
 	readonly isAuthenticated: boolean;
 	/** The one permission rule: in `effective_permissions` (minus what Go refuses in tenant context). */
 	can(permission: string): boolean;
@@ -110,6 +112,10 @@ function createSession(): Session {
 		},
 		get inTenantContext() {
 			return readInTenantContext();
+		},
+		get inCompanyScope() {
+			const data = page.data as { tenantContext?: { isPlatform: boolean } | null };
+			return readInTenantContext() && data.tenantContext?.isPlatform !== true;
 		},
 		get isAuthenticated() {
 			return readPrincipal() !== null;

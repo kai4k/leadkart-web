@@ -140,9 +140,7 @@
 			</Tabs.Content>
 
 			<Tabs.Content value="activity">
-				<p class="caption text-muted-foreground">
-					Audit log of edits and bulk actions — coming in a follow-up.
-				</p>
+				<p class="caption text-muted-foreground">Audit log of edits — coming in a follow-up.</p>
 			</Tabs.Content>
 		</Tabs.Root>
 	</div>

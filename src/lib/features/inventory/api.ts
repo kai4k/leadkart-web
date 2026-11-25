@@ -10,8 +10,7 @@
  * `/api/...` directly (BFF still injects cookies + CSRF transparently).
  */
 import { seg } from '#lib/utils/path-segment.ts';
-import { api, apiLegacy, parseResponse } from '#lib/api/client.ts';
-import { CSV_TYPE, downloadBlob } from '#lib/utils/download.ts';
+import { apiLegacy, parseResponse } from '#lib/api/client.ts';
 import {
 	batchDtoSchema,
 	computedPricesResponseSchema,
@@ -208,13 +207,4 @@ export async function getComputedPrices(productId: string): Promise<ComputedPric
 		`/v1/inventory/products/${seg(productId)}/computed-prices`
 	);
 	return parseResponse(computedPricesResponseSchema, raw);
-}
-
-/** CSV export, saved as a file through the one download helper (the Blob is `text/csv`, whatever the response said). */
-export async function exportProducts(params?: ListProductsParams): Promise<void> {
-	const path = buildProductListQuery(params).replace(
-		'/v1/inventory/products',
-		'/v1/inventory/products/export'
-	);
-	downloadBlob(await api.getBlob(path, CSV_TYPE), 'products.csv');
 }

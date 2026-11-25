@@ -244,11 +244,11 @@ describe.skipIf(!haveGo)('the persona builder equals Go at the pinned commit', (
 		expect(text).toContain('if inPlatform || !permission.IsPlatformManagedRole(n) {');
 	});
 
-	it('inPlatformTenant (authority/policy.go) decides by the TARGET tenant, not the actor kind (G2o)', () => {
+	it('inPlatformTenant (authority/policy.go) decides by the TARGET tenant, not the actor kind (G2o, G2p)', () => {
 		const src = stripComments(goFile('internal/identity/domain/authority/policy.go'));
 		const text = src.replace(/\s+/g, ' ');
 		expect(text).toContain(
-			'func (a Actor) inPlatformTenant(tid tenant.ID) bool { return a.platformTenantID != "" && sameTenant(tid, a.platformTenantID) }'
+			'func (a Actor) inPlatformTenant(tid tenant.ID) bool { return sameTenant(tid, a.platformTenantID) }'
 		);
 	});
 });

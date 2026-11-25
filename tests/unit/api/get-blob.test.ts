@@ -1,6 +1,6 @@
 /**
  * Downloads through the API client: the Blob carries the type the CALLER expects (never the
- * response's), the deadline bounds the headers and not the body, and both CSV exports save through
+ * response's), the deadline bounds the headers and not the body, and the CSV export saves through
  * the one download helper.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,7 +16,6 @@ import {
 } from '#lib/api/client.ts';
 import { DownloadTooLargeError, DownloadTooLongError, TimeoutError } from '#lib/api/errors.ts';
 import { exportLeads } from '#lib/features/leads/api.ts';
-import { exportProducts } from '#lib/features/inventory/api.ts';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
@@ -231,11 +230,11 @@ describe('the CSV exports', () => {
 		expect([blob.type, name]).toEqual(['text/csv', 'leads.csv']);
 	});
 
-	it('exportProducts downloads products.csv through the same helper', async () => {
+	it('exportLeads re-types an octet-stream answer as text/csv', async () => {
 		vi.stubGlobal('fetch', () => answer('application/octet-stream'));
-		await exportProducts();
+		await exportLeads();
 		const [blob, name] = downloaded.mock.calls[0] as [Blob, string];
-		expect([blob.type, name]).toEqual(['text/csv', 'products.csv']);
+		expect([blob.type, name]).toEqual(['text/csv', 'leads.csv']);
 	});
 
 	it('a failed export downloads nothing', async () => {

@@ -25,15 +25,19 @@
 
 	// Go refuses (403 grant_exceeds_authority) conferring a role-management name on a member's override, as a grant AND
 	// as a revocation, unless the caller is LeadKart staff in LeadKart's own tenant (`mayConferPlatformManaged`).
-	// Taking one away is always allowed, so a revocation the member already has may stay in the list.
+	// Taking one away is always allowed, so a revocation the member already has may stay in the list. An operator scoped
+	// into LeadKart's own tenant is not in a company (`session.inCompanyScope`).
 	let baseRevoked: ReadonlySet<string> = new Set();
-	const may = () => mayConferPlatformManaged(session.capabilities, session.inTenantContext);
+	// A grant the member already has may stay too (Go counts only a new or extended grant as conferred).
+	let baseGranted: ReadonlySet<string> = new Set();
+	const may = () => mayConferPlatformManaged(session.capabilities, session.inCompanyScope);
 	const schema = z.object({
 		granted: z
 			.array(z.string())
-			.refine((names) => may() || !names.some((n) => PLATFORM_MANAGED_ROLE.has(n)), {
-				message: 'form.errors.permissionNotGrantable'
-			}),
+			.refine(
+				(names) => may() || !names.some((n) => PLATFORM_MANAGED_ROLE.has(n) && !baseGranted.has(n)),
+				{ message: 'form.errors.permissionNotGrantable' }
+			),
 		revoked: z
 			.array(z.string())
 			.refine(
@@ -132,6 +136,7 @@
 	initial={() => {
 		baseVersion = detail.data?.overrides_version ?? '';
 		baseRevoked = new Set(overrides?.revoked ?? []);
+		baseGranted = new Set((overrides?.granted ?? []).map((g) => g.name));
 		return {
 			granted: (overrides?.granted ?? []).map((g) => g.name),
 			revoked: [...(overrides?.revoked ?? [])]

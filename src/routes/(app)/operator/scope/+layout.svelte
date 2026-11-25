@@ -6,6 +6,7 @@
 	import type { Snippet } from 'svelte';
 	import { Badge } from '#lib/components/ui/index.ts';
 	import { session } from '#lib/features/auth/index.ts';
+	import { isPlatformTenant } from '#lib/features/tenant/index.ts';
 	import { visibleNav } from '#lib/config/nav.ts';
 	import { NAV_ICONS } from '#lib/config/nav-icons.ts';
 	import type { LayoutData } from './$types';
@@ -30,7 +31,7 @@
 <div class="stack stack-relaxed">
 	<PageHeader title={tenant.display_name} isolated {crumbs}>
 		{#snippet meta()}
-			{#if tenant.slug === 'platform'}
+			{#if isPlatformTenant(tenant)}
 				<Badge variant="brand" size="sm">{$_('shell.tenantContext.platform')}</Badge>
 			{/if}
 		{/snippet}

@@ -97,11 +97,17 @@ export const UNVALIDATED_PATHS: readonly RegExp[] = [
  * ONLY a parameter on Go's side: `${id}` is not Go's literal `me`. A concrete segment matches a Go
  * parameter or the same literal; an empty segment matches nothing.
  */
-function segmentsMatch(a: string[], b: string[], prefix = false): boolean {
+export function segmentsMatch(
+	a: string[],
+	b: string[],
+	prefix = false,
+	strictLiterals = false
+): boolean {
 	if (prefix ? a.length > b.length : a.length !== b.length) return false;
 	return a.every((s, i) => {
 		if (s === PARAM) return b[i] === PARAM;
-		if (b[i] === PARAM) return s !== '';
+		// a literal segment (`export`) is a name, not an id: with `strictLiterals` it never fills a `{param}`
+		if (b[i] === PARAM) return !strictLiterals && s !== '';
 		return prefix && i === a.length - 1 ? b[i].startsWith(s) : s === b[i];
 	});
 }
@@ -169,11 +175,12 @@ function errorStatusError(candidates: GeneratedEndpoint[], status: number): stri
 function matching(method: string, path: string, prefix = false): GeneratedEndpoint[] {
 	const segs = normalizePath(path).split('/');
 	const m = method.toLowerCase();
-	// `ANY`: the scan could not tell the verb (a path built away from its call).
+	// `ANY`: the scan could not tell the verb (a path built away from its call). Too little is known to let a literal
+	// segment stand in for an id: `products/export` is not `products/{productId}`.
 	return endpoints.filter(
 		(e) =>
 			(m === 'any' || e.method === m) &&
-			segmentsMatch(segs, normalizePath(e.path).split('/'), prefix)
+			segmentsMatch(segs, normalizePath(e.path).split('/'), prefix, m === 'any')
 	);
 }
 

@@ -281,17 +281,33 @@ export const PLATFORM_MANAGED_ROLE: ReadonlySet<string> = new Set([
 
 /**
  * Go's `authority.mayConferManaged`: the three platform-managed names may be CONFERRED (on a role, or on a member's
- * override grants or revocations) only by LeadKart staff acting in LeadKart's own tenant: a platform operator who is
- * not an impersonation session and is not acting inside a company. Everywhere else (a company's own admin, an
- * operator in a company's scope, an impersonation session) Go answers 403 `grant_exceeds_authority`. Taking one away
- * is never refused. The one rule behind the role permission tree and the overrides panel; held against Go's clause in
- * `tests/unit/support/go-personas-pinned.test.ts`.
+ * override grants or revocations) only when `mayManageRoles && !impersonation && (platformOperator || superUser) &&
+ * sameTenant(target, own)`. Mirrored from the capabilities: `is_platform` is "(operator or super user) and not an
+ * impersonation session" (slug-anchored at issuance); `mayManageRoles` is "satisfies one of the three names in its own
+ * tenant", i.e. a super user of the platform tenant, or one of the three names, or the `platform.roles.manage`
+ * equivalent in `effective_permissions`; `inCompanyScope` stands for "the target is not the
+ * caller's own tenant" (an operator scoped into a company; scoped into LeadKart's own tenant it is false, as Go's
+ * `sameTenant` holds there). Everywhere else (a company's own admin, an operator in a company's scope, an
+ * impersonation session, LeadKart staff without role-management authority) Go answers 403 `grant_exceeds_authority`.
+ * Taking one away is never refused. The one rule behind the role permission tree and the overrides panel; held against
+ * Go's clause in `tests/unit/support/go-personas-pinned.test.ts`.
  */
 export function mayConferPlatformManaged(
-	caps: { is_platform: boolean; impersonation?: unknown } | null | undefined,
-	inTenantContext: boolean
+	caps:
+		| {
+				is_platform: boolean;
+				is_super_user?: boolean;
+				impersonation?: unknown;
+				effective_permissions?: readonly string[];
+		  }
+		| null
+		| undefined,
+	inCompanyScope: boolean
 ): boolean {
-	return caps != null && caps.is_platform && !caps.impersonation && !inTenantContext;
+	if (caps == null || !caps.is_platform || caps.impersonation || inCompanyScope) return false;
+	if (caps.is_super_user) return true;
+	const held = caps.effective_permissions ?? [];
+	return held.some((n) => PLATFORM_MANAGED_ROLE.has(n) || n === 'platform.roles.manage');
 }
 
 /**

@@ -88,12 +88,21 @@ async function signInAsCompanyAdmin(page: Page) {
 	});
 }
 
-/** A LeadKart operator acting inside Acme (the scope cookie is set by clicking the company), on its roles. */
+/** LeadKart's own tenant (slug `platform`): an operator may open its scope too, and it is not a company. */
+const LEADKART = fakeTenantDto({
+	id: '00000000-0000-4000-8000-0000000000c1',
+	slug: 'platform',
+	display_name: 'LeadKart',
+	legal_name: 'LeadKart Platform Pvt Ltd'
+});
+
+/** A LeadKart operator acting inside a tenant (Acme unless told otherwise: the scope cookie is set by clicking it), on its roles. */
 async function enterAcmeRoles(
 	page: Page,
 	roles: unknown[],
-	who: { superUser?: boolean; permissions?: string[] } = {}
+	who: { superUser?: boolean; permissions?: string[]; tenant?: typeof ACME } = {}
 ) {
+	const T = who.tenant ?? ACME;
 	await signInAsTier(page, {
 		tier: 'platform-super',
 		permissions: who.permissions ?? [
@@ -106,9 +115,9 @@ async function enterAcmeRoles(
 		tenant_slug: TEST_TENANT_SLUG
 	});
 	await registerMocks([
-		{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [ACME] } },
-		{ method: 'GET', path: `/api/v1/tenants/${ACME.id}`, status: 200, body: ACME },
-		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [ACME] } },
+		{ method: 'GET', path: '/api/v1/platform/tenants', status: 200, body: { tenants: [T] } },
+		{ method: 'GET', path: `/api/v1/tenants/${T.id}`, status: 200, body: T },
+		{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [T] } },
 		{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
 		{
 			method: 'GET',
@@ -118,14 +127,14 @@ async function enterAcmeRoles(
 		},
 		{
 			method: 'GET',
-			path: `/api/v1/tenants/${ACME.id}/audit/events`,
+			path: `/api/v1/tenants/${T.id}/audit/events`,
 			status: 200,
 			body: { events: [], has_more: false }
 		}
 	]);
 	await page.goto('/operator/tenants');
 	await expect(page.locator('html[data-hydrated="true"]')).toBeAttached();
-	await page.getByText('Acme Pharma').first().click();
+	await page.getByRole('button', { name: T.display_name, exact: true }).click();
 	await page.waitForURL(/\/operator\/scope\/profile$/);
 	await page.goto('/operator/scope/roles');
 }
@@ -538,29 +547,142 @@ test.describe('Roles: a LeadKart operator inside a company', () => {
 		});
 	}
 
-	test('an impersonation session sees the three role-management names refused on a company role', async ({
-		page
-	}) => {
-		await signInAsTier(page, {
-			tier: 'tenant-admin',
-			permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
-			// an impersonation session holds the names through the company's plane (Go tenantPlaneMayHold)
-			effective_permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
-			impersonation: {
-				session_id: '00000000-0000-4000-8000-0000000000e1',
-				tenant_display_name: 'Acme'
+	// A real impersonation token is `is_platform: false` (Go mints it so): that run is refused through the is_platform
+	// branch. The second run is a token Go never mints (`is_platform` AND impersonating), so the `impersonation` clause
+	// of the rule is the one that refuses.
+	for (const [label, tier] of [
+		['a real impersonation token (is_platform false)', 'tenant-admin'],
+		[
+			'an impersonating token that still says is_platform (the impersonation clause)',
+			'platform-staff'
+		]
+	] as const) {
+		test(`an impersonation session sees the three role-management names refused on a company role: ${label}`, async ({
+			page
+		}) => {
+			await signInAsTier(page, {
+				tier,
+				permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
+				// an impersonation session holds the names through the company's plane (Go tenantPlaneMayHold)
+				effective_permissions: ['tenant.admin', 'identity.roles.view', ...MANAGED_NAMES],
+				impersonation: {
+					session_id: '00000000-0000-4000-8000-0000000000e1',
+					tenant_display_name: 'Acme'
+				}
+			});
+			await registerMocks([
+				{
+					method: 'GET',
+					path: '/api/v1/users',
+					status: 200,
+					body: { users: [], has_more: false }
+				},
+				{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [CUSTOM_ROLE] } },
+				{ method: 'GET', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 200, body: CUSTOM_ROLE }
+			]);
+			await page.goto(`/settings/roles/${CUSTOM_ROLE.id}`);
+			await expect(page.getByRole('button', { name: 'Save permissions' })).toBeVisible();
+			for (const n of MANAGED_NAMES) {
+				await expect(page.getByRole('checkbox', { name: n, exact: true })).toBeDisabled();
 			}
 		});
+	}
+
+	// LeadKart's own tenant is not a company: scoped into it, staff with role authority confer the names.
+	for (const superUser of [true, false]) {
+		test(`in LeadKart's own tenant scope the operator can tick the three names (${superUser ? 'super user' : 'platform.roles.manage'}); a company scope cannot (the tests above)`, async ({
+			page
+		}) => {
+			const LEADKART_ROLE = { ...CUSTOM_ROLE, tenant_id: LEADKART.id, name: 'Platform Ops' };
+			await enterAcmeRoles(page, [LEADKART_ROLE], { superUser, tenant: LEADKART });
+			await registerMocks([
+				{
+					method: 'GET',
+					path: `/api/v1/roles/${LEADKART_ROLE.id}`,
+					status: 200,
+					body: LEADKART_ROLE
+				},
+				{ method: 'PUT', path: `/api/v1/roles/${LEADKART_ROLE.id}/permissions`, status: 204 }
+			]);
+			await page.goto(`/operator/scope/roles/${LEADKART_ROLE.id}`);
+			await expect(page.getByRole('button', { name: 'Save permissions' })).toBeVisible();
+			for (const n of MANAGED_NAMES) {
+				await expect(page.getByRole('checkbox', { name: n, exact: true })).toBeEnabled();
+			}
+			await expect(page.getByText('Only LeadKart can hold this.')).toHaveCount(0);
+			await page.getByRole('checkbox', { name: 'identity.roles.update', exact: true }).check();
+			await page.getByRole('button', { name: 'Save permissions' }).click();
+			await expect
+				.poll(
+					async () =>
+						(await listMockCalls()).filter(
+							(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
+						).length
+				)
+				.toBe(1);
+			const put = (await listMockCalls()).find(
+				(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
+			)!;
+			expect(put['x-tenant-id']).toBe(LEADKART.id);
+			expect(JSON.parse(put.body).permissions).toContain('identity.roles.update');
+		});
+	}
+
+	test('staff who may only view roles get no editor in LeadKart own tenant scope (the rule itself: unit-tested)', async ({
+		page
+	}) => {
+		const LEADKART_ROLE = { ...CUSTOM_ROLE, tenant_id: LEADKART.id, name: 'Platform Ops' };
+		await enterAcmeRoles(page, [LEADKART_ROLE], {
+			superUser: false,
+			tenant: LEADKART,
+			permissions: ['platform.tenants.view', 'platform.tenants.manage', 'platform.roles.view']
+		});
+		await registerMock({
+			method: 'GET',
+			path: `/api/v1/roles/${LEADKART_ROLE.id}`,
+			status: 200,
+			body: LEADKART_ROLE
+		});
+		await page.goto(`/operator/scope/roles/${LEADKART_ROLE.id}`);
+		// a view-only operator has no editors at all; the names are not offered as editable ones either
+		await expect(page.getByRole('button', { name: 'Save permissions' })).toHaveCount(0);
+	});
+
+	// Go lets a name go from a company role (a removal is outside the ceiling there): the tree can untick it.
+	test('a managed name a company role still carries can be unticked in the tree, never added again', async ({
+		page
+	}) => {
+		const STALE_ROLE = {
+			...CUSTOM_ROLE,
+			permissions: ['crm.leads.read', 'identity.roles.update']
+		};
+		await enterAcmeRoles(page, [STALE_ROLE]);
 		await registerMocks([
-			{ method: 'GET', path: '/api/v1/users', status: 200, body: { users: [], has_more: false } },
-			{ method: 'GET', path: '/api/v1/roles', status: 200, body: { roles: [CUSTOM_ROLE] } },
-			{ method: 'GET', path: `/api/v1/roles/${CUSTOM_ROLE.id}`, status: 200, body: CUSTOM_ROLE }
+			{ method: 'GET', path: `/api/v1/roles/${STALE_ROLE.id}`, status: 200, body: STALE_ROLE },
+			{ method: 'PUT', path: `/api/v1/roles/${STALE_ROLE.id}/permissions`, status: 204 }
 		]);
-		await page.goto(`/settings/roles/${CUSTOM_ROLE.id}`);
-		await expect(page.getByRole('button', { name: 'Save permissions' })).toBeVisible();
-		for (const n of MANAGED_NAMES) {
-			await expect(page.getByRole('checkbox', { name: n, exact: true })).toBeDisabled();
-		}
+		await page.goto(`/operator/scope/roles/${STALE_ROLE.id}`);
+		const stale = page.getByRole('checkbox', { name: 'identity.roles.update', exact: true });
+		await expect(stale).toBeChecked();
+		await expect(stale).toBeEnabled();
+		// the other two are still refused
+		await expect(
+			page.getByRole('checkbox', { name: 'identity.roles.create', exact: true })
+		).toBeDisabled();
+		await stale.uncheck();
+		await page.getByRole('button', { name: 'Save permissions' }).click();
+		await expect
+			.poll(
+				async () =>
+					(await listMockCalls()).filter(
+						(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
+					).length
+			)
+			.toBe(1);
+		const put = (await listMockCalls()).find(
+			(c) => c.method === 'PUT' && c.path.endsWith('/permissions')
+		)!;
+		expect(JSON.parse(put.body).permissions).toEqual(['crm.leads.read']);
 	});
 
 	test('a11y: the operator role page', async ({ page }) => {

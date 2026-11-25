@@ -20,6 +20,7 @@
 		unchangeablePermissions,
 		mayConferPlatformManaged,
 		ADMIN_TIER_ONLY,
+		PLATFORM_MANAGED_ROLE,
 		PLATFORM_RESERVED
 	} from '../permissions-catalogue.ts';
 	import PermissionTree from './PermissionTree.svelte';
@@ -132,15 +133,25 @@
 	const holds = (permission: string): boolean =>
 		(session.capabilities?.effective_permissions.includes(permission) ?? false) ||
 		(session.inTenantContext && !PLATFORM_RESERVED.has(permission));
+	// Go lets a platform-managed name go from a COMPANY's role (a removal is outside the ceiling there): one a company
+	// role still carries can be unticked, though never added again. LeadKart's own tenant keeps the ceiling.
+	const removableManaged = (name: string): boolean =>
+		PLATFORM_MANAGED_ROLE.has(name) &&
+		(role?.permissions.includes(name) ?? false) &&
+		(session.inCompanyScope || session.capabilities?.is_platform !== true);
 	const refusedPermissions = $derived<Record<string, string>>({
-		...unchangeablePermissions(
-			holds,
-			{
-				reserved: $_('pages.roles.platformReserved'),
-				notHeld: $_('pages.roles.notHeld'),
-				platformManaged: $_('pages.roles.platformManaged')
-			},
-			mayConferPlatformManaged(session.capabilities, session.inTenantContext)
+		...Object.fromEntries(
+			Object.entries(
+				unchangeablePermissions(
+					holds,
+					{
+						reserved: $_('pages.roles.platformReserved'),
+						notHeld: $_('pages.roles.notHeld'),
+						platformManaged: $_('pages.roles.platformManaged')
+					},
+					mayConferPlatformManaged(session.capabilities, session.inCompanyScope)
+				)
+			).filter(([name]) => !removableManaged(name))
 		),
 		// A role below the Administrator tier cannot contain an admin-tier-only name (Go: admin_tier_required): not offered.
 		...(role !== null && isBelowAdminTier(role.hierarchy_level)

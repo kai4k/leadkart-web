@@ -11,8 +11,14 @@ const h = vi.hoisted(() => ({
 	qc: undefined as unknown as QueryClient,
 	held: [] as string[],
 	// the caller: a company admin by default; LeadKart staff in their own tenant is { is_platform: true }
-	caps: { is_platform: false } as { is_platform: boolean; impersonation?: unknown },
+	caps: { is_platform: false } as {
+		is_platform: boolean;
+		impersonation?: unknown;
+		effective_permissions?: string[];
+	},
 	inTenantContext: false,
+	// an operator scoped into LeadKart's own tenant: a tenant context that is not a company
+	inPlatformScope: false,
 	// what `GET /v1/users/{id}` answers for the overrides panel (undefined = still loading)
 	detail: undefined as unknown,
 	detailError: false,
@@ -62,6 +68,9 @@ vi.mock('#lib/features/auth/index.ts', async () => {
 			},
 			get inTenantContext() {
 				return h.inTenantContext;
+			},
+			get inCompanyScope() {
+				return h.inTenantContext && !h.inPlatformScope;
 			}
 		}
 	};
@@ -129,6 +138,7 @@ beforeEach(() => {
 	h.detailError = false;
 	h.caps = { is_platform: false };
 	h.inTenantContext = false;
+	h.inPlatformScope = false;
 	h.qc = createQueryClient();
 	vi.spyOn(h.qc, 'invalidateQueries').mockResolvedValue(undefined);
 	h.held = [...ACTION.roleAssign, ...ACTION.roleRevoke];
@@ -421,19 +431,26 @@ describe('PermissionOverridesPanel', () => {
 		expect(gw.replacePermissionOverrides).not.toHaveBeenCalled();
 	}
 
+	const staffCaps = { is_platform: true, effective_permissions: ['platform.roles.manage'] };
+
 	it('an operator acting inside a company is refused like the company', async () => {
-		h.caps = { is_platform: true };
+		h.caps = staffCaps;
 		h.inTenantContext = true;
 		await refusedGrant();
 	});
 
 	it('an impersonation session is refused like the company', async () => {
-		h.caps = { is_platform: true, impersonation: { session_id: 's' } };
+		h.caps = { ...staffCaps, impersonation: { session_id: 's' } };
+		await refusedGrant();
+	});
+
+	it('LeadKart staff without role-management authority are refused (Go mayManageRoles)', async () => {
+		h.caps = { is_platform: true, effective_permissions: ['platform.users.manage'] };
 		await refusedGrant();
 	});
 
 	it('LeadKart staff in their own tenant may grant and revoke the names (Go mayConferManaged)', async () => {
-		h.caps = { is_platform: true };
+		h.caps = staffCaps;
 		gw.replacePermissionOverrides.mockResolvedValue(undefined);
 		open();
 		const [grants, revokes] = tags();
@@ -441,6 +458,56 @@ describe('PermissionOverridesPanel', () => {
 		addTag(revokes!, 'identity.roles.manage');
 		save();
 		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
+	});
+
+	it('an operator scoped into LeadKart own tenant (a context, not a company) may grant the names', async () => {
+		h.caps = staffCaps;
+		h.inTenantContext = true;
+		h.inPlatformScope = true;
+		gw.replacePermissionOverrides.mockResolvedValue(undefined);
+		open();
+		addTag(tags()[0]!, 'identity.roles.create');
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
+	});
+
+	it('a role-management grant the member already has stays; clearing it is sent; a new one is refused', async () => {
+		gw.replacePermissionOverrides.mockResolvedValue(undefined);
+		open(
+			person(1, {
+				permission_overrides: {
+					granted: [{ name: 'identity.roles.manage' }, { name: 'crm.leads.read' }],
+					revoked: []
+				},
+				overrides_version: 'v3'
+			})
+		);
+		// untouched: the stale grant goes back as it was
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1));
+		expect(gw.replacePermissionOverrides).toHaveBeenLastCalledWith('m1', {
+			overrides_version: 'v3',
+			granted: ['identity.roles.manage', 'crm.leads.read'],
+			revoked: []
+		});
+		// a NEW managed grant beside it is refused
+		addTag(tags()[0]!, 'identity.roles.update');
+		save();
+		await vi.waitFor(() =>
+			expect(document.body.textContent).toContain("can't be granted to a member")
+		);
+		expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(1);
+		// clearing both managed ones is sent
+		for (const n of ['identity.roles.update', 'identity.roles.manage'])
+			document.querySelector<HTMLElement>(`button[aria-label="Remove ${n}"]`)!.click();
+		flushSync();
+		save();
+		await vi.waitFor(() => expect(gw.replacePermissionOverrides).toHaveBeenCalledTimes(2));
+		expect(gw.replacePermissionOverrides).toHaveBeenLastCalledWith('m1', {
+			overrides_version: 'v3',
+			granted: ['crm.leads.read'],
+			revoked: []
+		});
 	});
 
 	it('a member with no overrides: empty lists are a valid submit and still carry the version', async () => {

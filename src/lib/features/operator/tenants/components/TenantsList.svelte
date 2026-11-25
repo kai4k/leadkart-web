@@ -91,8 +91,8 @@
 		const byStatus = statusFilter
 			? matched.filter((t: TenantDto) => t.status === statusFilter)
 			: matched;
-		const platform = byStatus.find((t: TenantDto) => t.slug === 'platform');
-		const rest = byStatus.filter((t: TenantDto) => t.slug !== 'platform');
+		const platform = byStatus.find((t: TenantDto) => isPlatformTenant(t));
+		const rest = byStatus.filter((t: TenantDto) => !isPlatformTenant(t));
 		return platform ? [platform, ...rest] : rest;
 	});
 
@@ -171,7 +171,7 @@
 
 {#snippet nameCell(tenant: TenantDto)}
 	<div class="cluster cluster-tight">
-		{#if tenant.slug === 'platform'}
+		{#if isPlatformTenant(tenant)}
 			<Icon icon={Shield} size="sm" class="text-primary-text" />
 		{/if}
 		<!-- The row is not clickable; its name is the control that opens the tenant. -->
@@ -185,7 +185,7 @@
 		>
 			{tenant.display_name}
 		</Button>
-		{#if tenant.slug === 'platform'}
+		{#if isPlatformTenant(tenant)}
 			<Badge variant="brand" size="sm">Platform</Badge>
 		{/if}
 	</div>
