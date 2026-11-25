@@ -277,23 +277,17 @@
 	}
 
 	/* mode: what the mode looks like, whatever mode the page is in */
-	[data-preview='mode-light'],
-	[data-preview='mode-black-white'] {
+	[data-preview='mode-light'] {
 		--cz-page: var(--palette-gray-100);
 		--cz-pane: var(--swatch-sidebar-light);
 		--cz-line: var(--palette-gray-200);
 	}
-	[data-preview='mode-light'] .cz-side,
-	[data-preview='mode-black-white'] .cz-side {
+	[data-preview='mode-light'] .cz-side {
 		background: var(--swatch-sidebar-light);
 		border-color: var(--palette-gray-200);
 	}
-	[data-preview='mode-light'] .cz-side i,
-	[data-preview='mode-black-white'] .cz-side i {
+	[data-preview='mode-light'] .cz-side i {
 		background: var(--palette-gray-400);
-	}
-	[data-preview='mode-black-white'] {
-		filter: grayscale(1);
 	}
 	[data-preview='mode-dark'] {
 		--cz-page: var(--neutral-default-950);
@@ -329,45 +323,79 @@
 		border-color: transparent;
 	}
 
+	/* dock position: the one dock is a bar under the page, or a strip beside it */
+	[data-preview^='dock-'] .cz-frame,
+	[data-preview^='autoHideDock-'] .cz-frame {
+		grid-template-columns: 1fr;
+		grid-template-rows: auto 1fr auto;
+	}
+	[data-preview^='dock-'] .cz-side,
+	[data-preview^='autoHideDock-'] .cz-side {
+		display: none;
+	}
+	[data-preview^='dock-'] .cz-body,
+	[data-preview^='autoHideDock-'] .cz-body {
+		grid-column: 1;
+		grid-row: 2;
+	}
+	[data-preview^='dock-'] .cz-nav,
+	[data-preview^='autoHideDock-'] .cz-nav {
+		display: block;
+		grid-row: 3;
+		block-size: var(--spacing-2);
+		margin-inline: 30%;
+		margin-block-end: var(--spacing-1);
+		border-radius: 9999px;
+		background: var(--primary);
+	}
+	[data-preview='dock-side'] .cz-frame {
+		grid-template-columns: 6fr var(--spacing-3);
+		grid-template-rows: auto 1fr;
+	}
+	[data-preview='dock-side'] .cz-body {
+		grid-column: 1;
+		grid-row: 2;
+	}
+	[data-preview='dock-side'] .cz-nav {
+		grid-column: 2;
+		grid-row: 2;
+		margin: var(--spacing-1);
+		margin-inline: 0;
+		border-radius: 9999px;
+	}
+	[data-preview='autoHideDock-on'] .cz-nav {
+		opacity: 0.35;
+		block-size: var(--spacing-1);
+	}
+
+	/* density: how tight the rows sit */
+	[data-preview='density-comfortable'] .cz-body {
+		gap: var(--spacing-1_5);
+	}
+	[data-preview='density-compact'] .cz-body {
+		gap: var(--spacing-0_5);
+	}
+
 	/* ── swatches ───────────────────────────────────────────────────────────────── */
-	[data-swatch='colors-leadkart'] {
-		background: var(--palette-leadkart-500);
+	/* a palette is its logo tile: the L in the brand colour, the K in the second piece */
+	[data-swatch^='palette-'] {
+		background: linear-gradient(135deg, var(--sw-l) 50%, var(--sw-k) 50%);
 	}
-	[data-swatch='colors-green'] {
-		background: var(--palette-green-500);
+	[data-swatch='palette-iris'] {
+		--sw-l: var(--palette-iris-500);
+		--sw-k: var(--palette-iris-k-500);
 	}
-	[data-swatch='colors-violet'] {
-		background: var(--palette-violet-500);
+	[data-swatch='palette-ocean'] {
+		--sw-l: var(--palette-ocean-500);
+		--sw-k: var(--palette-ocean-k-500);
 	}
-	[data-swatch='colors-orange'] {
-		background: var(--palette-orange-500);
+	[data-swatch='palette-coral'] {
+		--sw-l: var(--palette-coral-500);
+		--sw-k: var(--palette-coral-k-500);
 	}
-	[data-swatch='colors-teal'] {
-		background: var(--palette-teal-500);
-	}
-	[data-swatch='colors-fuchsia'] {
-		background: var(--palette-fuchsia-500);
-	}
-	[data-swatch='colors-lime'] {
-		background: var(--palette-lime-500);
-	}
-	[data-swatch='colors-amber'] {
-		background: var(--palette-amber-500);
-	}
-	[data-swatch='darkPalette-default'] {
-		background: var(--neutral-default-950);
-	}
-	[data-swatch='darkPalette-zinc'] {
-		background: var(--neutral-zinc-950);
-	}
-	[data-swatch='darkPalette-stone'] {
-		background: var(--neutral-stone-950);
-	}
-	[data-swatch='darkPalette-neutral'] {
-		background: var(--neutral-neutral-950);
-	}
-	[data-swatch='darkPalette-gray'] {
-		background: var(--neutral-gray-950);
+	[data-swatch='palette-emerald'] {
+		--sw-l: var(--palette-emerald-500);
+		--sw-k: var(--palette-emerald-k-500);
 	}
 	[data-swatch='sidebarColors-light'] {
 		background: var(--swatch-sidebar-light);

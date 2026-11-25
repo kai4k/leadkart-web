@@ -4,85 +4,87 @@
  * resolved by `color-scheme`, which `<html data-mode>` sets. No JavaScript,
  * no `.dark` class, no per-mode copies.
  *
- * Selected ramps: --primary-N follows <html data-colors>; --dark-N follows
- * <html data-dark-palette>. Both default here and are overridden by the
- * attribute blocks below.
+ * The selected palette: --primary-N and --brand-2-N follow <html data-palette>
+ * (iris is the default and lives in :root; ocean, coral and emerald re-point
+ * the two ramps below). Every role is built from those steps, so a palette
+ * block holds ramps only, plus a role override where the gate needs one.
  *
  * Rules in this file are FLAT (`:root` or `:root[data-x='y']` only, no
  * nesting, no @media) so scripts/arch/check-token-contrast.mjs can resolve
- * them for all 400 combinations. Keep it that way.
+ * them for every combination. Keep it that way.
  *
- * The primary colour has THREE roles (plan G1, supersedes L37 for fills), one hue, three jobs:
- *   --primary (+ -foreground, -hover)  the vivid FILL a label sits on: step 500, or 600 where white needs
- *                                       it; the label is white, or step 950 on the light fills (green,
- *                                       teal, lime, amber, orange: Apple's yellow and green buttons)
+ * The primary colour has THREE roles, one hue, three jobs:
+ *   --primary (+ -foreground, -hover)  the vivid FILL a label sits on: step 600 (the button step), white label
  *   --primary-text                     text in the colour (links, active nav label): the dark step, 4.5:1
  *   --primary-indicator (+ -foreground) non-text marks (checkbox, switch track, progress, tab underline), 3:1
+ *   --primary-tonal (+ -foreground)    the soft brand button: the lightest fill, ink on it
+ * and the logo's second piece, the K, is --brand-2 (+ -soft).
  *
- *   colour     fill     label  text (light)   indicator (light)   primary (dark)
- *   leadkart   600      white  700           600                 400
- *   green      500      950    800            700                 400
- *   violet     600      white  700            500                 400
- *   orange     600*     white  700            600                 400
- *   teal       500      950    800            700                 400
- *   fuchsia    600      white  700            600                 400
- *   lime       500      950    800            700                 400
- *   amber      500      950    800            700                 400
- *   (*) 96% of step 600 toward black: step 600 under white is 4.4997:1, and 500 + 950 fails black-white.
- *   The gate is the judge; --primary-text-light is the L37 step (what the app used as primary before).
+ *   light: fill 600, text 700, indicator 600, tonal 100 with ink 900. dark: primary 400, ink 950.
  *
- *   status (light): destructive 700; success, warning, info 800 (700 reached only 3.8-4.4 on muted). Dark: step 400.
- *   Indicators (non-text marks, 3:1): light 700 (destructive 600), dark 400.
- *   (destructive was 600: its text reached only 3.84:1 on `muted`, which the field error text
- *   sits on in a muted section; 700 passes on background, card, popover and muted. A default
- *   pending the owner's confirmation: it darkens every destructive button and error by one step.)
- *   input (dark): neutral step 400 (500-600 reach only 2.3-2.8:1 on the card / muted).
+ *   status (light): destructive 700; success, warning, info 800. Dark: step 400.
+ *   Indicators (non-text marks, 3:1): light 700 (destructive 600), dark 400. Status colours are fixed
+ *   across palettes and never aliased to an app colour; a count is neutral (--badge-count), red means
+ *   overdue or at risk only.
  *   Opaque hover (--primary-hover, --destructive-hover), the full-strength ring, --input-fill,
  *   --sidebar-ring and --sidebar-muted-foreground exist so no component needs an alpha
  *   modifier (`/90`, `/50`, `/70`, `/30`) on a colour that carries contrast.
- *   sidebar purple/sky text: Domiex #b98fd7 passes; its sky grey #8ea2b5 (3.6:1) became sky-300.
+ *
+ * Dark is designed on the same roles: a dark neutral wall (--dark-950, tinted by the palette in
+ * --wall-1..3), the clay and card surfaces one step lighter (--dark-900), the sunken troughs one step
+ * lighter again, the same status tokens on their 400 steps. The gate measures every pair in both modes.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
 	/* `only light`: Safari 27.3's Adaptive Dark Mode may re-colour a page that has not opted out, and the gated light
 	   theme must not be re-coloured (GD15). `auto` keeps `light dark` and `dark` keeps `dark`. */
 	color-scheme: only light;
 
-	/* selected primary ramp (default: leadkart = Kart Blue) */
-	--primary-50: var(--palette-leadkart-50);
-	--primary-100: var(--palette-leadkart-100);
-	--primary-200: var(--palette-leadkart-200);
-	--primary-300: var(--palette-leadkart-300);
-	--primary-400: var(--palette-leadkart-400);
-	--primary-500: var(--palette-leadkart-500);
-	--primary-600: var(--palette-leadkart-600);
-	--primary-700: var(--palette-leadkart-700);
-	--primary-800: var(--palette-leadkart-800);
-	--primary-900: var(--palette-leadkart-900);
-	--primary-950: var(--palette-leadkart-950);
-	/* the primary colour by ROLE (plan G1). Fill: the vivid step a label sits on (white where it reaches
-	   4.5:1, else the 950 step: a dark label on a vivid fill). Text: the dark step links and the active
-	   nav label need (4.5:1 on every surface). Indicator: the lightest step that is still 3:1 on the
-	   surfaces (checkbox, switch track, progress, tab underline). The three are one hue, three jobs. */
+	/* selected primary ramp (default: iris) */
+	--primary-50: var(--palette-iris-50);
+	--primary-100: var(--palette-iris-100);
+	--primary-200: var(--palette-iris-200);
+	--primary-300: var(--palette-iris-300);
+	--primary-400: var(--palette-iris-400);
+	--primary-500: var(--palette-iris-500);
+	--primary-600: var(--palette-iris-600);
+	--primary-700: var(--palette-iris-700);
+	--primary-800: var(--palette-iris-800);
+	--primary-900: var(--palette-iris-900);
+	--primary-950: var(--palette-iris-950);
+	/* the second piece of the logo (the K), by palette */
+	--brand-2-50: var(--palette-iris-k-50);
+	--brand-2-100: var(--palette-iris-k-100);
+	--brand-2-200: var(--palette-iris-k-200);
+	--brand-2-300: var(--palette-iris-k-300);
+	--brand-2-400: var(--palette-iris-k-400);
+	--brand-2-500: var(--palette-iris-k-500);
+	--brand-2-600: var(--palette-iris-k-600);
+	--brand-2-700: var(--palette-iris-k-700);
+	--brand-2-800: var(--palette-iris-k-800);
+	--brand-2-900: var(--palette-iris-k-900);
+	--brand-2-950: var(--palette-iris-k-950);
+	/* the primary colour by ROLE. Fill: the button step a white label sits on. Text: the dark step links and
+	   the active nav label need (4.5:1 on every surface). Indicator: the step that is 3:1 on the surfaces
+	   (checkbox, switch track, progress, tab underline). The three are one hue, three jobs. */
 	--primary-fill: var(--primary-600);
 	--primary-fill-foreground: oklch(1 0 0);
 	--primary-hover-toward: black;
 	--primary-text-light: var(--primary-700);
 	--primary-ring: var(--primary-600);
 	--primary-on-dark: var(--primary-400);
-	/* the logo (BrandMark): the frame and wheels, and the capsule, by palette (plan: the logo follows the
-	   chosen primary). Light values are the lightest steps that still reach 3:1 as a non-text graphic on
-	   every surface the mark sits on, a translucent bar over the darkest backdrop included (the gate
-	   proves it); dark values are the on-dark steps. The default is Kart Blue with Capsule Teal. */
-	--brand-frame-light: var(--primary-600);
-	--brand-capsule-light: var(--palette-capsule-500);
-	--brand-capsule-bar-light: var(--palette-capsule-600);
+	/* the logo (BrandMark): the L is the brand colour, the K is the second piece. Light values are the steps that
+	   reach 3:1 (the L) and 1.6:1 (the K) on every surface the mark sits on, a translucent bar over the darkest
+	   backdrop included (the gate proves it); dark values are the on-dark steps. */
+	--brand-frame-light: var(--primary-500);
+	--brand-capsule-light: var(--brand-2-500);
+	--brand-capsule-bar-light: var(--brand-2-600);
 	--brand-frame-bar-light: var(--primary-700);
-	--brand-capsule-dark: var(--palette-capsule-300);
-	/* the large icon (BrandIcon) paints the capsule as a gradient between these */
-	--brand-capsule-from: light-dark(var(--palette-capsule-400), var(--palette-capsule-300));
-	--brand-capsule-to: light-dark(var(--palette-capsule-600), var(--palette-capsule-500));
+	--brand-capsule-dark: var(--brand-2-300);
+	/* the large icon (BrandIcon) paints the K as a gradient between these */
+	--brand-capsule-from: light-dark(var(--brand-2-400), var(--brand-2-300));
+	--brand-capsule-to: light-dark(var(--brand-2-600), var(--brand-2-500));
 
-	/* selected dark surface ramp (default) */
+	/* the dark surface ramp: the one neutral family */
 	--dark-50: var(--neutral-default-50);
 	--dark-100: var(--neutral-default-100);
 	--dark-200: var(--neutral-default-200);
@@ -105,6 +107,20 @@
 	--popover-foreground: var(--foreground);
 	--muted: light-dark(oklch(0.9 0.008 268), var(--dark-850));
 	--muted-foreground: light-dark(oklch(0.42 0.02 250), var(--dark-400));
+	/* The wallpaper behind the shell: the palette tints a neutral wall (the second piece tints the far corner).
+	   Dark is the dark neutral wall with the same tints, so the clay and card surfaces sit one step lighter. */
+	--wall-1: light-dark(
+		color-mix(in oklab, var(--primary-500) 4%, oklch(0.957 0.006 268)),
+		color-mix(in oklab, var(--primary-500) 6%, var(--dark-950))
+	);
+	--wall-2: light-dark(
+		color-mix(in oklab, var(--primary-500) 9%, oklch(0.93 0.01 268)),
+		color-mix(in oklab, var(--primary-500) 12%, var(--dark-950))
+	);
+	--wall-3: light-dark(
+		color-mix(in oklab, var(--brand-2-500) 8%, oklch(0.94 0.008 268)),
+		color-mix(in oklab, var(--brand-2-500) 8%, var(--dark-950))
+	);
 	/* Three text levels, as Apple's label / secondaryLabel / tertiaryLabel: foreground (primary), muted-foreground
 	 * (secondary), subtle-foreground (tertiary: timestamps, hints, ids, metadata and "none" dashes ONLY; never body
 	 * text, errors, or anything the reader must read to act). One step quieter than muted-foreground, WCAG AA in
@@ -129,14 +145,34 @@
 	/* lines + focus (input meets 3:1 against the card, WCAG 1.4.11) */
 	--border: light-dark(oklch(0.92 0.01 268), var(--dark-800));
 	--input: light-dark(oklch(0.55 0.015 245), var(--dark-400));
-	--ring: light-dark(var(--primary-ring), var(--primary-on-dark));
+	/* the one keyboard focus ring, and the border of a field on a sheet or a tray: both 3:1 or better on the surfaces */
+	--focus-ring: light-dark(var(--primary-ring), var(--primary-on-dark));
+	--ring: var(--focus-ring);
+	--field-border: light-dark(oklch(0.55 0.02 262), var(--dark-400));
+	/* the empty part of a meter, against the fill (--primary-indicator) at 3:1 */
+	--meter-track: light-dark(oklch(0.93 0.008 262), var(--dark-800));
 	/* the fill of a form field: transparent in light (it sits on the surface), one opaque step in
 	   dark. Replaces shadcn's `dark:bg-input/30`, whose result depends on the surface behind it. */
 	--input-fill: light-dark(transparent, var(--dark-800));
+	/* a count on a pebble or a tab: neutral, never a status colour */
+	--badge-count: var(--card);
+	--badge-count-foreground: var(--foreground);
+
+	/* the identity colour of the app in scope: `.app-<key>` re-points it (utilities.css); Home is the brand */
+	--app-home: var(--primary-600);
+	--app-accent: var(--app-home);
+	/* the glyph on an app icon: white on every app colour, 3:1 (the gate measures each) */
+	--app-glyph: oklch(1 0 0);
 
 	/* primary */
 	--primary: light-dark(var(--primary-fill), var(--primary-on-dark));
 	--primary-foreground: light-dark(var(--primary-fill-foreground), var(--primary-950));
+	/* the soft brand button (tonal): the lightest brand fill with the ink step on it */
+	--primary-tonal: light-dark(
+		var(--primary-100),
+		color-mix(in oklch, var(--primary-400) 22%, var(--dark-900))
+	);
+	--primary-tonal-foreground: light-dark(var(--primary-900), var(--primary-100));
 	/* text in the primary colour (links, active nav label): never a fill */
 	--primary-text: light-dark(var(--primary-text-light), var(--primary-on-dark));
 	/* non-text marks, 3:1 (checkbox box, radio dot, switch track, slider, progress, tab underline) */
@@ -158,6 +194,12 @@
 	--primary-soft: light-dark(
 		var(--primary-50),
 		color-mix(in oklch, var(--primary-400) 15%, var(--dark-900))
+	);
+	/* the second piece of the logo as a flat colour, and its soft tint */
+	--brand-2: light-dark(var(--brand-2-500), var(--brand-2-300));
+	--brand-2-soft: light-dark(
+		var(--brand-2-100),
+		color-mix(in oklch, var(--brand-2-300) 15%, var(--dark-900))
 	);
 	/* the page colour wash (base.css body): the three gradients at their PEAK opacity, as tokens so the contrast
 	   gate can read them. Light keeps the light steps; dark uses the dark steps of the ramp (the light steps
@@ -233,7 +275,7 @@
 	--chart-4: var(--info);
 	--chart-5: var(--destructive);
 
-	/* sidebar (light sidebar colours) */
+	/* sidebar (light sidebar colours; removed with the sidebar) */
 	--sidebar: light-dark(oklch(1 0 0), var(--dark-900));
 	/* the dark-contrast text of the owner's direction: the muted foreground, not a mid grey (plan 3.4) */
 	--sidebar-foreground: light-dark(var(--muted-foreground), var(--dark-300));
@@ -261,10 +303,10 @@
 	--sidebar-muted-foreground: var(--sidebar-foreground);
 	/* inactive nav icons: the muted sidebar text; the ACTIVE item's icon and label are --sidebar-accent-foreground */
 	--sidebar-icon: var(--sidebar-muted-foreground);
-	/* the logo on the sidebar: the surface logo on a light sidebar (white, or the dark surface in dark mode);
-	   the on-dark logo on the dark / brand / purple / sky sidebars (blocks below) */
-	--sidebar-brand-frame: var(--brand-frame);
-	--sidebar-brand-capsule: var(--brand-capsule);
+	/* the logo on the sidebar: the bar logo (a step deeper, the sidebar is translucent) on a light sidebar (white, or
+	   the dark surface in dark mode); the on-dark logo on the dark / brand / purple / sky sidebars (blocks below) */
+	--sidebar-brand-frame: var(--brand-frame-bar);
+	--sidebar-brand-capsule: var(--brand-capsule-bar);
 }
 
 /* ── mode ─────────────────────────────────────────────────────────── */
@@ -274,264 +316,84 @@
 :root[data-mode='auto'] {
 	color-scheme: light dark;
 }
-/* grayscale on the root element: it is the one element whose filter does not create a
-   containing block for fixed descendants, so the fixed shell and portalled dialogs keep working */
-:root[data-mode='black-white'] {
-	color-scheme: only light;
-	filter: grayscale(1);
+
+/* ── palette: ocean, coral, emerald re-point the two ramps (iris is the default above) ── */
+:root[data-palette='ocean'] {
+	--primary-50: var(--palette-ocean-50);
+	--primary-100: var(--palette-ocean-100);
+	--primary-200: var(--palette-ocean-200);
+	--primary-300: var(--palette-ocean-300);
+	--primary-400: var(--palette-ocean-400);
+	--primary-500: var(--palette-ocean-500);
+	--primary-600: var(--palette-ocean-600);
+	--primary-700: var(--palette-ocean-700);
+	--primary-800: var(--palette-ocean-800);
+	--primary-900: var(--palette-ocean-900);
+	--primary-950: var(--palette-ocean-950);
+	--brand-2-50: var(--palette-ocean-k-50);
+	--brand-2-100: var(--palette-ocean-k-100);
+	--brand-2-200: var(--palette-ocean-k-200);
+	--brand-2-300: var(--palette-ocean-k-300);
+	--brand-2-400: var(--palette-ocean-k-400);
+	--brand-2-500: var(--palette-ocean-k-500);
+	--brand-2-600: var(--palette-ocean-k-600);
+	--brand-2-700: var(--palette-ocean-k-700);
+	--brand-2-800: var(--palette-ocean-k-800);
+	--brand-2-900: var(--palette-ocean-k-900);
+	--brand-2-950: var(--palette-ocean-k-950);
+}
+:root[data-palette='coral'] {
+	--primary-50: var(--palette-coral-50);
+	--primary-100: var(--palette-coral-100);
+	--primary-200: var(--palette-coral-200);
+	--primary-300: var(--palette-coral-300);
+	--primary-400: var(--palette-coral-400);
+	--primary-500: var(--palette-coral-500);
+	--primary-600: var(--palette-coral-600);
+	--primary-700: var(--palette-coral-700);
+	--primary-800: var(--palette-coral-800);
+	--primary-900: var(--palette-coral-900);
+	--primary-950: var(--palette-coral-950);
+	/* brand as text on a muted surface and on the page wash needs the step below the 700 anchor */
+	--primary-text-light: var(--primary-800);
+	--brand-2-50: var(--palette-coral-k-50);
+	--brand-2-100: var(--palette-coral-k-100);
+	--brand-2-200: var(--palette-coral-k-200);
+	--brand-2-300: var(--palette-coral-k-300);
+	--brand-2-400: var(--palette-coral-k-400);
+	--brand-2-500: var(--palette-coral-k-500);
+	--brand-2-600: var(--palette-coral-k-600);
+	--brand-2-700: var(--palette-coral-k-700);
+	--brand-2-800: var(--palette-coral-k-800);
+	--brand-2-900: var(--palette-coral-k-900);
+	--brand-2-950: var(--palette-coral-k-950);
+}
+:root[data-palette='emerald'] {
+	--primary-50: var(--palette-emerald-50);
+	--primary-100: var(--palette-emerald-100);
+	--primary-200: var(--palette-emerald-200);
+	--primary-300: var(--palette-emerald-300);
+	--primary-400: var(--palette-emerald-400);
+	--primary-500: var(--palette-emerald-500);
+	--primary-600: var(--palette-emerald-600);
+	--primary-700: var(--palette-emerald-700);
+	--primary-800: var(--palette-emerald-800);
+	--primary-900: var(--palette-emerald-900);
+	--primary-950: var(--palette-emerald-950);
+	--brand-2-50: var(--palette-emerald-k-50);
+	--brand-2-100: var(--palette-emerald-k-100);
+	--brand-2-200: var(--palette-emerald-k-200);
+	--brand-2-300: var(--palette-emerald-k-300);
+	--brand-2-400: var(--palette-emerald-k-400);
+	--brand-2-500: var(--palette-emerald-k-500);
+	--brand-2-600: var(--palette-emerald-k-600);
+	--brand-2-700: var(--palette-emerald-k-700);
+	--brand-2-800: var(--palette-emerald-k-800);
+	--brand-2-900: var(--palette-emerald-k-900);
+	--brand-2-950: var(--palette-emerald-k-950);
 }
 
-/* ── primary colour ───────────────────────────────────────────────── */
-:root[data-colors='green'] {
-	--primary-50: var(--palette-green-50);
-	--primary-100: var(--palette-green-100);
-	--primary-200: var(--palette-green-200);
-	--primary-300: var(--palette-green-300);
-	--primary-400: var(--palette-green-400);
-	--primary-500: var(--palette-green-500);
-	--primary-600: var(--palette-green-600);
-	--primary-700: var(--palette-green-700);
-	--primary-800: var(--palette-green-800);
-	--primary-900: var(--palette-green-900);
-	--primary-950: var(--palette-green-950);
-	--primary-fill: var(--primary-500);
-	--primary-fill-foreground: var(--primary-950);
-	--primary-hover-toward: white;
-	--primary-text-light: var(--primary-800);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-800);
-	--brand-frame-dark: var(--primary-400);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-600);
-	--brand-capsule-bar-light: var(--primary-600);
-	--brand-capsule-dark: var(--primary-600);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='violet'] {
-	--primary-50: var(--palette-violet-50);
-	--primary-100: var(--palette-violet-100);
-	--primary-200: var(--palette-violet-200);
-	--primary-300: var(--palette-violet-300);
-	--primary-400: var(--palette-violet-400);
-	--primary-500: var(--palette-violet-500);
-	--primary-600: var(--palette-violet-600);
-	--primary-700: var(--palette-violet-700);
-	--primary-800: var(--palette-violet-800);
-	--primary-900: var(--palette-violet-900);
-	--primary-950: var(--palette-violet-950);
-	--primary-fill: var(--primary-600);
-	--primary-fill-foreground: oklch(1 0 0);
-	--primary-hover-toward: black;
-	--primary-text-light: var(--primary-700);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-500);
-	--brand-frame-light: var(--primary-600);
-	--brand-frame-dark: var(--primary-300);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-400);
-	--brand-capsule-bar-light: var(--primary-400);
-	--brand-capsule-dark: var(--primary-100);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='orange'] {
-	--primary-50: var(--palette-orange-50);
-	--primary-100: var(--palette-orange-100);
-	--primary-200: var(--palette-orange-200);
-	--primary-300: var(--palette-orange-300);
-	--primary-400: var(--palette-orange-400);
-	--primary-500: var(--palette-orange-500);
-	--primary-600: var(--palette-orange-600);
-	--primary-700: var(--palette-orange-700);
-	--primary-800: var(--palette-orange-800);
-	--primary-900: var(--palette-orange-900);
-	--primary-950: var(--palette-orange-950);
-	/* step 600 reaches 4.4997:1 under white (the gate wants 4.5) and step 500 + 950 fails in black-white (3.4): 4% toward black */
-	--primary-fill: color-mix(in oklch, var(--primary-600) 96%, black);
-	--primary-fill-foreground: oklch(1 0 0);
-	--primary-hover-toward: black;
-	--primary-text-light: var(--primary-700);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-600);
-	--brand-frame-light: var(--primary-700);
-	--brand-frame-dark: var(--primary-300);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-500);
-	--brand-capsule-bar-light: var(--primary-500);
-	--brand-capsule-dark: var(--primary-100);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='teal'] {
-	--primary-50: var(--palette-teal-50);
-	--primary-100: var(--palette-teal-100);
-	--primary-200: var(--palette-teal-200);
-	--primary-300: var(--palette-teal-300);
-	--primary-400: var(--palette-teal-400);
-	--primary-500: var(--palette-teal-500);
-	--primary-600: var(--palette-teal-600);
-	--primary-700: var(--palette-teal-700);
-	--primary-800: var(--palette-teal-800);
-	--primary-900: var(--palette-teal-900);
-	--primary-950: var(--palette-teal-950);
-	--primary-fill: var(--primary-500);
-	--primary-fill-foreground: var(--primary-950);
-	--primary-hover-toward: white;
-	--primary-text-light: var(--primary-800);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-800);
-	--brand-frame-dark: var(--primary-400);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-500);
-	--brand-capsule-bar-light: var(--primary-600);
-	--brand-capsule-dark: var(--primary-100);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='fuchsia'] {
-	--primary-50: var(--palette-fuchsia-50);
-	--primary-100: var(--palette-fuchsia-100);
-	--primary-200: var(--palette-fuchsia-200);
-	--primary-300: var(--palette-fuchsia-300);
-	--primary-400: var(--palette-fuchsia-400);
-	--primary-500: var(--palette-fuchsia-500);
-	--primary-600: var(--palette-fuchsia-600);
-	--primary-700: var(--palette-fuchsia-700);
-	--primary-800: var(--palette-fuchsia-800);
-	--primary-900: var(--palette-fuchsia-900);
-	--primary-950: var(--palette-fuchsia-950);
-	--primary-fill: var(--primary-600);
-	--primary-fill-foreground: oklch(1 0 0);
-	--primary-hover-toward: black;
-	--primary-text-light: var(--primary-700);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-600);
-	--brand-frame-light: var(--primary-700);
-	--brand-frame-dark: var(--primary-300);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-500);
-	--brand-capsule-bar-light: var(--primary-500);
-	--brand-capsule-dark: var(--primary-100);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='lime'] {
-	--primary-50: var(--palette-lime-50);
-	--primary-100: var(--palette-lime-100);
-	--primary-200: var(--palette-lime-200);
-	--primary-300: var(--palette-lime-300);
-	--primary-400: var(--palette-lime-400);
-	--primary-500: var(--palette-lime-500);
-	--primary-600: var(--palette-lime-600);
-	--primary-700: var(--palette-lime-700);
-	--primary-800: var(--palette-lime-800);
-	--primary-900: var(--palette-lime-900);
-	--primary-950: var(--palette-lime-950);
-	--primary-fill: var(--primary-500);
-	--primary-fill-foreground: var(--primary-950);
-	--primary-hover-toward: white;
-	--primary-text-light: var(--primary-800);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-800);
-	--brand-frame-dark: var(--primary-400);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-600);
-	--brand-capsule-bar-light: var(--primary-600);
-	--brand-capsule-dark: var(--primary-600);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-:root[data-colors='amber'] {
-	--primary-50: var(--palette-amber-50);
-	--primary-100: var(--palette-amber-100);
-	--primary-200: var(--palette-amber-200);
-	--primary-300: var(--palette-amber-300);
-	--primary-400: var(--palette-amber-400);
-	--primary-500: var(--palette-amber-500);
-	--primary-600: var(--palette-amber-600);
-	--primary-700: var(--palette-amber-700);
-	--primary-800: var(--palette-amber-800);
-	--primary-900: var(--palette-amber-900);
-	--primary-950: var(--palette-amber-950);
-	--primary-fill: var(--primary-500);
-	--primary-fill-foreground: var(--primary-950);
-	--primary-hover-toward: white;
-	--primary-text-light: var(--primary-800);
-	--primary-on-dark: var(--primary-400);
-	--primary-ring: var(--primary-700);
-	--brand-frame-light: var(--primary-800);
-	--brand-frame-dark: var(--primary-400);
-	--brand-frame-bar-light: var(--brand-frame-light);
-	--brand-capsule-light: var(--primary-500);
-	--brand-capsule-bar-light: var(--primary-600);
-	--brand-capsule-dark: var(--primary-100);
-	--brand-capsule-from: light-dark(var(--primary-300), var(--primary-200));
-	--brand-capsule-to: light-dark(var(--primary-500), var(--primary-400));
-}
-
-/* ── dark surface palette ─────────────────────────────────────────── */
-:root[data-dark-palette='zinc'] {
-	--dark-50: var(--neutral-zinc-50);
-	--dark-100: var(--neutral-zinc-100);
-	--dark-200: var(--neutral-zinc-200);
-	--dark-300: var(--neutral-zinc-300);
-	--dark-400: var(--neutral-zinc-400);
-	--dark-500: var(--neutral-zinc-500);
-	--dark-600: var(--neutral-zinc-600);
-	--dark-700: var(--neutral-zinc-700);
-	--dark-800: var(--neutral-zinc-800);
-	--dark-850: var(--neutral-zinc-850);
-	--dark-900: var(--neutral-zinc-900);
-	--dark-950: var(--neutral-zinc-950);
-}
-:root[data-dark-palette='stone'] {
-	--dark-50: var(--neutral-stone-50);
-	--dark-100: var(--neutral-stone-100);
-	--dark-200: var(--neutral-stone-200);
-	--dark-300: var(--neutral-stone-300);
-	--dark-400: var(--neutral-stone-400);
-	--dark-500: var(--neutral-stone-500);
-	--dark-600: var(--neutral-stone-600);
-	--dark-700: var(--neutral-stone-700);
-	--dark-800: var(--neutral-stone-800);
-	--dark-850: var(--neutral-stone-850);
-	--dark-900: var(--neutral-stone-900);
-	--dark-950: var(--neutral-stone-950);
-}
-:root[data-dark-palette='neutral'] {
-	--dark-50: var(--neutral-neutral-50);
-	--dark-100: var(--neutral-neutral-100);
-	--dark-200: var(--neutral-neutral-200);
-	--dark-300: var(--neutral-neutral-300);
-	--dark-400: var(--neutral-neutral-400);
-	--dark-500: var(--neutral-neutral-500);
-	--dark-600: var(--neutral-neutral-600);
-	--dark-700: var(--neutral-neutral-700);
-	--dark-800: var(--neutral-neutral-800);
-	--dark-850: var(--neutral-neutral-850);
-	--dark-900: var(--neutral-neutral-900);
-	--dark-950: var(--neutral-neutral-950);
-}
-:root[data-dark-palette='gray'] {
-	--dark-50: var(--neutral-gray-50);
-	--dark-100: var(--neutral-gray-100);
-	--dark-200: var(--neutral-gray-200);
-	--dark-300: var(--neutral-gray-300);
-	--dark-400: var(--neutral-gray-400);
-	--dark-500: var(--neutral-gray-500);
-	--dark-600: var(--neutral-gray-600);
-	--dark-700: var(--neutral-gray-700);
-	--dark-800: var(--neutral-gray-800);
-	--dark-850: var(--neutral-gray-850);
-	--dark-900: var(--neutral-gray-900);
-	--dark-950: var(--neutral-gray-950);
-}
-
-/* ── sidebar colours (Domiex sidebar-color.css; Tailwind references as v4 oklch) ── */
+/* ── sidebar colours (Domiex sidebar-color.css; Tailwind references as v4 oklch). Removed with the sidebar. ── */
 :root[data-sidebar-colors='dark'] {
 	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 13%, transparent);
 	--sidebar-brand-frame: var(--brand-frame-dark);
@@ -543,8 +405,10 @@
 }
 :root[data-sidebar-colors='brand'] {
 	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 10%, transparent);
-	--sidebar-brand-frame: var(--brand-frame-dark);
-	--sidebar-brand-capsule: var(--brand-capsule-dark);
+	/* the darkest-tinted glasses: over a bright page their composite is lighter than the sidebar token, and the
+	   shared on-dark frame falls under 3:1, so the frame is a lighter step here */
+	--sidebar-brand-frame: var(--primary-100);
+	--sidebar-brand-capsule: var(--brand-2-500);
 	--sidebar: var(--primary-900);
 	--sidebar-foreground: var(--primary-100);
 	--sidebar-accent-foreground: oklch(1 0 0);
@@ -561,21 +425,10 @@
 }
 :root[data-sidebar-colors='sky'] {
 	--sidebar-accent: color-mix(in srgb, var(--sidebar-accent-foreground) 8%, transparent);
-	--sidebar-brand-frame: var(--brand-frame-dark);
-	--sidebar-brand-capsule: var(--brand-capsule-dark);
+	--sidebar-brand-frame: var(--primary-100);
+	--sidebar-brand-capsule: var(--brand-2-500);
 	--sidebar: var(--swatch-sidebar-sky);
 	--sidebar-foreground: oklch(0.94 0.04 230);
 	--sidebar-accent-foreground: oklch(0.977 0.013 236.62);
 	--sidebar-border: var(--swatch-sidebar-sky);
-}
-
-/* The brand and sky sidebars are the darkest-tinted glasses of the default palette: over a bright page their
-   composite is lighter than the sidebar token, and the logo frame (--brand-frame-dark, blue 400) falls under
-   3:1 at the 84% fill (2.99 / 2.78). They get their own, lighter frame step here instead of a more opaque
-   global sidebar fill; every other palette and sidebar colour passes with the shared step. */
-:root[data-colors='leadkart'][data-sidebar-colors='brand'] {
-	--sidebar-brand-frame: color-mix(in oklab, var(--primary-400) 75%, var(--primary-300));
-}
-:root[data-colors='leadkart'][data-sidebar-colors='sky'] {
-	--sidebar-brand-frame: color-mix(in oklab, var(--primary-400) 75%, var(--primary-300));
 }

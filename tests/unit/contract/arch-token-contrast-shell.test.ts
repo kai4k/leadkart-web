@@ -159,17 +159,15 @@ describe('fix round D: the five mutants of the material gate, each killed by one
 		expect(cs.find((c) => c.side === 'hi')!.color.r).toBeCloseTo(0.59, 6);
 	});
 
-	it('M5 black-white measures the grayscale, not the colours', () => {
+	it('M5 measures the colours as painted (there is no grayscale mode)', () => {
 		const css = base('--red: #ff0000; --clear: #ffffff;');
-		const props = propsFor(css, 'off', 'black-white');
-		const { results } = checkMaterials(props, 'black-white', 'fx', 'off', [
+		const props = propsFor(css, 'off', 'light');
+		const { results } = checkMaterials(props, 'light', 'fx', 'off', [
 			layer({ fill: 'clear', text: ['red'] })
 		] as never) as { results: Result[] };
-		// red on white is 4.0:1 in colour; its luma gray (0.2126) is 12.0:1
-		expect(results[0].ratio).toBeGreaterThan(11);
-		expect(
-			pairRatio(pair({ fg: 'red', bg: 'clear' }) as never, props, 'black-white')
-		).toBeGreaterThan(11);
+		// red on white is 4.0:1
+		expect(results[0].ratio).toBeCloseTo(4, 0);
+		expect(pairRatio(pair({ fg: 'red', bg: 'clear' }) as never, props, 'light')).toBeCloseTo(4, 0);
 	});
 });
 
@@ -299,9 +297,8 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 			layers: MATERIAL_LAYERS as never,
 			axes: {
 				...AXES,
-				colors: ['leadkart'],
-				sidebarColors: ['light'],
-				darkPalette: ['default']
+				palette: ['iris'],
+				sidebarColors: ['light']
 			} as never
 		}).problems as string[];
 
@@ -312,7 +309,7 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 	it('a capsule equal to the frame fails the two-tone floor (on the real resolved tokens)', () => {
 		const p = run(
 			mutate(
-				'--brand-capsule-light: var(--palette-capsule-500);',
+				'--brand-capsule-light: var(--brand-2-500);',
 				'--brand-capsule-light: var(--brand-frame-light);'
 			)
 		);
@@ -322,8 +319,8 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 	it('a capsule at ~1.2:1 on its surface fails the accent floor', () => {
 		const p = run(
 			mutate(
-				'--brand-capsule-light: var(--palette-capsule-500);',
-				'--brand-capsule-light: var(--palette-capsule-300);'
+				'--brand-capsule-light: var(--brand-2-500);',
+				'--brand-capsule-light: var(--brand-2-100);'
 			)
 		);
 		expect(p.some((x) => x.includes('logo accent'))).toBe(true);
@@ -331,7 +328,7 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 
 	it('the frame keeps 3:1: a pale frame fails', () => {
 		const p = run(
-			mutate('--brand-frame-light: var(--primary-600);', '--brand-frame-light: var(--primary-300);')
+			mutate('--brand-frame-light: var(--primary-500);', '--brand-frame-light: var(--primary-300);')
 		);
 		expect(p.some((x) => x.includes('logo frame'))).toBe(true);
 	});

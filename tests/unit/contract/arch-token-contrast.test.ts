@@ -17,17 +17,15 @@ vi.setConfig({ testTimeout: 30_000 });
 
 /** Self-test of the contrast gate: tiny fixtures, then the real token files. */
 const ONE = {
-	colors: ['leadkart'],
+	palette: ['iris'],
 	mode: ['light'],
-	darkPalette: ['default'],
 	sidebarColors: ['light']
 };
 const ratioOf = (css: string, p: object, mode = 'light') => {
 	const { rules } = parseRules(css, 'fixture.css');
 	const props = propertiesFor(rules, {
-		colors: 'leadkart',
+		palette: 'iris',
 		mode,
-		darkPalette: 'default',
 		sidebarColors: 'light'
 	});
 	return pairRatio(p as never, props, mode) as number;
@@ -100,12 +98,8 @@ describe('check-token-contrast: the real tokens', () => {
 	it('passes every pair in every combination', () => {
 		const { problems, combinations, checked, pairs } = check();
 		expect(problems).toEqual([]);
-		// light and dark cross every dark palette; black-white is a light mode, so one palette
 		expect(combinations).toBe(
-			AXES.colors.length *
-				AXES.sidebarColors.length *
-				(2 * AXES.darkPalette.length + 1) *
-				AXES.transparency.length
+			AXES.palette.length * AXES.mode.length * AXES.sidebarColors.length * AXES.transparency.length
 		);
 		expect(checked).toBe(pairs * combinations);
 	});
@@ -151,26 +145,47 @@ describe('check-token-contrast: fix round B tokens', () => {
 	});
 });
 
-describe('check-token-contrast: black-white mode (the customizer offers it)', () => {
-	const css = ':root { --fg: oklch(0.452 0.313 264.05); --bg: oklch(0 0 0); }';
-	it('is a gated mode axis value', () => {
-		expect([...AXES.mode]).toEqual(['light', 'dark', 'black-white']);
+describe('check-token-contrast: the axes (gate v3)', () => {
+	it('palette is the four logo palettes and mode is light and dark', () => {
+		expect([...AXES.palette]).toEqual(['iris', 'ocean', 'coral', 'emerald']);
+		expect([...AXES.mode]).toEqual(['light', 'dark']);
 	});
-	it('measures the grayscale the filter paints, not the colours underneath', () => {
-		const p = pair({ min: 3, over: 'bg' });
-		const colour = ratioOf(css, p, 'light');
-		const gray = ratioOf(css, p, 'black-white');
-		// a saturated blue keeps its WCAG luminance ratio in colour but loses it in grayscale
-		expect(gray).not.toBeCloseTo(colour, 1);
+	it('has no retired axis', () => {
+		expect(Object.keys(AXES)).not.toContain('darkPalette');
+		expect(Object.keys(AXES)).not.toContain('colors');
 	});
-	it('runs one dark palette for it (it is a light mode) and every sidebar colour', () => {
-		const { combinations } = check();
-		expect(combinations).toBe(
-			AXES.colors.length *
-				AXES.sidebarColors.length *
-				(2 * AXES.darkPalette.length + 1) *
-				AXES.transparency.length
-		);
+});
+
+describe('check-token-contrast: the Pebble World role pairs', () => {
+	const PW = PAIRS as Array<{ fg: string; bg: string; min: number }>;
+	const min = (fg: string, bg: string) => PW.find((p) => p.fg === fg && p.bg === bg)?.min;
+	it('gates the tonal button, field border, meter, focus ring and count', () => {
+		expect(min('primary-tonal-foreground', 'primary-tonal')).toBe(4.5);
+		expect(min('field-border', 'card')).toBe(3);
+		expect(min('field-border', 'muted')).toBe(3);
+		expect(min('meter-track', 'primary-indicator')).toBe(3);
+		expect(min('focus-ring', 'background')).toBe(3);
+		expect(min('focus-ring', 'card')).toBe(3);
+		expect(min('badge-count-foreground', 'badge-count')).toBe(4.5);
+	});
+	it('gates text on the wallpaper', () => {
+		for (const w of ['wall-1', 'wall-2', 'wall-3']) expect(min('foreground', w)).toBe(4.5);
+	});
+	it('gates the white glyph on every app colour at 3:1', () => {
+		for (const app of [
+			'home',
+			'leads',
+			'orders',
+			'stock',
+			'dispatch',
+			'payments',
+			'reports',
+			'team',
+			'settings',
+			'companies',
+			'people'
+		])
+			expect(min('app-glyph', `app-${app}`), app).toBe(3);
 	});
 });
 
@@ -195,9 +210,8 @@ describe('check-token-contrast: scoped re-declarations (layouts.css)', () => {
 	it('the scope applies only inside its scope and only with its attribute', () => {
 		const { rules } = parseRules(SCOPED_OK, 'layouts.css', { lenient: true });
 		const combo = {
-			colors: 'leadkart',
+			palette: 'iris',
 			mode: 'light',
-			darkPalette: 'default',
 			sidebarColors: 'light'
 		};
 		expect(propertiesFor(rules, combo).get('--fg')).toBe('#000');

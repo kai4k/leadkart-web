@@ -26,7 +26,7 @@ vi.setConfig({ testTimeout: 30_000 });
 describe('check-token-contrast: the legibility bound of a material (plan G3)', () => {
 	it('1. a fill that is too transparent fails, naming the layer, the mode and the ratio', () => {
 		const text = gate(base('', 40), layer({ text: ['mfg'] })).problems.join('\n');
-		expect(text).toContain('leadkart/light');
+		expect(text).toContain('iris/light');
 		expect(text).toContain('bar: mfg');
 		expect(text).toMatch(/darkest backdrop · \d+\.\d\d < 4\.5/);
 	});
@@ -132,13 +132,14 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 		);
 	});
 
-	it('the transparency axis is part of the gate: glass, reduced and off, 1320 combinations', () => {
+	it('the transparency axis is part of the gate: glass, reduced and off, every combination', () => {
 		expect(AXES.transparency).toEqual(['glass', 'reduced', 'off']);
 		const r = check() as { combinations: number; materialChecks: number; problems: string[] };
 		expect(r.combinations).toBe(
-			AXES.colors.length * AXES.sidebarColors.length * (2 * AXES.darkPalette.length + 1) * 3
+			AXES.palette.length * AXES.mode.length * AXES.sidebarColors.length * 3
 		);
-		expect(r.materialChecks).toBeGreaterThan(100_000);
+		// 120 combinations x 8 layers: never vacuous (it was 1,320 combinations before the palette and mode axes shrank)
+		expect(r.materialChecks).toBeGreaterThan(20_000);
 	});
 
 	it('8. the real files pass', () => {

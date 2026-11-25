@@ -312,6 +312,20 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-icon: var(--sidebar-icon);
 	--color-sidebar-indicator: var(--sidebar-indicator);
+	/* Pebble World roles: soft brand button, field border (`border-field`), meter, focus ring (`ring-focus`),
+	   neutral count, wallpaper (`bg-wall-1..3`), the app in scope (`bg-app-accent`) */
+	--color-primary-tonal: var(--primary-tonal);
+	--color-primary-tonal-foreground: var(--primary-tonal-foreground);
+	--color-field: var(--field-border);
+	--color-meter-track: var(--meter-track);
+	--color-focus: var(--focus-ring);
+	--color-badge-count: var(--badge-count);
+	--color-badge-count-foreground: var(--badge-count-foreground);
+	--color-wall-1: var(--wall-1);
+	--color-wall-2: var(--wall-2);
+	--color-wall-3: var(--wall-3);
+	--color-app-accent: var(--app-accent);
+	--color-app-glyph: var(--app-glyph);
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);

@@ -12,8 +12,8 @@ test.skip(
 
 /**
  * The computed value of every semantic token (and, until Task 16, every legacy `--color-*` alias), light mode,
- * default (LeadKart) colour, read from ONE probe element, against a recorded table
- * (`fixtures/tokens-light-leadkart.json`). A later change to `--muted-foreground`, `--input`,
+ * default (Iris) palette, read from ONE probe element, against a recorded table
+ * (`fixtures/tokens-light-iris.json`). A later change to `--muted-foreground`, `--input`,
  * `--ring`, a status colour or a legacy alias fails here and has to be made on purpose: re-record
  * with `LK_RECORD_TOKENS=1 npx playwright test tests/e2e/tokens-probe.spec.ts --project=chromium`
  * and review the diff of the JSON.
@@ -23,7 +23,7 @@ test.skip(
  */
 
 const ROOT = process.cwd();
-const TABLE = join(ROOT, 'tests', 'e2e', 'fixtures', 'tokens-light-leadkart.json');
+const TABLE = join(ROOT, 'tests', 'e2e', 'fixtures', 'tokens-light-iris.json');
 
 const semanticNames = [
 	...new Set(
@@ -60,13 +60,13 @@ async function probe(page: Page, names: string[]) {
 	}, names);
 }
 
-test('every semantic token and legacy alias keeps its recorded light/LeadKart value', async ({
+test('every semantic token and legacy alias keeps its recorded light/Iris value', async ({
 	page
 }) => {
 	await page.goto('/signin');
 	await page.locator('html[data-hydrated="true"]').waitFor({ state: 'attached' });
 	await expect(page.locator('html')).toHaveAttribute('data-mode', 'light');
-	await expect(page.locator('html')).toHaveAttribute('data-colors', 'leadkart');
+	await expect(page.locator('html')).toHaveAttribute('data-palette', 'iris');
 
 	const semantic = await probe(page, semanticNames);
 	const legacy = await probe(page, legacyNames);

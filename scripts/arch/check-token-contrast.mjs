@@ -3,9 +3,7 @@
  * Token contrast gate.
  *
  * Resolves the semantic tokens in src/styles/theme/{palettes,semantic}.css for EVERY combination
- * of colours (8) x mode (light, dark) x dark palette (5) x sidebar colours (5) = 400, plus
- * black-white (a light mode through a grayscale filter; one dark palette, it does not use them)
- * x colours x sidebar colours = 40, and checks
+ * of palette (4) x mode (light, dark) x sidebar colours (5) x transparency (3) = 120, and checks
  * WCAG 2.2 AA contrast on the pairs the UI promises: 4.5:1 for text, 3:1 for UI boundaries and
  * focus rings.
  *
@@ -58,20 +56,18 @@ export const PATTERN_TOPBAR = {
 };
 
 export const AXES = {
-	colors: ['leadkart', 'green', 'violet', 'orange', 'teal', 'fuchsia', 'lime', 'amber'],
-	// `auto` is light or dark by the OS, so it is covered by those two; `black-white` is a light
-	// mode painted through `filter: grayscale(1)` on <html>, measured on the grayscale (pairRatio)
-	mode: ['light', 'dark', 'black-white'],
-	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray'],
+	palette: ['iris', 'ocean', 'coral', 'emerald'],
+	// `auto` is light or dark by the OS, so it is covered by those two
+	mode: ['light', 'dark'],
+	// removed with the sidebar (the OS shell has none)
 	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky'],
 	// the Transparency preference: `glass` is the default (no attribute rule), `reduced` and `off` re-declare
 	// the material fills in materials.css
 	transparency: ['glass', 'reduced', 'off']
 };
 const ATTRIBUTE_FOR = {
-	colors: 'data-colors',
+	palette: 'data-palette',
 	mode: 'data-mode',
-	darkPalette: 'data-dark-palette',
 	sidebarColors: 'data-sidebar-colors',
 	transparency: 'data-transparency'
 };
@@ -95,6 +91,20 @@ const CHIP_FLOOR = 1.1;
 const LOGO_CAPSULE = 1.6;
 const LOGO_TWO_TONE = 1.5;
 const STATUS = ['success', 'warning', 'info'];
+/** The apps that have an identity colour (`--app-<key>`, spec 4.1; the one white glyph is `--app-glyph`). */
+const APPS = [
+	'home',
+	'leads',
+	'orders',
+	'stock',
+	'dispatch',
+	'payments',
+	'reports',
+	'team',
+	'settings',
+	'companies',
+	'people'
+];
 const SURFACES = ['background', 'card', 'muted'];
 
 /**
@@ -256,7 +266,18 @@ const RAW_PAIRS = [
 	]),
 	...[...STATUS, 'destructive'].flatMap((s) =>
 		SURFACES.map((b) => [`${s}-indicator`, b, UI, { note: 'dot, bar or icon mark' }])
-	)
+	),
+	// Pebble World roles (spec 4.2): the soft brand button, the field border, the meter, the focus ring, the
+	// neutral count badge, the wallpaper and the app identity colours
+	['primary-tonal-foreground', 'primary-tonal', TEXT, { note: 'soft brand button' }],
+	...['card', 'muted'].map((s) => ['field-border', s, UI, { note: 'field border' }]),
+	['meter-track', 'primary-indicator', UI, { note: 'meter: track against fill' }],
+	...['background', 'card'].map((s) => ['focus-ring', s, UI, { note: 'focus ring' }]),
+	['badge-count-foreground', 'badge-count', TEXT, { note: 'neutral count' }],
+	...['wall-1', 'wall-2', 'wall-3'].flatMap((w) =>
+		['foreground', 'muted-foreground'].map((fg) => [fg, w, TEXT, { note: 'text on the wallpaper' }])
+	),
+	...APPS.map((a) => ['app-glyph', `app-${a}`, UI, { note: 'white glyph on the app colour' }])
 ];
 
 /** @type {Pair[]} */
@@ -449,13 +470,6 @@ function ratio(a, b) {
 }
 
 /** The contrast of one pair for one combination's properties. */
-/** What `filter: grayscale(1)` paints for a colour (Filter Effects: the luma matrix on sRGB values). */
-export function grayscale(color) {
-	const c = toRgb(color);
-	const y = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-	return { mode: 'rgb', r: y, g: y, b: y };
-}
-
 export function pairRatio(pair, props, mode) {
 	const over = resolveColor(pair.over ?? 'card', props, mode);
 	let fg = resolveColor(pair.fg, props, mode, over);
@@ -464,8 +478,6 @@ export function pairRatio(pair, props, mode) {
 		if (pair.alphaOn === 'bg') bg = composite(bg, pair.alpha, over);
 		else fg = composite(fg, pair.alpha, bg);
 	}
-	if (mode === 'black-white')
-		return ratio(grayscale(clampRgb(toRgb(fg))), grayscale(clampRgb(toRgb(bg))));
 	return ratio(fg, bg);
 }
 
@@ -700,14 +712,9 @@ function literalOrToken(resolve, name, over) {
 	return resolve(name, over);
 }
 
-const ratioIn = (fg, bg, mode) =>
-	mode === 'black-white'
-		? ratio(grayscale(clampRgb(toRgb(fg))), grayscale(clampRgb(toRgb(bg))))
-		: ratio(fg, bg);
-
-/** Relative luminance of a colour as the page paints it (on the grayscale in black-white mode). */
-function lumaIn(c, mode) {
-	const x = clampRgb(toRgb(mode === 'black-white' ? grayscale(clampRgb(toRgb(c))) : c));
+/** Relative luminance of a colour as the page paints it. */
+function luma(c) {
+	const x = clampRgb(toRgb(c));
 	const l = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
 	return 0.2126 * l(x.r) + 0.7152 * l(x.g) + 0.0722 * l(x.b);
 }
@@ -764,10 +771,10 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 				// `soundFg`: the colour whose luminance must lie outside the backdrop interval. For a translucent mark (the
 				// active chip) that is its OPAQUE BASE, not the composite it paints at one corner.
 				const record = (kind, token, on, fg, bg, min, soundFg = fg) => {
-					const r = ratioIn(fg, bg, mode);
+					const r = ratio(fg, bg);
 					results.push({ layer: layer.layer, kind, token, on, corner, ratio: r, min });
 					const span = spans.get(`${token}|${on}`) ?? { token, on, fg: soundFg, ys: [] };
-					span.ys.push(lumaIn(bg, mode));
+					span.ys.push(luma(bg));
 					spans.set(`${token}|${on}`, span);
 					if (r < min)
 						problems.push(
@@ -807,7 +814,7 @@ export function checkMaterials(props, mode, label, transparency, layers = MATERI
 			for (const { token, on, fg, ys } of spans.values()) {
 				const lo = Math.min(...ys);
 				const hi = Math.max(...ys);
-				const y = lumaIn(fg, mode);
+				const y = luma(fg);
 				if (y > lo + 1e-9 && y < hi - 1e-9)
 					problems.push(
 						`${label} · ${layer.layer}: ${token} on ${on} has luminance ${y.toFixed(3)} inside the backdrop's range [${lo.toFixed(3)}, ${hi.toFixed(3)}], so the two-corner bound does not hold and the pair can reach 1:1 · 1.00 < 1.01`
@@ -832,7 +839,7 @@ export function minAlpha(props, mode, layer, token, min = TEXT) {
 	const passes = (alpha) =>
 		cs.every(({ color }) => {
 			const composite = paint(surface, alpha, color);
-			return ratioIn(resolve(token, composite), composite, mode) >= min;
+			return ratio(resolve(token, composite), composite) >= min;
 		});
 	if (!passes(1)) return null;
 	let a = 1;
@@ -862,38 +869,34 @@ export function checkCss(files, { pairs = PAIRS, axes = AXES, layers = [] } = {}
 	let combinations = 0;
 	let checked = 0;
 	let materialChecks = 0;
-	for (const colors of axes.colors)
+	for (const palette of axes.palette)
 		for (const mode of axes.mode)
-			// black-white resolves as light: the dark palette cannot change it, so run it once
-			for (const darkPalette of mode === 'black-white'
-				? axes.darkPalette.slice(0, 1)
-				: axes.darkPalette)
-				for (const sidebarColors of axes.sidebarColors)
-					for (const transparency of axes.transparency ?? ['glass']) {
-						combinations++;
-						const combo = { colors, mode, darkPalette, sidebarColors, transparency };
-						const props = propertiesFor(all, combo);
-						const label = `${colors}/${mode}/${darkPalette}/${sidebarColors}/${transparency}`;
-						for (const pair of pairs) {
-							try {
-								const r = pairRatio(
-									pair,
-									pair.scope ? propertiesFor(all, combo, pair.scope) : props,
-									mode
-								);
-								checked++;
-								if (r < pair.min)
-									problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
-							} catch (e) {
-								problems.push(`${label} · ${pair.label} · ${e.message}`);
-							}
-						}
-						if (layers.length > 0) {
-							const m = checkMaterials(props, mode, label, transparency, layers);
-							materialChecks += m.results.length;
-							problems.push(...m.problems);
+			for (const sidebarColors of axes.sidebarColors)
+				for (const transparency of axes.transparency ?? ['glass']) {
+					combinations++;
+					const combo = { palette, mode, sidebarColors, transparency };
+					const props = propertiesFor(all, combo);
+					const label = `${palette}/${mode}/${sidebarColors}/${transparency}`;
+					for (const pair of pairs) {
+						try {
+							const r = pairRatio(
+								pair,
+								pair.scope ? propertiesFor(all, combo, pair.scope) : props,
+								mode
+							);
+							checked++;
+							if (r < pair.min)
+								problems.push(`${label} · ${pair.label} · ${r.toFixed(2)} < ${pair.min}`);
+						} catch (e) {
+							problems.push(`${label} · ${pair.label} · ${e.message}`);
 						}
 					}
+					if (layers.length > 0) {
+						const m = checkMaterials(props, mode, label, transparency, layers);
+						materialChecks += m.results.length;
+						problems.push(...m.problems);
+					}
+				}
 	// never pass vacuously
 	if (pairs.length === 0 || combinations === 0)
 		problems.push('no pairs or no combinations checked');
@@ -951,36 +954,31 @@ export function needsReport() {
 	const lines = [];
 	// worst ratio per layer/token over every combination (the margin at the chosen alpha)
 	const worst = new Map();
-	for (const colors of AXES.colors)
+	for (const palette of AXES.palette)
 		for (const mode of AXES.mode)
-			for (const darkPalette of mode === 'black-white'
-				? AXES.darkPalette.slice(0, 1)
-				: AXES.darkPalette)
-				for (const sidebarColors of AXES.sidebarColors) {
-					const props = propertiesFor(all, {
-						colors,
-						mode,
-						darkPalette,
-						sidebarColors,
-						transparency: 'glass'
-					});
-					const { results } = checkMaterials(props, mode, '', 'glass');
-					for (const r of results) {
-						const k = `${mode === 'dark' ? 'dark' : 'light'}|${r.layer}|${r.token}`;
-						worst.set(k, Math.min(worst.get(k) ?? Infinity, r.ratio));
-					}
+			for (const sidebarColors of AXES.sidebarColors) {
+				const props = propertiesFor(all, {
+					palette,
+					mode,
+					sidebarColors,
+					transparency: 'glass'
+				});
+				const { results } = checkMaterials(props, mode, '', 'glass');
+				for (const r of results) {
+					const k = `${mode}|${r.layer}|${r.token}`;
+					worst.set(k, Math.min(worst.get(k) ?? Infinity, r.ratio));
 				}
+			}
 	for (const mode of ['light', 'dark']) {
 		const combo = {
-			colors: 'leadkart',
+			palette: 'iris',
 			mode,
-			darkPalette: 'default',
 			sidebarColors: 'light',
 			transparency: 'glass'
 		};
 		const props = propertiesFor(all, combo);
 		const resolve = makeResolver(props, mode);
-		lines.push(`\n== leadkart / ${mode} / default dark palette / light sidebar / glass ==`);
+		lines.push(`\n== iris / ${mode} / light sidebar / glass ==`);
 		for (const layer of MATERIAL_LAYERS) {
 			const alpha = fillAlpha(resolve, layer.fill);
 			const sat = numberToken(props, layer.saturate);
@@ -999,7 +997,7 @@ export function needsReport() {
 				const ratios = cs.map(({ color }) => {
 					const composite = resolve(layer.fill, color);
 					const fg = resolve(token, composite);
-					return `${ratioIn(fg, composite, mode).toFixed(2)}`;
+					return `${ratio(fg, composite).toFixed(2)}`;
 				});
 				const fgY = luminance(resolve(token, WHITE)).toFixed(4);
 				const need = minAlpha(props, mode, layer, token);

@@ -325,3 +325,39 @@ body:has(
 		backdrop-filter: none !important;
 	}
 }
+
+/* The app in scope: `.app-<key>` points --app-accent (semantic.css, `bg-app-accent`) at that app's identity colour
+ * (palettes.css). One scope per app, the single place a key maps to its colour. */
+.app-home {
+	--app-accent: var(--app-home);
+}
+.app-leads {
+	--app-accent: var(--app-leads);
+}
+.app-orders {
+	--app-accent: var(--app-orders);
+}
+.app-stock {
+	--app-accent: var(--app-stock);
+}
+.app-dispatch {
+	--app-accent: var(--app-dispatch);
+}
+.app-payments {
+	--app-accent: var(--app-payments);
+}
+.app-reports {
+	--app-accent: var(--app-reports);
+}
+.app-team {
+	--app-accent: var(--app-team);
+}
+.app-settings {
+	--app-accent: var(--app-settings);
+}
+.app-companies {
+	--app-accent: var(--app-companies);
+}
+.app-people {
+	--app-accent: var(--app-people);
+}

@@ -36,7 +36,7 @@ const rules = (): Rules => {
 const lum = (c: unknown) => wcagLuminance(toRgb(c as never));
 
 describe('a. the light bar is a bright frosted sheet', () => {
-	it('over the page colour the bar composite is at least as light as the page, on every palette (light, black-white)', () => {
+	it('over the page colour the bar composite is at least as light as the page, on every palette (light)', () => {
 		const all = rules();
 		const layer = {
 			...(MATERIAL_LAYERS as unknown as Array<{ layer: string }>).find(
@@ -44,19 +44,18 @@ describe('a. the light bar is a bright frosted sheet', () => {
 			)!,
 			backdrops: ['background']
 		};
-		for (const colors of AXES.colors)
-			for (const mode of ['light', 'black-white'] as const) {
+		for (const palette of AXES.palette)
+			for (const mode of ['light'] as const) {
 				const props = propertiesFor(all, {
-					colors,
+					palette,
 					mode,
-					darkPalette: 'default',
 					sidebarColors: 'light',
 					transparency: 'glass'
 				});
 				const page = lum(resolveColor('background', props, mode));
 				for (const { color } of layerCorners(props, mode, layer as never)) {
 					const bar = lum(resolveColor('material-bar-fill', props, mode, color));
-					expect(bar, `${colors}/${mode}`).toBeGreaterThanOrEqual(page - 1e-9);
+					expect(bar, `${palette}/${mode}`).toBeGreaterThanOrEqual(page - 1e-9);
 				}
 			}
 	});
@@ -157,14 +156,15 @@ describe('c. the sidebar fill is 84% again; brand and sky have their own logo fr
 			/--material-sidebar-fill: light-dark\(\s*color-mix\(in srgb, var\(--sidebar\) 84%/
 		);
 	});
-	it('the scoped frame step is declared for the default palette on brand and sky only', () => {
+	it('the brand and sky sidebars declare their own light frame step and K, for every palette', () => {
 		const css = src('src/styles/theme/semantic.css');
-		for (const sb of ['brand', 'sky'])
-			expect(css).toMatch(
-				new RegExp(
-					`:root\\[data-colors='leadkart'\\]\\[data-sidebar-colors='${sb}'\\] \\{\\s*--sidebar-brand-frame: color-mix`
-				)
-			);
-		expect(css.match(/:root\[data-colors='leadkart'\]\[data-sidebar-colors=/g)).toHaveLength(2);
+		const block = (sb: string) =>
+			new RegExp(`:root\\[data-sidebar-colors='${sb}'\\] \\{([^}]*)\\}`).exec(css)![1];
+		for (const sb of ['brand', 'sky']) {
+			expect(block(sb), sb).toContain('--sidebar-brand-frame: var(--primary-100);');
+			expect(block(sb), sb).toContain('--sidebar-brand-capsule: var(--brand-2-500);');
+		}
+		for (const sb of ['dark', 'purple'])
+			expect(block(sb), sb).toContain('--sidebar-brand-frame: var(--brand-frame-dark);');
 	});
 });

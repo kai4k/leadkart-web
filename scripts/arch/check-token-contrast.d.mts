@@ -10,9 +10,8 @@ export interface Pair {
 	scope?: { selector: string; attrs: Record<string, string> };
 }
 export interface Axes {
-	colors: string[];
+	palette: string[];
 	mode: string[];
-	darkPalette: string[];
 	sidebarColors: string[];
 	transparency?: string[];
 }

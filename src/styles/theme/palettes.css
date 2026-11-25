@@ -2,134 +2,137 @@
  * PALETTES — primitive colour ramps only. No semantic meaning here.
  *
  * Semantic tokens (theme/semantic.css) pick from these. Components never
- * reference a --palette-* or --neutral-* variable directly (the one exception: the customizer's
- * tiles, which paint what each OPTION looks like, whatever is selected).
+ * reference a --palette-*, --neutral-* or --app-* variable directly (the one exception: the
+ * customizer's tiles, which paint what each OPTION looks like, whatever is selected).
  *
- *   --palette-{leadkart,green,violet,orange,teal,fuchsia,lime,amber}-N   primary choices
- *   --palette-{success,warning,danger,info}-N                           status
- *   --palette-gray-N                                                    neutral gray
- *   --neutral-{default,zinc,stone,neutral,gray}-N (+ -850)              dark surfaces
+ *   --palette-{iris,ocean,coral,emerald}-N      the four logo palettes: the brand colour
+ *   --palette-{iris,ocean,coral,emerald}-k-N    the same palettes' second piece (the K of the logo)
+ *   --app-{home,leads,...,people}               one identity colour per app (icon and roof, never a button or a status)
+ *   --palette-{success,warning,danger,info}-N   status (fixed across palettes)
+ *   --palette-gray-N                            neutral gray
+ *   --neutral-default-N (+ -850)                the one neutral family (dark surfaces)
  *
- * leadkart: Kart Blue, anchored to the approved logo (#60A5FA, #3B82F6, #2563EB, #1D4ED8 at
- * 400-700 are contracts with the SVG fills); --palette-capsule-* is the logo's teal. The other
- * primaries are copied from the Domiex theme (themes-color/primary-color.css). The
- * neutrals are Domiex dark-color.css; "default" is Tailwind v4 slate plus
- * Domiex's 850.
+ * The brand ramps are generated from the logo hexes in oklch. Anchors, per palette:
+ *   500 = the logo fill        600 = the button step (white label, 4.5:1)
+ *   700 = brand as text        900 = ink on the soft tint
+ * (iris #6c5ce7 #6252e0 #5646d4 #2c2380, ocean #2f6fe0 #2a66d4 #2259c2 #123c86,
+ *  coral #ec5a36 #cc4420 #b63a18 #7d2a12, emerald #12996b #0d7f58 #0b6e4c #0c5239.)
+ * The other steps follow the anchors' hue; 50-400 are tints, 800 sits between the text and the ink,
+ * 950 is deeper than the ink. The K ramp: 500 = the K's flat fill, 300 = the K on the clay tile.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
-	/* leadkart = Kart Blue (logo). 400 / 500 / 600 / 700 are the logo's hexes (#60A5FA dark frame,
-	   #3B82F6 gradient start, #2563EB solid, #1D4ED8 gradient end); the other steps are the same
-	   blue family (Tailwind v3 blue hexes) converted to oklch like every other ramp here. */
-	--palette-leadkart-50: oklch(0.97 0.014 254.6);
-	--palette-leadkart-100: oklch(0.932 0.032 255.6);
-	--palette-leadkart-200: oklch(0.882 0.057 254.1);
-	--palette-leadkart-300: oklch(0.809 0.096 251.8);
-	--palette-leadkart-400: #60a5fa;
-	--palette-leadkart-500: #3b82f6;
-	--palette-leadkart-600: #2563eb;
-	--palette-leadkart-700: #1d4ed8;
-	--palette-leadkart-800: oklch(0.424 0.181 265.6);
-	--palette-leadkart-900: oklch(0.379 0.138 265.5);
-	--palette-leadkart-950: oklch(0.282 0.087 267.9);
+	/* iris */
+	--palette-iris-50: oklch(0.972 0.0202 283.08);
+	--palette-iris-100: oklch(0.94 0.0445 283.08);
+	--palette-iris-200: oklch(0.885 0.0849 283.08);
+	--palette-iris-300: oklch(0.81 0.1334 283.08);
+	--palette-iris-400: oklch(0.6767 0.1712 283.08);
+	--palette-iris-500: oklch(0.5676 0.2021 283.08);
+	--palette-iris-600: oklch(0.5383 0.207 282);
+	--palette-iris-700: oklch(0.5004 0.208 280.88);
+	--palette-iris-800: oklch(0.4177 0.1785 279.94);
+	--palette-iris-900: oklch(0.335 0.149 279.01);
+	--palette-iris-950: oklch(0.2077 0.1192 279.01);
+	--palette-iris-k-50: oklch(0.975 0.0119 191.86);
+	--palette-iris-k-100: oklch(0.95 0.0262 191.86);
+	--palette-iris-k-200: oklch(0.9291 0.0544 191.86);
+	--palette-iris-k-300: oklch(0.9121 0.0775 191.86);
+	--palette-iris-k-400: oklch(0.8074 0.0984 209.08);
+	--palette-iris-k-500: oklch(0.7027 0.1192 209.08);
+	--palette-iris-k-600: oklch(0.6227 0.1133 209.08);
+	--palette-iris-k-700: oklch(0.5327 0.1013 209.08);
+	--palette-iris-k-800: oklch(0.4427 0.0858 209.08);
+	--palette-iris-k-900: oklch(0.3627 0.0715 209.08);
+	--palette-iris-k-950: oklch(0.2827 0.0596 209.08);
 
-	/* Capsule Teal (logo): solid #14B8A6; #5EEAD4 on dark; 600 / 700 are the darker steps the gate
-	   asks for where the capsule sits on a light surface or a translucent bar */
-	--palette-capsule-300: #5eead4;
-	--palette-capsule-400: #2dd4bf;
-	--palette-capsule-500: #14b8a6;
-	--palette-capsule-600: #0d9488;
-	--palette-capsule-700: #0f766e;
+	/* ocean */
+	--palette-ocean-50: oklch(0.972 0.0185 260.82);
+	--palette-ocean-100: oklch(0.94 0.0406 260.82);
+	--palette-ocean-200: oklch(0.885 0.0776 260.82);
+	--palette-ocean-300: oklch(0.81 0.1219 260.82);
+	--palette-ocean-400: oklch(0.6749 0.1564 260.82);
+	--palette-ocean-500: oklch(0.5644 0.1847 260.82);
+	--palette-ocean-600: oklch(0.5353 0.1809 261.25);
+	--palette-ocean-700: oklch(0.492 0.1747 261.68);
+	--palette-ocean-800: oklch(0.4339 0.1537 261.28);
+	--palette-ocean-900: oklch(0.3757 0.1327 260.87);
+	--palette-ocean-950: oklch(0.2329 0.1061 260.87);
+	--palette-ocean-k-50: oklch(0.975 0.0137 170.4);
+	--palette-ocean-k-100: oklch(0.95 0.0301 170.4);
+	--palette-ocean-k-200: oklch(0.9249 0.0674 170.4);
+	--palette-ocean-k-300: oklch(0.9043 0.098 170.4);
+	--palette-ocean-k-400: oklch(0.7931 0.1174 166.5);
+	--palette-ocean-k-500: oklch(0.6819 0.1369 166.5);
+	--palette-ocean-k-600: oklch(0.6019 0.13 166.5);
+	--palette-ocean-k-700: oklch(0.5119 0.1163 166.5);
+	--palette-ocean-k-800: oklch(0.4219 0.0985 166.5);
+	--palette-ocean-k-900: oklch(0.3419 0.0821 166.5);
+	--palette-ocean-k-950: oklch(0.2619 0.0684 166.5);
 
-	/* green (Domiex) */
-	--palette-green-50: oklch(98.4% 0.0182 166.4);
-	--palette-green-100: oklch(96.73% 0.0421 168.38);
-	--palette-green-200: oklch(93.31% 0.077 165.84);
-	--palette-green-300: oklch(88.6% 0.1269 164.02);
-	--palette-green-400: oklch(82.25% 0.1654 160.37);
-	--palette-green-500: oklch(74.88% 0.1723 157.44);
-	--palette-green-600: oklch(64.79% 0.1512 157.06);
-	--palette-green-700: oklch(54.51% 0.1228 158.21);
-	--palette-green-800: oklch(46.24% 0.0982 159.81);
-	--palette-green-900: oklch(40.38% 0.0818 161.07);
-	--palette-green-950: oklch(27.46% 0.057 162.48);
+	/* coral */
+	--palette-coral-50: oklch(0.972 0.0188 34.96);
+	--palette-coral-100: oklch(0.94 0.0413 34.96);
+	--palette-coral-200: oklch(0.885 0.0788 34.96);
+	--palette-coral-300: oklch(0.81 0.1239 34.96);
+	--palette-coral-400: oklch(0.7243 0.159 34.96);
+	--palette-coral-500: oklch(0.6542 0.1877 34.96);
+	--palette-coral-600: oklch(0.5747 0.1786 35.25);
+	--palette-coral-700: oklch(0.5256 0.1661 35.4);
+	--palette-coral-800: oklch(0.4658 0.1433 35.83);
+	--palette-coral-900: oklch(0.406 0.1205 36.27);
+	--palette-coral-950: oklch(0.2517 0.0964 36.27);
+	--palette-coral-k-50: oklch(0.975 0.0163 92.65);
+	--palette-coral-k-100: oklch(0.95 0.0358 92.65);
+	--palette-coral-k-200: oklch(0.9364 0.0746 92.65);
+	--palette-coral-k-300: oklch(0.9253 0.1064 92.65);
+	--palette-coral-k-400: oklch(0.8469 0.1346 72.31);
+	--palette-coral-k-500: oklch(0.7686 0.1627 72.31);
+	--palette-coral-k-600: oklch(0.6886 0.1546 72.31);
+	--palette-coral-k-700: oklch(0.5986 0.1383 72.31);
+	--palette-coral-k-800: oklch(0.5086 0.1172 72.31);
+	--palette-coral-k-900: oklch(0.4286 0.0976 72.31);
+	--palette-coral-k-950: oklch(0.3486 0.0814 72.31);
 
-	/* violet (Domiex) */
-	--palette-violet-50: oklch(0.969 0.016 293.756);
-	--palette-violet-100: oklch(0.943 0.029 294.588);
-	--palette-violet-200: oklch(0.894 0.057 293.283);
-	--palette-violet-300: oklch(0.811 0.111 293.571);
-	--palette-violet-400: oklch(0.702 0.183 293.541);
-	--palette-violet-500: oklch(0.606 0.25 292.717);
-	--palette-violet-600: oklch(0.541 0.281 293.009);
-	--palette-violet-700: oklch(0.491 0.27 292.581);
-	--palette-violet-800: oklch(0.432 0.232 292.759);
-	--palette-violet-900: oklch(0.38 0.189 293.745);
-	--palette-violet-950: oklch(0.283 0.141 291.089);
+	/* emerald */
+	--palette-emerald-50: oklch(0.972 0.0128 162.72);
+	--palette-emerald-100: oklch(0.94 0.0281 162.72);
+	--palette-emerald-200: oklch(0.885 0.0536 162.72);
+	--palette-emerald-300: oklch(0.81 0.0843 162.72);
+	--palette-emerald-400: oklch(0.6976 0.1081 162.72);
+	--palette-emerald-500: oklch(0.6057 0.1277 162.72);
+	--palette-emerald-600: oklch(0.529 0.1116 162.63);
+	--palette-emerald-700: oklch(0.4775 0.1002 162.75);
+	--palette-emerald-800: oklch(0.4341 0.0894 163.01);
+	--palette-emerald-900: oklch(0.3906 0.0786 163.27);
+	--palette-emerald-950: oklch(0.2422 0.0629 163.27);
+	--palette-emerald-k-50: oklch(0.975 0.0157 98.1);
+	--palette-emerald-k-100: oklch(0.95 0.0346 98.1);
+	--palette-emerald-k-200: oklch(0.9502 0.0674 98.1);
+	--palette-emerald-k-300: oklch(0.9503 0.0942 98.1);
+	--palette-emerald-k-400: oklch(0.8555 0.1257 77.26);
+	--palette-emerald-k-500: oklch(0.7607 0.1571 77.26);
+	--palette-emerald-k-600: oklch(0.6807 0.1493 77.26);
+	--palette-emerald-k-700: oklch(0.5907 0.1335 77.26);
+	--palette-emerald-k-800: oklch(0.5007 0.1131 77.26);
+	--palette-emerald-k-900: oklch(0.4207 0.0943 77.26);
+	--palette-emerald-k-950: oklch(0.3407 0.0786 77.26);
 
-	/* orange (Domiex) */
-	--palette-orange-50: oklch(97.33% 0.0134 53.35);
-	--palette-orange-100: oklch(93.76% 0.0324 52.33);
-	--palette-orange-200: oklch(86.91% 0.0692 47.91);
-	--palette-orange-300: oklch(78.54% 0.1178 44.51);
-	--palette-orange-400: oklch(70.79% 0.1638 38.6);
-	--palette-orange-500: oklch(64.19% 0.2084 34.96);
-	--palette-orange-600: oklch(59.32% 0.2139 31.82);
-	--palette-orange-700: oklch(51.23% 0.1897 30.2);
-	--palette-orange-800: oklch(43.72% 0.1565 28.53);
-	--palette-orange-900: oklch(37.95% 0.1283 28.1);
-	--palette-orange-950: oklch(24.88% 0.084 26.62);
-
-	/* teal (Domiex) */
-	--palette-teal-50: oklch(0.984 0.014 180.72);
-	--palette-teal-100: oklch(0.953 0.051 180.801);
-	--palette-teal-200: oklch(0.91 0.096 180.426);
-	--palette-teal-300: oklch(0.855 0.138 181.071);
-	--palette-teal-400: oklch(0.777 0.152 181.912);
-	--palette-teal-500: oklch(0.704 0.14 182.503);
-	--palette-teal-600: oklch(0.6 0.118 184.704);
-	--palette-teal-700: oklch(0.511 0.096 186.391);
-	--palette-teal-800: oklch(0.437 0.078 188.216);
-	--palette-teal-900: oklch(0.386 0.063 188.416);
-	--palette-teal-950: oklch(0.277 0.046 192.524);
-
-	/* fuchsia (Domiex) */
-	--palette-fuchsia-50: oklch(0.977 0.017 320.058);
-	--palette-fuchsia-100: oklch(0.952 0.037 318.852);
-	--palette-fuchsia-200: oklch(0.903 0.076 319.62);
-	--palette-fuchsia-300: oklch(0.833 0.145 321.434);
-	--palette-fuchsia-400: oklch(0.74 0.238 322.16);
-	--palette-fuchsia-500: oklch(0.667 0.295 322.15);
-	--palette-fuchsia-600: oklch(0.591 0.293 322.896);
-	--palette-fuchsia-700: oklch(0.518 0.253 323.949);
-	--palette-fuchsia-800: oklch(0.452 0.211 324.591);
-	--palette-fuchsia-900: oklch(0.401 0.17 325.612);
-	--palette-fuchsia-950: oklch(0.293 0.136 325.661);
-
-	/* lime (Domiex) */
-	--palette-lime-50: oklch(0.986 0.031 120.757);
-	--palette-lime-100: oklch(0.967 0.067 122.328);
-	--palette-lime-200: oklch(0.938 0.127 124.321);
-	--palette-lime-300: oklch(0.897 0.196 126.665);
-	--palette-lime-400: oklch(0.841 0.238 128.85);
-	--palette-lime-500: oklch(0.768 0.233 130.85);
-	--palette-lime-600: oklch(0.648 0.2 131.684);
-	--palette-lime-700: oklch(0.532 0.157 131.589);
-	--palette-lime-800: oklch(0.453 0.124 130.933);
-	--palette-lime-900: oklch(0.405 0.101 131.063);
-	--palette-lime-950: oklch(0.274 0.072 132.109);
-
-	/* amber (Domiex) */
-	--palette-amber-50: oklch(0.987 0.022 95.277);
-	--palette-amber-100: oklch(0.962 0.059 95.617);
-	--palette-amber-200: oklch(0.924 0.12 95.746);
-	--palette-amber-300: oklch(0.879 0.169 91.605);
-	--palette-amber-400: oklch(0.828 0.189 84.429);
-	--palette-amber-500: oklch(0.769 0.188 70.08);
-	--palette-amber-600: oklch(0.666 0.179 58.318);
-	--palette-amber-700: oklch(0.555 0.163 48.998);
-	--palette-amber-800: oklch(0.473 0.137 46.201);
-	--palette-amber-900: oklch(0.414 0.112 45.904);
-	--palette-amber-950: oklch(0.279 0.077 45.635);
+	/* App identity colours (spec 4.1): the icon colour and the roof colour of an app. Never a button,
+	   never a status. Each carries a white glyph at 3:1 or better (the gate measures it). Home is the
+	   brand: semantic.css points it at the selected palette's button step. Stock and Reports are the
+	   reference hexes darkened a notch so the glossy top of the icon, which is lighter than the flat
+	   colour, still carries a white glyph at 3:1. Companies and People are builder picks from the same
+	   family: a steel blue and an orchid, apart from the palette hues and from Team's pink. */
+	--app-leads: oklch(0.6398 0.1644 47.51);
+	--app-orders: oklch(0.5873 0.1709 260.35);
+	--app-stock: oklch(0.5805 0.1194 164.21);
+	--app-dispatch: oklch(0.579 0.0977 62.19);
+	--app-payments: oklch(0.5798 0.1964 294.49);
+	--app-reports: oklch(0.5865 0.1022 216.85);
+	--app-team: oklch(0.6107 0.1678 359.58);
+	--app-settings: oklch(0.5685 0.028 265.44);
+	--app-companies: oklch(0.5321 0.103 262.91);
+	--app-people: oklch(0.577 0.1425 317.34);
 
 	/* success (status) */
 	--palette-success-50: oklch(0.97 0.03 145);
@@ -196,7 +199,7 @@
 	--palette-gray-900: oklch(0.18 0.01 256);
 	--palette-gray-950: oklch(0.12 0.01 256);
 
-	/* dark surfaces: default = Tailwind slate + Domiex 850 */
+	/* the one neutral family, for dark surfaces: Tailwind slate plus Domiex's 850 */
 	--neutral-default-50: oklch(98.4% 0.003 247.858);
 	--neutral-default-100: oklch(96.8% 0.007 247.896);
 	--neutral-default-200: oklch(92.9% 0.013 255.508);
@@ -209,66 +212,11 @@
 	--neutral-default-850: oklch(23.13% 0.0399 270.37);
 	--neutral-default-900: oklch(20.8% 0.042 265.755);
 	--neutral-default-950: oklch(12.9% 0.042 264.695);
-
-	/* dark surfaces: zinc (Domiex) */
-	--neutral-zinc-50: oklch(0.985 0 0);
-	--neutral-zinc-100: oklch(0.967 0.001 286.375);
-	--neutral-zinc-200: oklch(0.92 0.004 286.32);
-	--neutral-zinc-300: oklch(0.871 0.006 286.286);
-	--neutral-zinc-400: oklch(0.705 0.015 286.067);
-	--neutral-zinc-500: oklch(0.552 0.016 285.938);
-	--neutral-zinc-600: oklch(0.442 0.017 285.786);
-	--neutral-zinc-700: oklch(0.37 0.013 285.805);
-	--neutral-zinc-800: oklch(0.274 0.006 286.033);
-	--neutral-zinc-850: oklch(30.12% 0 0);
-	--neutral-zinc-900: oklch(0.21 0.006 285.885);
-	--neutral-zinc-950: oklch(0.141 0.005 285.823);
-
-	/* dark surfaces: stone (Domiex) */
-	--neutral-stone-50: oklch(0.985 0.001 106.423);
-	--neutral-stone-100: oklch(0.97 0.001 106.424);
-	--neutral-stone-200: oklch(0.923 0.003 48.717);
-	--neutral-stone-300: oklch(0.869 0.005 56.366);
-	--neutral-stone-400: oklch(0.709 0.01 56.259);
-	--neutral-stone-500: oklch(0.553 0.013 58.071);
-	--neutral-stone-600: oklch(0.444 0.011 73.639);
-	--neutral-stone-700: oklch(0.374 0.01 67.558);
-	--neutral-stone-800: oklch(0.268 0.007 34.298);
-	--neutral-stone-850: oklch(25.53% 0.0082 59.29);
-	--neutral-stone-900: oklch(0.216 0.006 56.043);
-	--neutral-stone-950: oklch(0.147 0.004 49.25);
-
-	/* dark surfaces: neutral (Domiex) */
-	--neutral-neutral-50: oklch(0.985 0 0);
-	--neutral-neutral-100: oklch(0.97 0 0);
-	--neutral-neutral-200: oklch(0.922 0 0);
-	--neutral-neutral-300: oklch(0.87 0 0);
-	--neutral-neutral-400: oklch(0.708 0 0);
-	--neutral-neutral-500: oklch(0.556 0 0);
-	--neutral-neutral-600: oklch(0.439 0 0);
-	--neutral-neutral-700: oklch(0.371 0 0);
-	--neutral-neutral-800: oklch(0.269 0 0);
-	--neutral-neutral-850: oklch(23.5% 0 0);
-	--neutral-neutral-900: oklch(0.205 0 0);
-	--neutral-neutral-950: oklch(0.145 0 0);
-
-	/* dark surfaces: gray (Domiex) */
-	--neutral-gray-50: oklch(0.985 0.002 247.839);
-	--neutral-gray-100: oklch(0.967 0.003 264.542);
-	--neutral-gray-200: oklch(0.928 0.006 264.531);
-	--neutral-gray-300: oklch(0.872 0.01 258.338);
-	--neutral-gray-400: oklch(0.707 0.022 261.325);
-	--neutral-gray-500: oklch(0.551 0.027 264.364);
-	--neutral-gray-600: oklch(0.446 0.03 256.802);
-	--neutral-gray-700: oklch(0.373 0.034 259.733);
-	--neutral-gray-800: oklch(0.278 0.033 256.848);
-	--neutral-gray-850: oklch(25.89% 0.0374 268.25);
-	--neutral-gray-900: oklch(0.21 0.034 264.665);
-	--neutral-gray-950: oklch(0.13 0.028 261.692);
 }
 
 /* What each SIDEBAR colour looks like, independent of the selected one: the customizer's swatches
-   and semantic.css's dark / purple / sky sidebar blocks read these (one value, two uses). */
+   and semantic.css's dark / purple / sky sidebar blocks read these (one value, two uses). Removed
+   with the sidebar. */
 :root {
 	--swatch-sidebar-light: oklch(1 0 0);
 	--swatch-sidebar-dark: oklch(0.278 0.033 256.848);

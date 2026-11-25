@@ -8,8 +8,7 @@ import {
 export const pair = (over: object = {}) => ({ fg: 'fg', bg: 'bg', min: 4.5, label: 'p', ...over });
 
 export const FIXED_AXES = {
-	colors: ['leadkart'],
-	darkPalette: ['default'],
+	palette: ['iris'],
 	sidebarColors: ['light']
 };
 export const base = (
@@ -41,9 +40,8 @@ export const gate = (css: string, l: object, mode = 'light', transparency = 'gla
 	});
 export const propsFor = (css: string, transparency: string, mode = 'light') =>
 	propertiesFor(parseRules(css, 'f.css').rules, {
-		colors: 'leadkart',
+		palette: 'iris',
 		mode,
-		darkPalette: 'default',
 		sidebarColors: 'light',
 		transparency
 	});

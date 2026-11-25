@@ -46,15 +46,14 @@ const b64url = (s: string) =>
 const withMode = (mode: string) =>
 	b64url(
 		JSON.stringify({
-			v: 1,
+			v: 2,
 			layout: 'vertical',
 			navType: 'default',
 			contentWidth: 'default',
 			sidebar: 'large',
 			mode,
-			colors: 'leadkart',
-			sidebarColors: 'light',
-			darkPalette: 'default'
+			palette: 'iris',
+			sidebarColors: 'light'
 		})
 	);
 
@@ -69,9 +68,9 @@ const EXPECTED: Record<string, Measured> = {
 	'/styleguide': {
 		body: { backgroundColor: 'oklch(0.96 0.008 268)', color: 'oklch(0.18 0.02 250)' },
 		button: {
-			// the primary button is the vivid fill with a white label (plan G1); the default palette is Kart
-			// Blue (step 600, #2563EB; it was the old logo purple), and the card border lost its purple tint
-			backgroundColor: 'rgb(37, 99, 235)',
+			// the primary button is the vivid fill with a white label (plan G1); the default palette is Iris
+			// (the button step 600, #6252e0 in oklch; it was Kart Blue before Pebble World)
+			backgroundColor: 'oklch(0.5383 0.207 282)',
 			color: 'oklch(1 0 0)',
 			borderRadius: '9999px' // capsule (plan G7, Q1)
 		},
