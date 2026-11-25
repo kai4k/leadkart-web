@@ -48,7 +48,7 @@
 		'companies',
 		'people'
 	];
-	const TYPE = ['2xs', 'xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
+	const TYPE = ['xs', 'sm', 'base', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl'];
 	const SPACING = [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32];
 	const RADII = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', 'control', 'card', 'sheet', 'pebble', 'full'];
 	/** the solid materials (spec 4.3): the class that makes each, and the radius it is drawn with */
