@@ -30,6 +30,7 @@ const CODES = [
 	'grant_exceeds_authority',
 	'self_modification_forbidden',
 	'impersonation_not_allowed',
+	'impersonation_invalid',
 	'admin_tier_required',
 	// Members and roles
 	'last_owner_protected',

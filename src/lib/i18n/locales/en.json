@@ -374,6 +374,7 @@
 			"grant_exceeds_authority": "You can't grant a permission or role above your own.",
 			"self_modification_forbidden": "You can't make this change to your own account.",
 			"impersonation_not_allowed": "Not available during an impersonation session.",
+			"impersonation_invalid": "This session can't be started. LeadKart's own company can't be impersonated, and the reason must be at least 10 characters.",
 			"already_exists": "This already exists.",
 			"insufficient_stock": "There is not enough stock for this change.",
 			"batch_expired": "This batch has expired, so stock can't be added to it.",

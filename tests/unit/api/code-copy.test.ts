@@ -96,7 +96,8 @@ describe('the code table', () => {
 			'role_name_taken',
 			'insufficient_rank',
 			'grant_exceeds_authority',
-			'impersonation_not_allowed'
+			'impersonation_not_allowed',
+			'impersonation_invalid'
 		]) {
 			expect(goCodeKey(code), code).toBeDefined();
 		}

@@ -5,7 +5,7 @@
 	import { IdChip } from '#lib/components/data/index.ts';
 	import { Eye, Icon } from '#lib/icons/index.ts';
 	import { ImpersonateModal } from '#lib/features/operator/impersonation/index.ts';
-	import { tenantStatus } from '#lib/features/tenant/index.ts';
+	import { isPlatformTenant, tenantStatus } from '#lib/features/tenant/index.ts';
 	import { P, session } from '#lib/features/auth/index.ts';
 	import type { LayoutData } from '../$types';
 
@@ -14,7 +14,10 @@
 	const impersonateDialog = createDialogState();
 
 	const tenant = $derived(data.tenant);
-	const canImpersonate = $derived(session.can(P.platformImpersonationManage));
+	// Go refuses a session into LeadKart's own tenant (422 impersonation_invalid): no action offered.
+	const canImpersonate = $derived(
+		session.can(P.platformImpersonationManage) && !isPlatformTenant(tenant)
+	);
 	const badge = $derived(tenantStatus(tenant.status));
 </script>
 

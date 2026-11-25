@@ -596,4 +596,45 @@ test.describe('Lifecycle: platform-tenant guard', () => {
 		await expect(page.getByText(/locked for the platform tenant/i)).toBeVisible();
 		await expect(page.getByRole('button', { name: /^suspend$/i })).toHaveCount(0);
 	});
+
+	// Go refuses a session into the platform tenant (422 impersonation_invalid, G2o): no action is offered.
+	test('platform tenant: no impersonation on its list row or its profile page; a company still has it', async ({
+		page
+	}) => {
+		const PLATFORM = fakeTenantDto({
+			id: '00000000-0000-4000-8000-0000000000c1',
+			slug: 'platform',
+			display_name: 'LeadKart',
+			legal_name: 'LeadKart Platform Pvt Ltd'
+		});
+		await signInAsTier(page, {
+			tier: 'platform-super',
+			permissions: ['platform.tenants.view', 'platform.impersonation.manage'],
+			is_super_user: true,
+			tenant_id: TEST_TENANT_ID,
+			tenant_slug: TEST_TENANT_SLUG
+		});
+		await registerMocks([
+			{
+				method: 'GET',
+				path: '/api/v1/platform/tenants',
+				status: 200,
+				body: { tenants: [PLATFORM, ACME] }
+			},
+			{ method: 'GET', path: `/api/v1/tenants/${PLATFORM.id}`, status: 200, body: PLATFORM },
+			{ method: 'GET', path: '/api/v1/tenants', status: 200, body: { tenants: [PLATFORM] } }
+		]);
+		await page.goto('/operator/tenants');
+		await expect(
+			page.getByRole('button', { name: `Impersonate ${ACME.display_name}` })
+		).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: `Impersonate ${PLATFORM.display_name}` })
+		).toHaveCount(0);
+
+		await page.getByRole('button', { name: PLATFORM.display_name, exact: true }).click();
+		await page.waitForURL(/\/operator\/scope\/profile$/);
+		await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
+		await expect(page.getByRole('button', { name: /impersonate/i })).toHaveCount(0);
+	});
 });

@@ -9,6 +9,7 @@ import {
 	formattedAddressLines,
 	formattedPhone,
 	formattedPincode,
+	isPlatformTenant,
 	tenantDisplayName,
 	tenantStatus
 } from '#lib/features/tenant/view-models.ts';
@@ -32,6 +33,15 @@ const BASE_TENANT: Tenant = {
 		lockout_minutes: 15
 	}
 };
+
+describe("isPlatformTenant (no impersonation / lifecycle actions on LeadKart's own tenant)", () => {
+	it('is true only for the slug `platform`', () => {
+		expect(isPlatformTenant({ slug: 'platform' })).toBe(true);
+		expect(isPlatformTenant({ slug: 'acme' })).toBe(false);
+		expect(isPlatformTenant({ slug: 'platform-2' })).toBe(false);
+		expect(isPlatformTenant({ slug: 'Platform' })).toBe(false);
+	});
+});
 
 describe('tenantDisplayName', () => {
 	it('prefers display_name when present', () => {

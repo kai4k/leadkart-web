@@ -4,6 +4,7 @@
 	import { canSuspend, canActivate } from '../view-models';
 	import { activateTenantMutation } from '../queries';
 	import { P, session } from '#lib/features/auth/index.ts';
+	import { isPlatformTenant } from '#lib/features/tenant/index.ts';
 	import type { TenantDto } from '../types';
 
 	type Props = {
@@ -19,7 +20,7 @@
 	const canManage = $derived(maySuspend || mayActivate);
 	/** Platform tenant is immutable — backend rejects lifecycle mutations via
 	 *  ensureNotPlatformTenant. Hide the buttons rather than let them 422. */
-	const isPlatformTenant = $derived(tenant.slug === 'platform');
+	const platformTenant = $derived(isPlatformTenant(tenant));
 
 	const activateMutation = activateTenantMutation();
 
@@ -40,7 +41,7 @@
 		>
 	</Card.Header>
 	<Card.Content class="cluster">
-		{#if isPlatformTenant}
+		{#if platformTenant}
 			<p class="caption text-muted-foreground">
 				Lifecycle mutations are locked for the platform tenant.
 			</p>

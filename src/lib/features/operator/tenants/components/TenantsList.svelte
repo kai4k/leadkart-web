@@ -12,7 +12,7 @@
 	import { DataTable } from '#lib/components/data/data-table/index.ts';
 	import { activateTenantMutation, tenantsListQuery } from '../queries';
 	import { canActivate, canSuspend } from '../view-models';
-	import { tenantStatus } from '#lib/features/tenant/index.ts';
+	import { isPlatformTenant, tenantStatus } from '#lib/features/tenant/index.ts';
 	import { P, session } from '#lib/features/auth/index.ts';
 	import { enterScopeMutation } from '#lib/features/operator/scope/index.ts';
 	import { confirmLeave } from '#lib/hooks/use-leave-guard.svelte.ts';
@@ -202,7 +202,7 @@
 			<Spinner size={14} />
 			<span class="caption text-muted-foreground">Opening…</span>
 		</div>
-	{:else if tenant.slug !== 'platform'}
+	{:else if !isPlatformTenant(tenant)}
 		<div class="cluster cluster-tight justify-end">
 			{#if canImpersonate}
 				<Button

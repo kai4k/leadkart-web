@@ -491,6 +491,11 @@ describe('code to copy map (Go codes with fixed user copy)', () => {
 		[422, 'manager_not_eligible', "This person can't be set as the manager."],
 		[422, 'role_parent_not_eligible', 'The parent role must be more senior.'],
 		[403, 'impersonation_not_allowed', 'Not available during an impersonation session.'],
+		[
+			422,
+			'impersonation_invalid',
+			"This session can't be started. LeadKart's own company can't be impersonated, and the reason must be at least 10 characters."
+		],
 		[401, 'incorrect_current_password', 'Your current password is incorrect.'],
 		[
 			403,

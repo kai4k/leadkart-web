@@ -19,6 +19,14 @@ import { defineStatusMap } from '#lib/utils/status.ts';
 import type { AdminAddress, Tenant, TenantStatus } from './types';
 
 /**
+ * LeadKart's own tenant (slug `platform`). Go refuses an impersonation session into it
+ * (422 `impersonation_invalid`) and its lifecycle is immutable, so screens hide those actions.
+ */
+export function isPlatformTenant(tenant: { slug: string }): boolean {
+	return tenant.slug === 'platform';
+}
+
+/**
  * Page-header / topbar title for a tenant. Prefers the friendly
  * display_name; falls back to legal_name when display is empty.
  * legal_name is always non-empty on the server side, so the fallback
