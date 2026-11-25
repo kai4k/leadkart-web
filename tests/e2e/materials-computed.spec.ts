@@ -289,7 +289,8 @@ test.describe('materials: computed styles on the built app', () => {
 					const cv = document.createElement('canvas').getContext('2d')!;
 					cv.fillStyle = c;
 					cv.fillRect(0, 0, 1, 1);
-					const [r, g, b] = cv.getImageData(0, 0, 1, 1).data.map((v) => {
+					// Array.from, not a typed-array map: a Uint8ClampedArray would round each channel's luminance to 0 or 1
+					const [r, g, b] = Array.from(cv.getImageData(0, 0, 1, 1).data, (v) => {
 						const s = v / 255;
 						return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 					});
