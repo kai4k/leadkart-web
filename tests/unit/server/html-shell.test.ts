@@ -42,14 +42,28 @@ describe('htmlShellHandle', () => {
 		const out = (await html(TEMPLATE)) ?? '';
 		expect(out).toContain('<html lang="en" data-layout="semibox"');
 		expect(out).toContain('data-mode="dark"');
+		expect(out).toContain('data-palette="iris"');
+		expect(out).toContain('data-dock="bottom"');
 		expect(out).not.toContain('%lk.html.attrs%');
+	});
+	it('a v1 cookie (a removed axis, an old colour) renders the defaults', async () => {
+		const v1 = btoa(JSON.stringify({ v: 1, layout: 'horizontal', colors: 'teal', mode: 'dark' }))
+			.replaceAll('+', '-')
+			.replaceAll('/', '_')
+			.replace(/=+$/, '');
+		const { event, html } = await run(v1);
+		expect(event.locals.preferences).toEqual(DEFAULT_PREFERENCES);
+		const out = (await html(TEMPLATE)) ?? '';
+		expect(out).toContain('data-layout="vertical"');
+		expect(out).toContain('data-palette="iris"');
+		expect(out).not.toContain('data-colors');
 	});
 	it('writes data-transparency from the validated enum, and glass for anything else', async () => {
 		for (const transparency of ['glass', 'reduced', 'off'] as const) {
 			const { html } = await run(encodePreferences({ ...DEFAULT_PREFERENCES, transparency }));
 			expect(await html(TEMPLATE)).toContain(`data-transparency="${transparency}"`);
 		}
-		const hostile = btoa(JSON.stringify({ v: 1, transparency: '"><script>alert(1)</script>' }))
+		const hostile = btoa(JSON.stringify({ v: 2, transparency: '"><script>alert(1)</script>' }))
 			.replaceAll('+', '-')
 			.replaceAll('/', '_')
 			.replace(/=+$/, '');

@@ -27,15 +27,14 @@ const b64url = (s: string) =>
 const prefs = (extra: Record<string, string>) =>
 	b64url(
 		JSON.stringify({
-			v: 1,
+			v: 2,
 			layout: 'vertical',
 			navType: 'default',
 			contentWidth: 'default',
 			sidebar: 'large',
 			mode: 'light',
-			colors: 'leadkart',
+			palette: 'iris',
 			sidebarColors: 'light',
-			darkPalette: 'default',
 			...extra
 		})
 	);

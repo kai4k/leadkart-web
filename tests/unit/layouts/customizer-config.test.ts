@@ -24,9 +24,11 @@ describe('the customizer config is the preference schema', () => {
 			'sidebar',
 			'mode',
 			'transparency',
-			'darkPalette',
 			'sidebarColors',
-			'colors'
+			'palette',
+			'dock',
+			'autoHideDock',
+			'density'
 		]);
 	});
 
@@ -74,17 +76,21 @@ describe('which groups are shown (L25)', () => {
 		const shown = keys({ ...DEFAULT_PREFERENCES, layout: 'horizontal' });
 		for (const k of ['navType', 'sidebar', 'sidebarColors']) expect(shown).not.toContain(k);
 		expect(shown).toContain('layout');
-		expect(shown).toContain('colors');
+		for (const k of ['palette', 'dock', 'autoHideDock', 'density']) expect(shown).toContain(k);
 	});
-	it('the default (light) hides the dark palette; dark and auto show it', () => {
-		expect(keys(DEFAULT_PREFERENCES)).not.toContain('darkPalette');
-		expect(keys({ ...DEFAULT_PREFERENCES, mode: 'dark' })).toContain('darkPalette');
-		expect(keys({ ...DEFAULT_PREFERENCES, mode: 'auto' })).toContain('darkPalette');
-		expect(keys({ ...DEFAULT_PREFERENCES, mode: 'black-white' })).not.toContain('darkPalette');
+	it('every group is shown in the default non-horizontal state', () => {
+		expect(keys(DEFAULT_PREFERENCES)).toEqual(CUSTOMIZER_GROUPS.map((g) => g.key));
 	});
-	it('every group is shown in the default non-horizontal state except the dark palette', () => {
-		expect(keys(DEFAULT_PREFERENCES)).toEqual(
-			CUSTOMIZER_GROUPS.map((g) => g.key).filter((k) => k !== 'darkPalette')
-		);
+	it('the palette is a swatch group; dock, auto-hide and density are wireframe groups', () => {
+		const kind = (k: string) => CUSTOMIZER_GROUPS.find((g) => g.key === k)!.kind;
+		expect(kind('palette')).toBe('swatch');
+		for (const k of ['dock', 'autoHideDock', 'density']) expect(kind(k)).toBe('wireframe');
+	});
+	it('no group offers a removed axis or value', () => {
+		const groupKeys = CUSTOMIZER_GROUPS.map((g) => g.key) as string[];
+		expect(groupKeys).not.toContain('darkPalette');
+		expect(groupKeys).not.toContain('colors');
+		const mode = CUSTOMIZER_GROUPS.find((g) => g.key === 'mode')!;
+		expect(mode.options.map((o) => o.value)).toEqual(['light', 'dark', 'auto']);
 	});
 });

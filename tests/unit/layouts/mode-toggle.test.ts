@@ -6,8 +6,7 @@ describe('quickModeTarget', () => {
 		expect(quickModeTarget('light')).toBe('dark');
 		expect(quickModeTarget('dark')).toBe('light');
 	});
-	it('does not overwrite auto or black-white (the caller opens the customizer)', () => {
+	it('does not overwrite auto (the caller opens the customizer)', () => {
 		expect(quickModeTarget('auto')).toBeNull();
-		expect(quickModeTarget('black-white')).toBeNull();
 	});
 });

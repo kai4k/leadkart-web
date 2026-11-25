@@ -4,8 +4,7 @@
 
 	/**
 	 * Toaster (svelte-sonner). Mounted ONCE in the root layout, which passes `theme` from the
-	 * preferences store (`auto` is sonner's `system`; `black-white` is the light palette under
-	 * the root grayscale filter). This primitive does not read the store: ui/ stays below features/.
+	 * preferences store (`auto` is sonner's `system`). This primitive does not read the store: ui/ stays below features/.
 	 */
 	let { theme = 'system', ...restProps }: SonnerProps = $props();
 </script>

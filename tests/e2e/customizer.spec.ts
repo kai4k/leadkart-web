@@ -15,9 +15,11 @@ const DEFAULTS = {
 	'data-content-width': 'default',
 	'data-sidebar': 'large',
 	'data-mode': 'light',
-	'data-colors': 'leadkart',
+	'data-palette': 'iris',
 	'data-sidebar-colors': 'light',
-	'data-dark-palette': 'default',
+	'data-dock': 'bottom',
+	'data-dock-autohide': 'off',
+	'data-density': 'comfortable',
 	'data-transparency': 'glass'
 } as const;
 
@@ -47,10 +49,10 @@ test.describe('theme customizer', () => {
 
 		await pick(page, 'Layout', 'Semibox');
 		await pick(page, 'Mode', 'Dark');
-		await pick(page, 'Primary colour', 'Teal');
+		await pick(page, 'Colour palette', 'Ocean');
 		expect(await attr(page, 'data-layout')).toBe('semibox');
 		expect(await attr(page, 'data-mode')).toBe('dark');
-		expect(await attr(page, 'data-colors')).toBe('teal');
+		expect(await attr(page, 'data-palette')).toBe('ocean');
 		expect(navigations).toEqual([]);
 
 		// the radios report the choice
@@ -62,7 +64,7 @@ test.describe('theme customizer', () => {
 		const tag = htmlTag(await (await page.request.get('/dashboard')).text());
 		expect(tag).toContain('data-layout="semibox"');
 		expect(tag).toContain('data-mode="dark"');
-		expect(tag).toContain('data-colors="teal"');
+		expect(tag).toContain('data-palette="ocean"');
 
 		await page.getByRole('button', { name: 'Reset to defaults' }).click();
 		for (const [name, value] of Object.entries(DEFAULTS))
@@ -82,8 +84,11 @@ test.describe('theme customizer', () => {
 			['Mode', 'Dark', 'data-mode', 'dark'],
 			['Transparency', 'Tinted', 'data-transparency', 'reduced'],
 			['Transparency', 'Solid', 'data-transparency', 'off'],
-			['Dark surfaces', 'Zinc', 'data-dark-palette', 'zinc'],
-			['Mode', 'Black and white', 'data-mode', 'black-white']
+			['Colour palette', 'Emerald', 'data-palette', 'emerald'],
+			['Dock position', 'Side', 'data-dock', 'side'],
+			['Hide the dock', 'Hide until needed', 'data-dock-autohide', 'on'],
+			['Density', 'Compact', 'data-density', 'compact'],
+			['Mode', 'Auto (follows your device)', 'data-mode', 'auto']
 		] as const;
 		for (const [group, option, name, value] of cases) {
 			await pick(page, group, option);
@@ -126,7 +131,7 @@ test.describe('theme customizer', () => {
 		await pick(page, 'Layout', 'Horizontal');
 		for (const g of ['Navigation style', 'Sidebar size', 'Sidebar colour'])
 			await expect(page.getByRole('radiogroup', { name: g })).toHaveCount(0);
-		await expect(page.getByRole('radiogroup', { name: 'Primary colour' })).toBeVisible();
+		await expect(page.getByRole('radiogroup', { name: 'Colour palette' })).toBeVisible();
 	});
 
 	test('the keyboard moves through a group, closes with Escape and returns focus to the trigger', async ({
@@ -134,14 +139,14 @@ test.describe('theme customizer', () => {
 	}) => {
 		await open(page);
 		const first = page
-			.getByRole('radiogroup', { name: 'Primary colour' })
-			.getByRole('radio', { name: 'LeadKart' });
+			.getByRole('radiogroup', { name: 'Colour palette' })
+			.getByRole('radio', { name: 'Iris' });
 		await first.focus();
 		await page.keyboard.press('ArrowRight');
 		await expect(
-			page.getByRole('radiogroup', { name: 'Primary colour' }).getByRole('radio', { name: 'Green' })
+			page.getByRole('radiogroup', { name: 'Colour palette' }).getByRole('radio', { name: 'Ocean' })
 		).toBeFocused();
-		expect(await attr(page, 'data-colors')).toBe('green');
+		expect(await attr(page, 'data-palette')).toBe('ocean');
 		await page.keyboard.press('Escape');
 		await expect(page.getByRole('dialog', { name: 'Customize' })).toBeHidden();
 		await expect(page.getByRole('button', { name: 'Open theme settings' })).toBeFocused();
@@ -156,7 +161,7 @@ test.describe('theme customizer', () => {
 		});
 		await open(page);
 		await pick(page, 'Mode', 'Dark');
-		await pick(page, 'Primary colour', 'Fuchsia');
+		await pick(page, 'Colour palette', 'Coral');
 		expect(violations).toEqual([]);
 		await expect(
 			page.getByRole('dialog', { name: 'Customize' }).locator('[role="alert"], [aria-live]')
@@ -220,8 +225,8 @@ test.describe('theme customizer on a phone', () => {
 						.length
 			);
 		expect(stops).toBe(1);
-		await pick(page, 'Primary colour', 'Amber');
-		expect(await attr(page, 'data-colors')).toBe('amber');
+		await pick(page, 'Colour palette', 'Emerald');
+		expect(await attr(page, 'data-palette')).toBe('emerald');
 		// no horizontal scroll inside the sheet
 		const overflow = await dialog.evaluate((el) => el.scrollWidth - el.clientWidth);
 		expect(overflow).toBeLessThanOrEqual(0);

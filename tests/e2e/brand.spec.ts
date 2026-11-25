@@ -88,10 +88,10 @@ test.describe('brand wiring', () => {
 
 		await page.getByRole('button', { name: 'Open theme settings' }).click();
 		await page
-			.getByRole('radiogroup', { name: 'Primary colour' })
-			.getByRole('radio', { name: 'Teal' })
+			.getByRole('radiogroup', { name: 'Colour palette' })
+			.getByRole('radio', { name: 'Ocean' })
 			.click();
-		await expect(page.locator('html')).toHaveAttribute('data-colors', 'teal');
+		await expect(page.locator('html')).toHaveAttribute('data-palette', 'ocean');
 		const after = await frameStroke(page);
 		expect(after).not.toBe(before);
 		const capsuleAfter = await capsuleStroke(page);

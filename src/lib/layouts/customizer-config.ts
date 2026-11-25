@@ -38,12 +38,14 @@ const KIND: Record<PreferenceKey, TileKind> = {
 	sidebar: 'wireframe',
 	mode: 'wireframe',
 	transparency: 'wireframe',
-	darkPalette: 'swatch',
+	dock: 'wireframe',
+	autoHideDock: 'wireframe',
+	density: 'wireframe',
 	sidebarColors: 'swatch',
-	colors: 'swatch'
+	palette: 'swatch'
 };
 
-/** Domiex order, minus direction (the app is LTR, plan D5). */
+/** Domiex order, minus direction (the app is LTR, plan D5), then the Pebble World axes. */
 const ORDER: readonly PreferenceKey[] = [
 	'layout',
 	'navType',
@@ -51,24 +53,24 @@ const ORDER: readonly PreferenceKey[] = [
 	'sidebar',
 	'mode',
 	'transparency',
-	'darkPalette',
 	'sidebarColors',
-	'colors'
+	'palette',
+	'dock',
+	'autoHideDock',
+	'density'
 ];
 
 /** Per L25: what is irrelevant in the current state is not offered. */
 const VISIBLE: Partial<Record<PreferenceKey, (p: Preferences) => boolean>> = {
 	navType: (p) => p.layout !== 'horizontal',
 	sidebar: (p) => p.layout !== 'horizontal',
-	sidebarColors: (p) => p.layout !== 'horizontal',
-	darkPalette: (p) => p.mode === 'dark' || p.mode === 'auto'
+	sidebarColors: (p) => p.layout !== 'horizontal'
 };
 
-/** The sidebar group says where Ctrl/Cmd+B works; the dark palette group says when it applies; the transparency group says what the page cannot read. */
+/** The sidebar group says where Ctrl/Cmd+B works; the transparency group says what the page cannot read. */
 const HINT: Partial<Record<PreferenceKey, string>> = {
 	sidebar: 'customizer.sidebar.hint',
-	transparency: 'customizer.transparency.hint',
-	darkPalette: 'customizer.darkPalette.hint'
+	transparency: 'customizer.transparency.hint'
 };
 
 /** Layout tiles that need room (their sidebar sits beside the page) are hidden below `lg`. */

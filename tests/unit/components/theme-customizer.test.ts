@@ -87,7 +87,10 @@ describe('the customizer sheet', () => {
 			'Mode',
 			'Transparency',
 			'Sidebar colour',
-			'Primary colour'
+			'Colour palette',
+			'Dock position',
+			'Hide the dock',
+			'Density'
 		]);
 		for (const g of groups()) {
 			const radios = g.querySelectorAll('[role="radio"]');
@@ -100,10 +103,10 @@ describe('the customizer sheet', () => {
 	it('names every radio by its visible label', async () => {
 		await render();
 		expect(
-			[...group('Primary colour').querySelectorAll('[role="radio"]')].map((r) =>
+			[...group('Colour palette').querySelectorAll('[role="radio"]')].map((r) =>
 				r.textContent?.trim()
 			)
-		).toEqual(['LeadKart', 'Green', 'Violet', 'Orange', 'Teal', 'Fuchsia', 'Lime', 'Amber']);
+		).toEqual(['Iris', 'Ocean', 'Coral', 'Emerald']);
 	});
 });
 
@@ -123,9 +126,12 @@ describe('every control writes one preference and the page re-skins at once', ()
 		['Navigation style', 'Pattern', 'navType', 'pattern', 'data-nav-type'],
 		['Content width', 'Fluid', 'contentWidth', 'fluid', 'data-content-width'],
 		['Sidebar size', 'Small (icons)', 'sidebar', 'small', 'data-sidebar'],
-		['Mode', 'Black and white', 'mode', 'black-white', 'data-mode'],
+		['Mode', 'Auto (follows your device)', 'mode', 'auto', 'data-mode'],
 		['Sidebar colour', 'Brand', 'sidebarColors', 'brand', 'data-sidebar-colors'],
-		['Primary colour', 'Teal', 'colors', 'teal', 'data-colors']
+		['Colour palette', 'Coral', 'palette', 'coral', 'data-palette'],
+		['Dock position', 'Side', 'dock', 'side', 'data-dock'],
+		['Hide the dock', 'Hide until needed', 'autoHideDock', 'on', 'data-dock-autohide'],
+		['Density', 'Compact', 'density', 'compact', 'data-density']
 	] as const)('%s: %s -> %s=%s on %s', async (g, label, key, value, attr) => {
 		await render();
 		await click(radio(g, label));
@@ -136,15 +142,11 @@ describe('every control writes one preference and the page re-skins at once', ()
 			expect(prefs[other]).toBe(DEFAULT_PREFERENCES[other]);
 	});
 
-	it('dark mode brings the dark-surface group in, and light takes it out again', async () => {
+	it('offers no dark-surface group in any mode (one neutral family)', async () => {
 		await render();
-		expect(groups().map(nameOf)).not.toContain('Dark surfaces');
 		await click(radio('Mode', 'Dark'));
-		expect(groups().map(nameOf)).toContain('Dark surfaces');
-		await click(radio('Dark surfaces', 'Zinc'));
-		expect(document.documentElement.getAttribute('data-dark-palette')).toBe('zinc');
-		await click(radio('Mode', 'Light'));
 		expect(groups().map(nameOf)).not.toContain('Dark surfaces');
+		expect(document.documentElement.hasAttribute('data-dark-palette')).toBe(false);
 	});
 
 	it('the horizontal layout hides navigation style, sidebar size and sidebar colour', async () => {
@@ -153,7 +155,7 @@ describe('every control writes one preference and the page re-skins at once', ()
 		const names = groups().map(nameOf);
 		for (const hidden of ['Navigation style', 'Sidebar size', 'Sidebar colour'])
 			expect(names).not.toContain(hidden);
-		expect(names).toContain('Primary colour');
+		expect(names).toContain('Colour palette');
 	});
 
 	it('a Medium sidebar chosen here is what the toggle returns to after collapse and expand', async () => {
@@ -181,9 +183,11 @@ describe('Reset to defaults', () => {
 			contentWidth: 'fluid',
 			sidebar: 'medium',
 			mode: 'dark',
-			colors: 'teal',
+			palette: 'coral',
 			sidebarColors: 'sky',
-			darkPalette: 'zinc'
+			dock: 'side',
+			autoHideDock: 'on',
+			density: 'compact'
 		});
 		const reset = [...dialog().querySelectorAll('button')].find(
 			(b) => b.textContent?.trim() === 'Reset to defaults'
@@ -197,7 +201,7 @@ describe('Reset to defaults', () => {
 			);
 		}
 		expect(radio('Layout', 'Vertical').getAttribute('aria-checked')).toBe('true');
-		expect(radio('Primary colour', 'LeadKart').getAttribute('aria-checked')).toBe('true');
+		expect(radio('Colour palette', 'Iris').getAttribute('aria-checked')).toBe('true');
 	});
 });
 
@@ -212,8 +216,8 @@ describe('accessibility and tokens', () => {
 		await render();
 		expect(dialog().querySelectorAll('[style]').length).toBe(0);
 		const swatches = dialog().querySelectorAll('[data-swatch]');
-		expect(swatches.length).toBeGreaterThanOrEqual(13);
-		expect(dialog().querySelector('[data-swatch="colors-teal"]')).not.toBeNull();
+		expect(swatches.length).toBeGreaterThanOrEqual(9);
+		expect(dialog().querySelector('[data-swatch="palette-coral"]')).not.toBeNull();
 		expect(dialog().querySelector('[data-preview="layout-semibox"]')).not.toBeNull();
 	});
 
@@ -292,7 +296,7 @@ describe('accessibility and tokens', () => {
 
 	it('arrow keys move through a group (roving focus: one tab stop per group)', async () => {
 		await render();
-		const radios = [...group('Primary colour').querySelectorAll<HTMLElement>('[role="radio"]')];
+		const radios = [...group('Colour palette').querySelectorAll<HTMLElement>('[role="radio"]')];
 		expect(radios.filter((r) => r.tabIndex === 0)).toHaveLength(1);
 		expect(radios.filter((r) => r.tabIndex === -1)).toHaveLength(radios.length - 1);
 	});

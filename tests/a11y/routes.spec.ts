@@ -63,18 +63,20 @@ const b64url = (s: string) =>
 		.replaceAll('+', '-')
 		.replaceAll('/', '_')
 		.replace(/=+$/, '');
-const uiCookie = (mode: string, colors: string, transparency: string) =>
+const uiCookie = (mode: string, palette: string, transparency: string) =>
 	b64url(
 		JSON.stringify({
-			v: 1,
+			v: 2,
 			layout: 'vertical',
 			navType: 'default',
 			contentWidth: 'default',
 			sidebar: 'large',
 			mode,
-			colors,
+			palette,
 			sidebarColors: 'light',
-			darkPalette: 'default',
+			dock: 'bottom',
+			autoHideDock: 'off',
+			density: 'comfortable',
 			transparency
 		})
 	);
@@ -83,11 +85,11 @@ const uiCookie = (mode: string, colors: string, transparency: string) =>
 // colours, so Solid says nothing about it and axe is not run under it (contrast is the user agent's there);
 // material-fallbacks.spec.ts asserts forced colours on computed styles instead (a 1px solid border, an opaque fill).
 const SCHEMES = [
-	{ name: 'light', mode: 'light', colors: 'leadkart', transparency: 'glass' },
-	{ name: 'dark', mode: 'dark', colors: 'leadkart', transparency: 'glass' },
-	{ name: 'green primary', mode: 'light', colors: 'green', transparency: 'glass' },
-	{ name: 'light solid', mode: 'light', colors: 'leadkart', transparency: 'off' },
-	{ name: 'dark solid', mode: 'dark', colors: 'leadkart', transparency: 'off' }
+	{ name: 'light', mode: 'light', palette: 'iris', transparency: 'glass' },
+	{ name: 'dark', mode: 'dark', palette: 'iris', transparency: 'glass' },
+	{ name: 'emerald palette', mode: 'light', palette: 'emerald', transparency: 'glass' },
+	{ name: 'light solid', mode: 'light', palette: 'iris', transparency: 'off' },
+	{ name: 'dark solid', mode: 'dark', palette: 'iris', transparency: 'off' }
 ] as const;
 
 for (const scheme of SCHEMES) {
@@ -96,7 +98,7 @@ for (const scheme of SCHEMES) {
 			await context.addCookies([
 				{
 					name: 'lk_ui',
-					value: uiCookie(scheme.mode, scheme.colors, scheme.transparency),
+					value: uiCookie(scheme.mode, scheme.palette, scheme.transparency),
 					url: 'http://localhost:4173'
 				}
 			]);

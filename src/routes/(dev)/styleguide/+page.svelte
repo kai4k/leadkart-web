@@ -171,18 +171,17 @@
 	<section aria-labelledby="theme-heading" class="stack stack-loose">
 		<h2 id="theme-heading" class="h2">Theme picker</h2>
 		<p class="body-sm text-muted-foreground">
-			8 primary colour choices. <strong>LeadKart</strong> is the default (logo wordmark). Picking
-			re-skins the primary tokens instantly via a <code>&lt;html data-colors="X"&gt;</code> attribute
-			swap.
+			4 palettes. <strong>Iris</strong> is the default (logo). Picking re-skins the primary tokens
+			instantly via a <code>&lt;html data-palette="X"&gt;</code> attribute swap.
 		</p>
 		<div class="flex flex-wrap gap-2">
-			{#each PREFERENCE_VALUES.colors as id (id)}
+			{#each PREFERENCE_VALUES.palette as id (id)}
 				<button
 					type="button"
-					onclick={() => prefs.set({ colors: id })}
+					onclick={() => prefs.set({ palette: id })}
 					class="interactive label border-border flex items-center gap-2 rounded-md border px-3 py-2"
-					class:ring-2={prefs.colors === id}
-					aria-pressed={prefs.colors === id}
+					class:ring-2={prefs.palette === id}
+					aria-pressed={prefs.palette === id}
 				>
 					{id}
 				</button>

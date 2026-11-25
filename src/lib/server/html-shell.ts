@@ -13,7 +13,7 @@ const LANG_PLACEHOLDER = '%lk.html.lang%';
  * Fills the two `<html>` placeholders in app.html, so the first paint is already in the user's
  * layout, colours, mode and language (no script, no flash):
  *
- * - `%lk.html.attrs%`: the eight `data-*` preference attributes from the `lk_ui` cookie.
+ * - `%lk.html.attrs%`: the `data-*` preference attributes from the `lk_ui` cookie.
  * - `%lk.html.lang%`: the request's language, negotiated from `Accept-Language`.
  *
  * Both are request text. The cookie is decoded against the enum (see codec.ts) and the language is

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * The nine customiser axes, one list per axis. This is the only place that knows the legal
+ * The eleven customiser axes, one list per axis. This is the only place that knows the legal
  * values: the cookie decoder, the store, the `<html data-*>` writer and the customiser UI all read
  * it, so nothing that reaches the document can be anything but a member of these lists.
  */
@@ -10,10 +10,13 @@ export const PREFERENCE_VALUES = {
 	navType: ['default', 'floating', 'boxed', 'pattern'],
 	contentWidth: ['default', 'fluid'],
 	sidebar: ['large', 'medium', 'small'],
-	mode: ['light', 'dark', 'auto', 'black-white'],
-	colors: ['leadkart', 'green', 'violet', 'orange', 'teal', 'fuchsia', 'lime', 'amber'],
+	mode: ['light', 'dark', 'auto'],
+	palette: ['iris', 'ocean', 'coral', 'emerald'],
 	sidebarColors: ['light', 'dark', 'brand', 'purple', 'sky'],
-	darkPalette: ['default', 'zinc', 'stone', 'neutral', 'gray'],
+	/** where the one dock sits */
+	dock: ['bottom', 'side'],
+	autoHideDock: ['off', 'on'],
+	density: ['comfortable', 'compact'],
 	/** how see-through bars and panels are: glass (the default), reduced ("Tinted"), off ("Solid") */
 	transparency: ['glass', 'reduced', 'off']
 } as const;
@@ -29,9 +32,11 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
 	contentWidth: 'default',
 	sidebar: 'large',
 	mode: 'light',
-	colors: 'leadkart',
+	palette: 'iris',
 	sidebarColors: 'light',
-	darkPalette: 'default',
+	dock: 'bottom',
+	autoHideDock: 'off',
+	density: 'comfortable',
 	transparency: 'glass'
 });
 
@@ -42,9 +47,11 @@ export const PREFERENCE_ATTRIBUTES: Readonly<Record<PreferenceKey, string>> = Ob
 	contentWidth: 'data-content-width',
 	sidebar: 'data-sidebar',
 	mode: 'data-mode',
-	colors: 'data-colors',
+	palette: 'data-palette',
 	sidebarColors: 'data-sidebar-colors',
-	darkPalette: 'data-dark-palette',
+	dock: 'data-dock',
+	autoHideDock: 'data-dock-autohide',
+	density: 'data-density',
 	transparency: 'data-transparency'
 });
 
@@ -70,9 +77,11 @@ export const preferencesSchema = z
 		contentWidth: axis('contentWidth'),
 		sidebar: axis('sidebar'),
 		mode: axis('mode'),
-		colors: axis('colors'),
+		palette: axis('palette'),
 		sidebarColors: axis('sidebarColors'),
-		darkPalette: axis('darkPalette'),
+		dock: axis('dock'),
+		autoHideDock: axis('autoHideDock'),
+		density: axis('density'),
 		transparency: axis('transparency')
 	})
 	.catch(() => ({ ...DEFAULT_PREFERENCES })) as unknown as z.ZodType<Preferences>;

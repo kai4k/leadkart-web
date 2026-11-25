@@ -16,9 +16,12 @@ export const PREFERENCES_COOKIE_MAX_AGE = 31_536_000;
 const MAX_RAW_LENGTH = 400;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
-/** base64url(JSON.stringify({ v: 1, ...p })): ASCII only, so btoa needs no byte conversion. */
+/** Bump when an axis or value is removed or renamed: any other version decodes to defaults. */
+export const PREFERENCES_COOKIE_VERSION = 2;
+
+/** base64url(JSON.stringify({ v, ...p })): ASCII only, so btoa needs no byte conversion. */
 export function encodePreferences(p: Preferences): string {
-	return btoa(JSON.stringify({ v: 1, ...p }))
+	return btoa(JSON.stringify({ v: PREFERENCES_COOKIE_VERSION, ...p }))
 		.replaceAll('+', '-')
 		.replaceAll('/', '_')
 		.replace(/=+$/, '');
@@ -34,13 +37,17 @@ export function decodePreferences(raw: string | null | undefined): Preferences {
 	try {
 		const b64 = raw.replaceAll('-', '+').replaceAll('_', '/');
 		const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-		return preferencesSchema.parse(JSON.parse(atob(padded)));
+		const payload: unknown = JSON.parse(atob(padded));
+		if ((payload as { v?: unknown } | null)?.v !== PREFERENCES_COOKIE_VERSION) {
+			return { ...DEFAULT_PREFERENCES };
+		}
+		return preferencesSchema.parse(payload);
 	} catch {
 		return { ...DEFAULT_PREFERENCES };
 	}
 }
 
-/** The nine `data-*` pairs in schema order. Every value comes from the enum, never from input. */
+/** The `data-*` pairs in schema order. Every value comes from the enum, never from input. */
 export function htmlAttributes(p: Preferences): string {
 	return PREFERENCE_KEYS.map((key) => `${PREFERENCE_ATTRIBUTES[key]}="${p[key]}"`).join(' ');
 }

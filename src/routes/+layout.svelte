@@ -25,7 +25,7 @@
 	// svelte-ignore state_referenced_locally
 	const preferences = createPreferences(data.preferences ?? DEFAULT_PREFERENCES);
 	setPreferences(preferences);
-	// `auto` follows the OS (sonner's `system`); `black-white` is the light palette under the filter.
+	// `auto` follows the OS (sonner's `system`).
 	const toastTheme = $derived(
 		preferences.mode === 'dark' ? 'dark' : preferences.mode === 'auto' ? 'system' : 'light'
 	);

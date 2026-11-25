@@ -751,8 +751,7 @@
 			"title": "Mode",
 			"light": "Light",
 			"dark": "Dark",
-			"auto": "Auto (follows your device)",
-			"black-white": "Black and white"
+			"auto": "Auto (follows your device)"
 		},
 		"transparency": {
 			"title": "Transparency",
@@ -760,15 +759,6 @@
 			"glass": "Glass",
 			"reduced": "Tinted",
 			"off": "Solid"
-		},
-		"darkPalette": {
-			"title": "Dark surfaces",
-			"hint": "Used in dark and auto mode.",
-			"default": "Default",
-			"zinc": "Zinc",
-			"stone": "Stone",
-			"neutral": "Neutral",
-			"gray": "Gray"
 		},
 		"sidebarColors": {
 			"title": "Sidebar colour",
@@ -778,16 +768,27 @@
 			"purple": "Purple",
 			"sky": "Sky"
 		},
-		"colors": {
-			"title": "Primary colour",
-			"leadkart": "LeadKart",
-			"green": "Green",
-			"violet": "Violet",
-			"orange": "Orange",
-			"teal": "Teal",
-			"fuchsia": "Fuchsia",
-			"lime": "Lime",
-			"amber": "Amber"
+		"palette": {
+			"title": "Colour palette",
+			"iris": "Iris",
+			"ocean": "Ocean",
+			"coral": "Coral",
+			"emerald": "Emerald"
+		},
+		"dock": {
+			"title": "Dock position",
+			"bottom": "Bottom",
+			"side": "Side"
+		},
+		"autoHideDock": {
+			"title": "Hide the dock",
+			"off": "Always show",
+			"on": "Hide until needed"
+		},
+		"density": {
+			"title": "Density",
+			"comfortable": "Comfortable",
+			"compact": "Compact"
 		}
 	},
 	"reasonConfirm": {

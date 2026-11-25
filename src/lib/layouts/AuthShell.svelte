@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * AuthShell: the frame of every signed-out page. The surface follows the user's mode and primary
-	 * like every other page (`<html data-mode data-colors>` from the SSR cookie): nothing is locked to
+	 * like every other page (`<html data-mode data-palette>` from the SSR cookie): nothing is locked to
 	 * light values.
 	 *
 	 *   <div frame>

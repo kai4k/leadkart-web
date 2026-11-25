@@ -94,33 +94,20 @@ test.describe('@visual matrix: structural axes on the anchor routes', () => {
 				page.emulateMedia({ colorScheme: 'dark' })
 			);
 		});
-		test(`${anchor.name}: mode black-white`, async ({ page }) => {
-			await shoot(page, anchor, { mode: 'black-white' }, `${anchor.name}-mode-black-white`);
-		});
 	}
 });
 
 test.describe('@visual matrix: colour axes on /dashboard', () => {
 	test.use({ viewport: { width: 1280, height: 800 } });
 
-	for (const value of others('colors')) {
-		test(`colors ${value}`, async ({ page }) => {
-			await shoot(page, DASHBOARD, { colors: value }, `dashboard-colors-${value}`);
+	for (const value of others('palette')) {
+		test(`palette ${value}`, async ({ page }) => {
+			await shoot(page, DASHBOARD, { palette: value }, `dashboard-palette-${value}`);
 		});
 	}
 	for (const value of others('sidebarColors')) {
 		test(`sidebar colors ${value}`, async ({ page }) => {
 			await shoot(page, DASHBOARD, { sidebarColors: value }, `dashboard-sidebar-colors-${value}`);
-		});
-	}
-	for (const value of others('darkPalette')) {
-		test(`dark palette ${value}`, async ({ page }) => {
-			await shoot(
-				page,
-				DASHBOARD,
-				{ mode: 'dark', darkPalette: value },
-				`dashboard-dark-palette-${value}`
-			);
 		});
 	}
 	for (const value of others('transparency')) {

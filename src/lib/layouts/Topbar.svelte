@@ -35,7 +35,7 @@
 		}
 	}
 
-	// light <-> dark; in `auto` / `black-white` the choice is not overwritten: open the customizer.
+	// light <-> dark; in `auto` the choice is not overwritten: open the customizer.
 	function toggleMode() {
 		const next = quickModeTarget(prefs.mode);
 		if (next) prefs.set({ mode: next });

@@ -16,15 +16,17 @@ const b64url = (s: string) =>
 
 const SEMIBOX_DARK = b64url(
 	JSON.stringify({
-		v: 1,
+		v: 2,
 		layout: 'semibox',
 		navType: 'default',
 		contentWidth: 'default',
 		sidebar: 'large',
 		mode: 'dark',
-		colors: 'leadkart',
+		palette: 'coral',
 		sidebarColors: 'light',
-		darkPalette: 'default'
+		dock: 'side',
+		autoHideDock: 'on',
+		density: 'compact'
 	})
 );
 
@@ -45,13 +47,60 @@ test.describe('preferences at SSR', () => {
 		const tag = htmlTag(await res.text());
 		expect(tag).toContain('data-layout="semibox"');
 		expect(tag).toContain('data-mode="dark"');
+		expect(tag).toContain('data-palette="coral"');
+		expect(tag).toContain('data-dock="side"');
+		expect(tag).toContain('data-dock-autohide="on"');
+		expect(tag).toContain('data-density="compact"');
 		// a cookie written before the Transparency axis existed decodes to the default level
 		expect(tag).toContain('data-transparency="glass"');
+		expect(tag).not.toContain('data-colors');
+		expect(tag).not.toContain('data-dark-palette');
 	});
+
+	test('no cookie renders the Pebble World defaults: palette iris, dock bottom', async ({
+		page
+	}) => {
+		const tag = htmlTag(await (await page.request.get('/signin')).text());
+		expect(tag).toContain('data-palette="iris"');
+		expect(tag).toContain('data-dock="bottom"');
+		expect(tag).toContain('data-dock-autohide="off"');
+		expect(tag).toContain('data-density="comfortable"');
+	});
+
+	for (const [name, stale] of [
+		['a v1 cookie', { v: 1, layout: 'horizontal', colors: 'teal', mode: 'dark' }],
+		['a removed layout value', { v: 2, layout: 'sideways', mode: 'dark' }],
+		['a removed colour axis value', { v: 2, colors: 'teal', palette: 'teal', mode: 'dark' }],
+		['the removed black-white mode', { v: 2, mode: 'black-white', palette: 'ocean' }]
+	] as const) {
+		test(`a stale cookie (${name}) gives defaults per field and valid attributes`, async ({
+			page
+		}) => {
+			await page.context().addCookies([
+				{
+					name: 'lk_ui',
+					value: b64url(JSON.stringify(stale)),
+					url: 'http://localhost:4173'
+				}
+			]);
+			const res = await page.request.get('/signin');
+			expect(res.status()).toBe(200);
+			const tag = htmlTag(await res.text());
+			// v1 drops everything; a v2 payload keeps what is still legal and drops the rest, field by field
+			const kept = 'v' in stale && stale.v === 2 ? stale : {};
+			const mode = 'mode' in kept && kept.mode === 'dark' ? 'dark' : 'light';
+			const palette = 'palette' in kept && kept.palette === 'ocean' ? 'ocean' : 'iris';
+			expect(tag).toContain(`data-mode="${mode}"`);
+			expect(tag).toContain(`data-palette="${palette}"`);
+			expect(tag).toContain('data-layout="vertical"');
+			expect(tag).not.toContain('data-colors');
+			expect(tag).not.toContain('black-white');
+		});
+	}
 
 	test('transparency "off" in the cookie is rendered onto <html>', async ({ page }) => {
 		const off = b64url(
-			JSON.stringify({ v: 1, layout: 'vertical', mode: 'light', transparency: 'off' })
+			JSON.stringify({ v: 2, layout: 'vertical', mode: 'light', transparency: 'off' })
 		);
 		await page.context().addCookies([{ name: 'lk_ui', value: off, url: 'http://localhost:4173' }]);
 		const tag = htmlTag(await (await page.request.get('/signin')).text());
@@ -62,7 +111,7 @@ test.describe('preferences at SSR', () => {
 	});
 
 	test('a hostile transparency value renders glass and injects no markup', async ({ page }) => {
-		const hostile = b64url(JSON.stringify({ v: 1, transparency: '"><script>alert(2)</script>' }));
+		const hostile = b64url(JSON.stringify({ v: 2, transparency: '"><script>alert(2)</script>' }));
 		await page
 			.context()
 			.addCookies([{ name: 'lk_ui', value: hostile, url: 'http://localhost:4173' }]);
@@ -116,7 +165,7 @@ test.describe('preferences at SSR', () => {
 
 /**
  * GD15 / plan G9 step 0: Safari 27.3's Adaptive Dark Mode may re-colour a light page that has not opted out, which would
- * re-colour the gated light theme. The light and black-white modes declare `color-scheme: only light` (Chrome serializes it `light only`); auto keeps
+ * re-colour the gated light theme. The light mode declares `color-scheme: only light` (Chrome serializes it `light only`); auto keeps
  * `light dark` and dark keeps `dark`. The `light-dark()` lowering is unaffected (the build still emits one value
  * per mode): the page paints the same colours in every mode, which tokens-parity asserts.
  */
@@ -126,12 +175,11 @@ test.describe('color-scheme opt-out', () => {
 	});
 	for (const [mode, expected] of [
 		['light', 'light only'],
-		['black-white', 'light only'],
 		['auto', 'light dark'],
 		['dark', 'dark']
 	] as const) {
 		test(`mode=${mode} computes color-scheme "${expected}"`, async ({ page }) => {
-			const cookie = b64url(JSON.stringify({ v: 1, layout: 'vertical', mode }));
+			const cookie = b64url(JSON.stringify({ v: 2, layout: 'vertical', mode }));
 			await page
 				.context()
 				.addCookies([{ name: 'lk_ui', value: cookie, url: 'http://localhost:4173' }]);
