@@ -69,7 +69,23 @@
 
 <script lang="ts">
 	import { _ } from 'svelte-i18n';
-	import { Check, ChevronDown, Icon } from '#lib/icons/index.ts';
+	import {
+		AlertCircle,
+		Check,
+		CheckCircle2,
+		ChevronDown,
+		Icon,
+		Info,
+		XCircle
+	} from '#lib/icons/index.ts';
+
+	/** one shape per status, the same icons as Alert: success check, warning alert, danger cross, info i */
+	const STATUS_GLYPH: Partial<Record<BadgeVariant, typeof Info>> = {
+		success: CheckCircle2,
+		warning: AlertCircle,
+		danger: XCircle,
+		info: Info
+	};
 	import { cn } from '#lib/utils/cn.ts';
 	import * as Dropdown from './dropdown-menu';
 
@@ -90,10 +106,22 @@
 	const currentLabel = $derived(currentOption?.label ?? value);
 </script>
 
-{#snippet glyph()}
-	<!-- the status dot: decorative, in the pill's own ink (the word carries the meaning) -->
-	<span data-slot="status-glyph" aria-hidden="true" class="size-2 shrink-0 rounded-full bg-current"
-	></span>
+{#snippet glyph(variant: BadgeVariant)}
+	<!-- a shape per status (the icons Alert uses), in the pill's own ink: decorative, the word carries the meaning;
+	     neutral and brand keep the plain dot -->
+	{@const GlyphIcon = STATUS_GLYPH[variant]}
+	<span
+		data-slot="status-glyph"
+		data-glyph={GlyphIcon ? variant : 'dot'}
+		aria-hidden="true"
+		class="inline-flex shrink-0"
+	>
+		{#if GlyphIcon}
+			<Icon icon={GlyphIcon} size="xs" />
+		{:else}
+			<span class="size-2 rounded-full bg-current"></span>
+		{/if}
+	</span>
 {/snippet}
 
 {#if isInteractive && options}
@@ -109,7 +137,7 @@
 		>
 			<Badge variant={currentVariant}>
 				<span class="inline-flex items-center gap-1">
-					{@render glyph()}<span>{currentLabel}</span>
+					{@render glyph(currentVariant)}<span>{currentLabel}</span>
 					<Icon icon={ChevronDown} size="xs" />
 				</span>
 			</Badge>
@@ -131,6 +159,6 @@
 	</Dropdown.Root>
 {:else}
 	<span class={className}>
-		<Badge variant={currentVariant}>{@render glyph()}{currentLabel}</Badge>
+		<Badge variant={currentVariant}>{@render glyph(currentVariant)}{currentLabel}</Badge>
 	</span>
 {/if}

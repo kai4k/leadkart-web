@@ -77,7 +77,7 @@
 			hint: 'dashboard.tile.tenantsActive.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: Activity,
-			accent: 'success',
+			accent: 'primary',
 			value: () => (stats ? stats.tenants_active : '—')
 		},
 		{
@@ -85,7 +85,7 @@
 			hint: 'dashboard.tile.tenantsSuspended.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: Ban,
-			accent: 'warning',
+			accent: 'neutral',
 			value: () => (stats ? stats.tenants_suspended : '—')
 		},
 		{
@@ -101,7 +101,7 @@
 			hint: 'dashboard.tile.membershipsActive.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: UserCheck,
-			accent: 'success',
+			accent: 'primary',
 			value: () => (stats ? stats.memberships_active : '—')
 		}
 	];
@@ -119,7 +119,7 @@
 			hint: 'dashboard.tile.verificationQueue.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: ClipboardCheck,
-			accent: 'warning'
+			accent: 'neutral'
 		},
 		{
 			label: 'dashboard.tile.marketplaceInventory.label',
@@ -133,7 +133,7 @@
 			hint: 'dashboard.tile.impersonationSessions.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: UserCog,
-			accent: 'danger'
+			accent: 'neutral'
 		}
 	];
 </script>

@@ -54,7 +54,7 @@
 			hint: 'dashboard.tile.teamActive.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: Users,
-			accent: 'success'
+			accent: 'neutral'
 		},
 		{
 			label: 'dashboard.tile.leadsThisWeek.label',
@@ -68,7 +68,7 @@
 			hint: 'dashboard.tile.conversionThisMonth.hint',
 			timeframe: 'dashboard.timeframe.thisMonth',
 			icon: TrendingUp,
-			accent: 'success'
+			accent: 'primary'
 		},
 		{
 			label: 'dashboard.tile.openOrders.label',
@@ -82,7 +82,7 @@
 			hint: 'dashboard.tile.pendingDispatches.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: Truck,
-			accent: 'warning'
+			accent: 'neutral'
 		},
 		{
 			label: 'dashboard.tile.inventoryAlerts.label',

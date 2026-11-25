@@ -76,9 +76,10 @@ const EXPECTED: Record<string, Measured> = {
 			borderRadius: '9999px' // capsule (plan G7, Q1)
 		},
 		card: {
+			// the card is clay (Task 7): the card fill, a transparent solid edge, --radius-card (1.25rem)
 			backgroundColor: 'oklch(1 0 0)',
-			borderColor: 'oklch(0.92 0.01 268)',
-			borderRadius: '16px'
+			borderColor: 'rgba(0, 0, 0, 0)',
+			borderRadius: '20px'
 		}
 	},
 	'/signin': {

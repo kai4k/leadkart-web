@@ -196,6 +196,7 @@
 			"remove": "Remove {label} filter: {value}"
 		},
 		"statusPill": "Status: {status}. Click to change.",
+		"urgent": "urgent",
 		"upload": {
 			"removeFile": "Remove file"
 		}

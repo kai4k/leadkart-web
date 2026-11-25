@@ -9,6 +9,10 @@
 	 * brand`, plus the counts `count` (neutral) and `count-urgent` (danger). Each pair is checked by
 	 * the token contrast gate.
 	 */
+	/** what the two counts share; they differ only in fill and ink */
+	const COUNT =
+		'h-5 min-w-5 justify-center rounded-full border-(--solid-edge) px-1.5 py-0 font-bold tabular-nums shadow-(--shadow-clay-sm)';
+
 	export const badgeVariants = cva(
 		[
 			'inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2 py-0.5 text-xs leading-tight font-medium whitespace-nowrap',
@@ -28,10 +32,8 @@
 					danger: 'bg-destructive-soft text-destructive',
 					brand: 'bg-primary-soft text-primary-text',
 					// a count on a pebble or tab: neutral, never a status colour; red (`count-urgent`) means overdue/at-risk only
-					count:
-						'h-5 min-w-5 justify-center rounded-full border-(--solid-edge) bg-badge-count px-1.5 py-0 font-bold text-badge-count-foreground tabular-nums shadow-(--shadow-clay-sm)',
-					'count-urgent':
-						'h-5 min-w-5 justify-center rounded-full border-(--solid-edge) bg-destructive px-1.5 py-0 font-bold text-destructive-foreground tabular-nums shadow-(--shadow-clay-sm)'
+					count: [COUNT, 'bg-badge-count text-badge-count-foreground'],
+					'count-urgent': [COUNT, 'bg-destructive text-destructive-foreground']
 				},
 				// `sm` is the compact badge of dense lists, status columns and card corners: tighter
 				// inline padding, same 12px type (nothing a person reads is under 12px).
@@ -49,19 +51,30 @@
 	export type BadgeSize = NonNullable<BadgeVariants['size']>;
 	export type BadgeProps = WithElementRef<HTMLAttributes<HTMLSpanElement>> &
 		WithElementRef<HTMLAnchorAttributes> &
-		BadgeVariants;
+		BadgeVariants & {
+			/** the name of a count ("12 unread", "3 overdue"): the number alone says nothing to a screen reader; an urgent count's wording carries the urgency */
+			label?: string;
+		};
 </script>
 
 <script lang="ts">
+	import { _ } from 'svelte-i18n';
+	import { Icon, TriangleAlert } from '#lib/icons/index.ts';
+
 	let {
 		ref = $bindable(null),
 		href,
 		class: className,
 		variant = 'neutral',
 		size = 'default',
+		label,
 		children,
 		...restProps
 	}: BadgeProps = $props();
+	const isCount = $derived(variant === 'count' || variant === 'count-urgent');
+	const urgent = $derived(variant === 'count-urgent');
+	// an urgent count always says so in words, even when the caller's label does not
+	const name = $derived(urgent && !label ? $_('common.urgent') : label);
 </script>
 
 <svelte:element
@@ -72,5 +85,12 @@
 	class={cn(badgeVariants({ variant, size }), className)}
 	{...restProps}
 >
-	{@render children?.()}
+	{#if isCount}
+		<!-- urgency is a glyph and a word, not only the red fill -->
+		{#if urgent}<Icon icon={TriangleAlert} size="xs" />{/if}
+		<span aria-hidden={name ? 'true' : undefined}>{@render children?.()}</span>
+		{#if name}<span class="sr-only">{name}</span>{/if}
+	{:else}
+		{@render children?.()}
+	{/if}
 </svelte:element>

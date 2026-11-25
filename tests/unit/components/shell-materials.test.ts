@@ -61,13 +61,19 @@ describe('the shell on materials', () => {
 		);
 	});
 
-	it('the context banners, the sticky table header, the tooltip and typed toasts take no material (GD12)', () => {
+	it('the tooltip is milk (spec 7.1: every overlay but the glass ones is milk)', () => {
+		const tooltip = src('src/lib/components/ui/tooltip/tooltip-content.svelte');
+		expect(tooltip).toContain('material-milk');
+		expect(tooltip).not.toMatch(/material-(bar|glass|sidebar)/);
+		expect(tooltip).not.toContain('bg-foreground');
+	});
+
+	it('the context banners, the sticky table header and typed toasts take no material (GD12)', () => {
 		for (const p of [
 			'src/lib/layouts/ContextBanner.svelte',
 			'src/lib/layouts/TenantContextBanner.svelte',
 			'src/lib/features/operator/impersonation/components/ImpersonationBanner.svelte',
-			'src/lib/components/ui/table/table-header.svelte',
-			'src/lib/components/ui/tooltip/tooltip-content.svelte'
+			'src/lib/components/ui/table/table-header.svelte'
 		])
 			expect(src(p), p).not.toMatch(/material-(bar|glass|milk|sidebar)/);
 		// the typed toast keeps its soft fill: the neutral toast is the only one the material is applied to

@@ -47,19 +47,43 @@ describe('Badge', () => {
 		expect(cls()).not.toContain('px-2 ');
 	});
 	it('variant="count" is the neutral count: card fill, readable text, no status colour', () => {
-		render({ variant: 'count', 'aria-label': '12 unread' });
+		render({ variant: 'count', label: '12 unread' });
 		expect(cls()).toContain('bg-badge-count');
 		expect(cls()).toContain('text-badge-count-foreground');
 		expect(cls()).not.toMatch(/destructive|success|warning|info/);
-		const el = target.querySelector('[data-slot="badge"]')!;
-		expect(el.textContent).toBe('Active');
-		expect(el.getAttribute('aria-hidden')).toBeNull();
-		expect(el.getAttribute('aria-label')).toBe('12 unread');
 	});
-	it('variant="count-urgent" uses the danger tokens', () => {
-		render({ variant: 'count-urgent' });
+	it('a count is named for screen readers: the label is read, the bare number is hidden', () => {
+		render({ variant: 'count', label: '12 unread' });
+		const el = target.querySelector('[data-slot="badge"]')!;
+		expect(el.querySelector('.sr-only')?.textContent).toBe('12 unread');
+		expect(el.querySelector('[aria-hidden="true"]')?.textContent).toBe('Active');
+		expect(el.querySelector('svg')).toBeNull();
+	});
+	it('variant="count-urgent" uses the danger tokens, a glyph and a word: colour is not the only cue', () => {
+		render({ variant: 'count-urgent', label: '3 overdue' });
 		expect(cls()).toContain('bg-destructive');
 		expect(cls()).toContain('text-destructive-foreground');
+		const el = target.querySelector('[data-slot="badge"]')!;
+		expect(el.querySelector('svg')).not.toBeNull();
+		expect(el.querySelector('.sr-only')?.textContent).toBe('3 overdue');
+	});
+	it('an urgent count with no label still says urgent in words', () => {
+		render({ variant: 'count-urgent' });
+		expect(target.querySelector('.sr-only')?.textContent).toBe('urgent');
+	});
+	it('the two counts share one base: they differ only in fill and ink', () => {
+		render({ variant: 'count' });
+		const a = cls()
+			.split(/\s+/)
+			.filter((c) => !/badge-count|^bg-|^text-/.test(c));
+		unmount(component!);
+		component = undefined;
+		target.remove();
+		render({ variant: 'count-urgent' });
+		const b = cls()
+			.split(/\s+/)
+			.filter((c) => !/destructive/.test(c) && !/^bg-|^text-/.test(c));
+		expect(a.sort()).toEqual(b.sort());
 	});
 	it('the default size keeps the regular padding and text-xs', () => {
 		render({ variant: 'success' });

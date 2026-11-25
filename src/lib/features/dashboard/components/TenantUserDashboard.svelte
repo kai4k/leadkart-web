@@ -40,14 +40,14 @@
 			hint: 'dashboard.tile.callbacksToday.hint',
 			timeframe: 'dashboard.timeframe.today',
 			icon: PhoneCall,
-			accent: 'success'
+			accent: 'neutral'
 		},
 		{
 			label: 'dashboard.tile.overdueReminders.label',
 			hint: 'dashboard.tile.overdueReminders.hint',
 			timeframe: 'dashboard.timeframe.now',
 			icon: AlarmClock,
-			accent: 'warning'
+			accent: 'danger'
 		},
 		{
 			label: 'dashboard.tile.myOpenTasks.label',

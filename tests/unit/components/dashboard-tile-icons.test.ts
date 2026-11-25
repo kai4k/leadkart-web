@@ -22,3 +22,25 @@ describe('dashboard tile icons', () => {
 		}
 	);
 });
+
+describe('KPI tile accents are identity; status colours are for real status only', () => {
+	it('no dashboard tile uses success or info, and StatCard has no such accent', () => {
+		for (const name of ['PlatformDashboard', 'TenantAdminDashboard', 'TenantUserDashboard']) {
+			const s = readFileSync(`src/lib/features/dashboard/components/${name}.svelte`, 'utf8');
+			expect(s, name).not.toMatch(/accent: '(success|info)'/);
+		}
+		expect(statCardAccentVariants({ accent: 'primary' })).toBeTruthy();
+		const source = readFileSync('src/lib/components/ui/StatCard.svelte', 'utf8');
+		expect(source).not.toMatch(/\bsuccess:|\binfo:/);
+	});
+
+	it('only the at-risk and overdue tiles are warning or danger', () => {
+		const statusTiles = ['inventoryAlerts', 'overdueTasks', 'overdueReminders'];
+		for (const name of ['PlatformDashboard', 'TenantAdminDashboard', 'TenantUserDashboard']) {
+			const s = readFileSync(`src/lib/features/dashboard/components/${name}.svelte`, 'utf8');
+			for (const m of s.matchAll(/dashboard\.tile\.(\w+)\.label'[\s\S]*?accent: '(\w+)'/g)) {
+				if (m[2] === 'warning' || m[2] === 'danger') expect(statusTiles, m[1]).toContain(m[1]);
+			}
+		}
+	});
+});

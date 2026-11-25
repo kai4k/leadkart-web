@@ -11,13 +11,13 @@
 
 	export const statCardAccentVariants = cva('', {
 		variants: {
+			// `primary` and `neutral` are identity (what a tile is). `warning` and `danger` are STATUS: only a tile that
+			// counts something at risk (`warning`) or overdue (`danger`) takes them; a count is otherwise neutral.
 			accent: {
 				primary: 'text-primary-indicator bg-primary-soft',
-				success: 'text-success bg-success-soft',
+				neutral: 'text-muted-foreground bg-muted',
 				warning: 'text-warning bg-warning-soft',
-				danger: 'text-destructive bg-destructive-soft',
-				info: 'text-info bg-info-soft',
-				neutral: 'text-muted-foreground bg-muted'
+				danger: 'text-destructive bg-destructive-soft'
 			}
 		},
 		defaultVariants: { accent: 'neutral' }

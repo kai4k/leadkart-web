@@ -122,15 +122,21 @@ alphas fixed: `card` (padding and `surface` clay|sheet|tray props, 40+ call site
 group), `skeleton` (shapes), `progress`, `slider`, `breadcrumb` (items array).
 
 - `button/button.svelte`: focus ring offset is `ring-offset-background` (the default offset colour is white:
-  a white halo in dark); `secondary` hover is the opaque `--secondary-hover`; `cva` (not tailwind-variants); Domiex sizes (`h-10 px-6` default, `h-8 px-3
-text-xs` sm, `h-12 px-7` lg, `icon*` squares); `default` uses `hover:bg-primary-hover`,
-  `destructive` is a SOLID fill with `hover:bg-destructive-hover` (the stock one is a translucent
-  tint); `outline` keeps `dark:bg-input-fill`; extra `tonal` variant; `loading` (spinner,
+  a white halo in dark); `secondary` hover is the opaque `--secondary-hover`; `cva` (not tailwind-variants); Pebble World sizes (`h-9 px-4` sm, `h-11 px-5` md, `h-13 px-6` lg, `size-11` icon, `size-9` icon-sm;
+  44 px is the touch floor); variants `primary` (clay, `hover:bg-primary-hover`; ONE per view), `tonal`, `secondary`, `ghost`, `link`,
+  `destructive` (a SOLID clay fill with `hover:bg-destructive-hover`; the stock one is a translucent
+  tint); the shadcn `default` and `outline` are renamed `primary` and `secondary`; the active pagination page is `tonal`; `loading` (spinner,
   `aria-busy`, disabled) and `focusableWhileLoading`; `href` renders an `<a>` (a disabled one has no
   href). The `aria-invalid:` ring alphas are dropped. `fullWidth` is gone: `class="w-full"`.
 - `badge/badge.svelte`: shadcn variants + soft status variants `neutral|info|success|warning|danger|brand`
   on the soft tokens (`bg-success-soft text-success`, ...). `appearance` is gone. `size` is
-  `default | sm`: `sm` is the compact badge of dense lists, status columns and card corners.
+  `default | sm`: `sm` is the compact badge of dense lists, status columns and card corners. `count` (neutral)
+  and `count-urgent` (danger tokens) share one base; a count takes a `label` ("12 unread") that screen
+  readers get instead of the bare number, and an urgent count adds a warning glyph and always says "urgent".
+- `StatusPill`: tint + word + a shape per status (check, alert, cross, info; a dot for neutral and brand).
+- `StatCard` `accent`: `primary` and `neutral` are identity; `warning` and `danger` are status, for a tile that
+  counts something at risk or overdue only.
+- `tooltip/tooltip-content`: milk (spec 7.1), not the inverted foreground fill.
 - `alert/alert.svelte`: LeadKart root (title, icon, dismiss) on soft status tokens; role is `alert` for
   destructive and warning, `status` otherwise. No compound parts (no user).
 - `tabs/tabs-trigger`: `text-foreground/60` -> `text-muted-foreground`; the active tab has a

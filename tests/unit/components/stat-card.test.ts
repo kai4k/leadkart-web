@@ -83,9 +83,9 @@ describe('StatCard', () => {
 	});
 
 	it('draws the icon chip in the requested accent and hides it from assistive technology', () => {
-		render({ label: 'Lead credits', value: 7, icon: Coins, accent: 'success' });
+		render({ label: 'Lead credits', value: 7, icon: Coins, accent: 'warning' });
 		const chip = target.querySelector('[data-accent]');
-		expect(chip?.getAttribute('data-accent')).toBe('success');
+		expect(chip?.getAttribute('data-accent')).toBe('warning');
 		expect(chip?.getAttribute('aria-hidden')).toBe('true');
 		expect(chip?.querySelector('svg')).not.toBeNull();
 	});
