@@ -361,7 +361,10 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 
 	it('the frame keeps 3:1: a pale frame fails', () => {
 		const p = run(
-			mutate('--brand-frame-light: var(--primary-500);', '--brand-frame-light: var(--primary-300);')
+			mutate(
+				'--brand-frame-light: var(--primary-fill);',
+				'--brand-frame-light: var(--primary-300);'
+			)
 		);
 		expect(p.some((x) => x.includes('logo frame'))).toBe(true);
 	});
@@ -374,6 +377,24 @@ describe('fix round D (GD21): the logo keeps its own colours, with its own floor
 		expect(surfaces.has('background')).toBe(false);
 		expect(surfaces.has('popover')).toBe(false);
 		expect(surfaces.has('card') && surfaces.has('primary-soft')).toBe(true);
+	});
+
+	it('the mark on the brand pebble keeps the floors: K vs the pebble 1.6, white L vs K 1.5, in every palette and mode', () => {
+		const pairs = PAIRS as Array<{ fg: string; bg: string; min: number }>;
+		expect(
+			pairs.find((x) => x.fg === 'brand-pebble-capsule' && x.bg === 'app-home')?.min
+		).toBeGreaterThanOrEqual(1.6);
+		expect(
+			pairs.find((x) => x.fg === 'app-glyph' && x.bg === 'brand-pebble-capsule')?.min
+		).toBeGreaterThanOrEqual(1.5);
+		// too pale a K (the old tint, step 200) fails the two-tone floor against the white L
+		const p = run(
+			mutate(
+				'--brand-pebble-capsule: var(--brand-2-500);',
+				'--brand-pebble-capsule: var(--brand-2-200);'
+			)
+		);
+		expect(p.some((x) => x.includes('logo: two tones on the pebble'))).toBe(true);
 	});
 });
 

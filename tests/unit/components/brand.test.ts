@@ -70,10 +70,16 @@ describe('BrandMark', () => {
 		expect(hidden.hasAttribute('aria-label')).toBe(false);
 	});
 
-	it('fills the L from --primary and the K from --brand-2 (sidebar: its own pair)', () => {
+	it('fills the L from --brand-frame (= --primary) and the K from --brand-capsule (= --brand-2): the gated, re-declarable logo tokens', () => {
 		const surface = render(BrandMark).querySelector('[data-brand-mark]')!;
-		expect(surface.className).toContain('[--m1:var(--primary)]');
-		expect(surface.className).toContain('[--m2:var(--brand-2)]');
+		expect(surface.className).toContain('[--m1:var(--brand-frame)]');
+		expect(surface.className).toContain('[--m2:var(--brand-capsule)]');
+		const semantic = readFileSync('src/styles/theme/semantic.css', 'utf8');
+		expect(semantic).toContain('--brand-frame-light: var(--primary-fill);');
+		expect(semantic).toContain('--brand-capsule-light: var(--brand-2-500);');
+		const pebble = render(BrandMark, { tone: 'pebble' }).querySelector('[data-brand-mark]')!;
+		expect(pebble.className).toContain('[--m1:var(--app-glyph)]');
+		expect(pebble.className).toContain('[--m2:var(--brand-pebble-capsule)]');
 		const { l, k } = drawing(surface as HTMLElement);
 		expect(l.getAttribute('class')).toContain('fill-(--m1)');
 		expect(k.getAttribute('class')).toContain('fill-(--m2)');
@@ -99,8 +105,8 @@ describe('BrandMark', () => {
 		expect(html).not.toContain('<circle');
 		const source = readFileSync('src/lib/components/ui/BrandMark.svelte', 'utf8');
 		expect(source).not.toMatch(/#[0-9a-fA-F]{6}\b/);
-		// the sidebar's own pair (--sidebar-brand-*) stays until the sidebar goes; the surface tokens are gone
-		expect(source).not.toMatch(/(?<!sidebar-)brand-(frame|capsule)/);
+		// it paints the gated logo tokens, never a raw palette step
+		expect(source).not.toMatch(/var\(--(primary|brand-2)(-\d+)?\)/);
 		expect(source).not.toContain('--mark-frame');
 	});
 

@@ -125,8 +125,9 @@ describe('the semantic palette switch', () => {
 });
 
 describe('the logo follows the palette', () => {
-	it('the L is the brand colour (step 500) and the K is the second piece', () => {
-		expect(SEMANTIC).toContain('--brand-frame-light: var(--primary-500);');
+	it('the L is the palette primary (--primary) and the K is the second piece (--brand-2)', () => {
+		expect(SEMANTIC).toContain('--brand-frame-light: var(--primary-fill);');
+		expect(SEMANTIC).toContain('--brand-frame-dark: var(--primary-on-dark);');
 		expect(SEMANTIC).toContain('--brand-capsule-light: var(--brand-2-500);');
 		expect(SEMANTIC).toContain('--brand-capsule-dark: var(--brand-2-300);');
 	});

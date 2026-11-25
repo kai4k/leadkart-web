@@ -229,7 +229,8 @@ describe('Pebble World materials in the gate (Task 3)', () => {
 		for (const p of pebble) expect(p.over, p.bg).toBe('pebble-light');
 		expect(pebble.map((p) => p.bg).sort()).toEqual(
 			(PAIRS as Array<{ fg: string; bg: string; alpha?: number }>)
-				.filter((p) => p.fg === 'app-glyph' && p.alpha === undefined)
+				// the glyph on an app colour (not the white L against the pebble's K, which has its own pair)
+				.filter((p) => p.fg === 'app-glyph' && p.alpha === undefined && p.bg.startsWith('app-'))
 				.map((p) => p.bg)
 				.sort()
 		);

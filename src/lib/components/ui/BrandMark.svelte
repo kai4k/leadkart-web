@@ -6,9 +6,11 @@
 		variants: {
 			/** where the mark sits: the sidebar has its own logo tokens (dark in either mode); a pebble paints the L light and the K a light tint of its second piece */
 			tone: {
-				surface: '[--m1:var(--primary)] [--m2:var(--brand-2)]',
+				// --brand-frame is the palette's --primary and --brand-capsule its --brand-2 (semantic.css), re-declared by the
+				// material bar and the pattern band, so the gated logo pairs cover the mark as drawn
+				surface: '[--m1:var(--brand-frame)] [--m2:var(--brand-capsule)]',
 				sidebar: '[--m1:var(--sidebar-brand-frame)] [--m2:var(--sidebar-brand-capsule)]',
-				pebble: '[--m1:var(--pebble-light)] [--m2:var(--brand-2-200)]'
+				pebble: '[--m1:var(--app-glyph)] [--m2:var(--brand-pebble-capsule)]'
 			}
 		},
 		defaultVariants: { tone: 'surface' }

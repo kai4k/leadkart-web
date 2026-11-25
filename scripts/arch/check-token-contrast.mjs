@@ -160,6 +160,10 @@ const RAW_PAIRS = [
 		['brand-capsule', s, LOGO_CAPSULE, { note: 'logo accent' }]
 	]),
 	['brand-capsule', 'brand-frame', LOGO_TWO_TONE, { note: 'logo: two tones' }],
+	// the mark on the brand pebble (AppPebble / BrandIcon): the L is the white glyph (gated against the pebble
+	// above), the K keeps the same floors as everywhere else
+	['brand-pebble-capsule', 'app-home', LOGO_CAPSULE, { note: 'logo accent on the pebble' }],
+	['app-glyph', 'brand-pebble-capsule', LOGO_TWO_TONE, { note: 'logo: two tones on the pebble' }],
 	['brand-capsule-bar', 'brand-frame-bar', LOGO_TWO_TONE, { note: 'logo: two tones on the bar' }],
 	// sidebar
 	['sidebar-foreground', 'sidebar', TEXT],

@@ -75,7 +75,7 @@
 	/* the logo (BrandMark): the L is the brand colour, the K is the second piece. Light values are the steps that
 	   reach 3:1 (the L) and 1.6:1 (the K) on every surface the mark sits on, a translucent bar over the darkest
 	   backdrop included (the gate proves it); dark values are the on-dark steps. */
-	--brand-frame-light: var(--primary-500);
+	--brand-frame-light: var(--primary-fill);
 	--brand-capsule-light: var(--brand-2-500);
 	--brand-capsule-bar-light: var(--brand-2-600);
 	--brand-frame-bar-light: var(--primary-700);
@@ -167,6 +167,9 @@
 	--app-accent: var(--app-home);
 	/* the glyph on an app icon: white on every app colour, 3:1 (the gate measures each) */
 	--app-glyph: oklch(1 0 0);
+	/* the K of the mark on a pebble (BrandMark tone="pebble"; the L is the white glyph): a mid step of the second piece,
+	   >= 1.6:1 against the pebble (--app-home) and >= 1.5:1 against the white L, in every palette (the gate) */
+	--brand-pebble-capsule: var(--brand-2-500);
 
 	/* primary */
 	--primary: light-dark(var(--primary-fill), var(--primary-on-dark));

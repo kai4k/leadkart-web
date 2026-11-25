@@ -24,6 +24,7 @@
 	 *
 	 * `BrandIcon` is this component with the mark, so there is one pebble implementation.
 	 */
+	import type { Component } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { AppKey } from '#lib/config/nav.ts';
 	import Icon from '#lib/icons/Icon.svelte';
@@ -32,8 +33,8 @@
 
 	type Props = Omit<HTMLAttributes<HTMLSpanElement>, 'aria-label' | 'role'> & {
 		app?: AppKey;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		icon?: any;
+		/** a lucide icon (any Svelte component that takes a class) */
+		icon?: Component<{ class?: string }>;
 		size?: AppPebbleSize;
 		label?: string;
 	};

@@ -13,7 +13,7 @@
  * Nothing here has a colour of its own. The colours are resolved from src/styles/theme/*.css (the contrast
  * gate's resolver, the iris palette, light mode): the brand pebble is `--app-home` lit from above exactly as
  * `material-pebble` does (`--pebble-top-mix`, `--pebble-light`, `--pebble-dark`), the L is `--app-glyph`, the K is
- * `--brand-2-200` (the tint the K takes on a pebble, BrandMark tone="pebble"), the theme colour is `--primary`.
+ * `--brand-pebble-capsule` (the K on a pebble, gated; BrandMark tone="pebble"), the theme colour is `--primary`.
  * The path data is src/lib/components/ui/brand-mark-geometry.json, the file BrandMark draws from.
  *
  * Rasterising uses the Chromium that Playwright already installs (no image dependency). `--check` is pure
@@ -52,12 +52,13 @@ export function readTokens(root = REPO) {
 	return {
 		themeColor: hex(color('primary')),
 		backgroundColor: hex(color('background')),
-		// material-pebble: top = accent 82% toward the light, the body = accent, the foot = accent 90% toward the dark
+		// material-pebble: top = the accent mixed 82% (--pebble-top-mix) with the light, i.e. 18% of the way toward it;
+		// the body = the accent; the foot = the accent 90% mixed with the dark, i.e. 10% toward it
 		pebbleTop: hex(toward('pebble-light', 1 - mix)),
 		pebbleBody: hex(accent),
 		pebbleFoot: hex(toward('pebble-dark', 0.1)),
 		glyph: hex(color('app-glyph')),
-		second: hex(color('brand-2-200'))
+		second: hex(color('brand-pebble-capsule'))
 	};
 }
 
@@ -66,6 +67,34 @@ export function readGeometry(root = REPO) {
 		readFileSync(join(root, 'src/lib/components/ui/brand-mark-geometry.json'), 'utf8')
 	);
 }
+
+/**
+ * The pebble's shape, read from the files that own it so the icons cannot drift from the component:
+ * the corner radius (`--radius-pebble`, tokens.css), the gradient's body stop (`material-pebble`, utilities.css)
+ * and the mark's share of the edge (`size-[N%]` in AppPebble.svelte).
+ */
+export function readShape(root = REPO) {
+	const read = (p) => readFileSync(join(root, p), 'utf8');
+	const grab = (text, re, what) => {
+		const m = re.exec(text);
+		if (!m) throw new Error(`generate-icons: cannot read ${what}`);
+		return Number.parseFloat(m[1]) / 100;
+	};
+	return {
+		radius: grab(read('src/styles/tokens.css'), /--radius-pebble:\s*([\d.]+)%/, '--radius-pebble'),
+		bodyStop: grab(
+			read('src/styles/utilities.css'),
+			/var\(--app-accent\)\s+([\d.]+)%,/,
+			'the material-pebble body stop'
+		),
+		mark: grab(
+			read('src/lib/components/ui/AppPebble.svelte'),
+			/size-\[([\d.]+)%\]/,
+			"AppPebble's mark share"
+		)
+	};
+}
+const SHAPE = readShape();
 
 /**
  * One icon as SVG on a 512 square.
@@ -78,12 +107,12 @@ export function iconSvg(tokens, geometry, { shape, drawing, mark }) {
 	const g = geometry[drawing];
 	const size = Math.round(512 * mark);
 	const at = (512 - size) / 2;
-	const radius = shape === 'pebble' ? ` rx="${Math.round(512 * 0.28)}"` : '';
+	const radius = shape === 'pebble' ? ` rx="${Math.round(512 * SHAPE.radius)}"` : '';
 	return [
 		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">',
 		'<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1">',
 		`<stop offset="0" stop-color="${tokens.pebbleTop}"/>`,
-		`<stop offset="0.58" stop-color="${tokens.pebbleBody}"/>`,
+		`<stop offset="${SHAPE.bodyStop}" stop-color="${tokens.pebbleBody}"/>`,
 		`<stop offset="1" stop-color="${tokens.pebbleFoot}"/>`,
 		'</linearGradient></defs>',
 		`<rect width="512" height="512"${radius} fill="url(#p)"/>`,
@@ -96,7 +125,7 @@ export function iconSvg(tokens, geometry, { shape, drawing, mark }) {
 	].join('\n');
 }
 
-const PEBBLE_MARK = 0.62;
+const PEBBLE_MARK = SHAPE.mark;
 /** Android's safe zone for a maskable icon is the inner 80% circle, so the mark stays well inside it. */
 const MASKABLE_MARK = 0.48;
 
