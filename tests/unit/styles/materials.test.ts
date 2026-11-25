@@ -197,7 +197,8 @@ describe('materials-fallbacks.css', () => {
 			'--material-highlight',
 			'--material-bar-shadow',
 			'--material-milk-shadow',
-			'--material-glass-shadow'
+			'--material-glass-shadow',
+			'--solid-edge'
 		];
 		const allowed = new Set([...off.keys(), ...PINNED]);
 		for (const needle of [
@@ -211,6 +212,20 @@ describe('materials-fallbacks.css', () => {
 				expect(allowed.has(key), `${needle} declares ${key}, which the gate never reads`).toBe(
 					true
 				);
+	});
+
+	it('the solid edge is transparent by default and the field border ONLY under increased contrast', () => {
+		expect(root.get('--solid-edge')).toBe('transparent');
+		expect(named('prefers-contrast').decls.get('--solid-edge')).toBe('var(--field-border)');
+		for (const needle of [
+			'@supports not',
+			'prefers-reduced-transparency',
+			'forced-colors',
+			'@media print',
+			'pointer: coarse'
+		])
+			expect(named(needle).decls.has('--solid-edge'), needle).toBe(false);
+		expect(off.has('--solid-edge')).toBe(false);
 	});
 
 	it('increased contrast also swaps the edge for the 3:1 border and drops the highlight', () => {
@@ -280,8 +295,39 @@ describe('materials-fallbacks.css', () => {
 describe('the material utilities', () => {
 	const declared = new Set([...root.keys(), ...reduced.keys(), ...off.keys()]);
 
-	const utility = (name: string) =>
+	const own = (name: string) =>
 		new RegExp(`@utility ${name} \\{([\\s\\S]*?)\\n\\}`).exec(UTILITIES)?.[1];
+	const SHARED = own('material-surface-tokens')!;
+	/** the body of a utility, with the private shared block spliced in where it `@apply`s it */
+	const utility = (name: string) => {
+		const b = own(name);
+		return b?.includes('@apply material-surface-tokens;')
+			? b.replace('@apply material-surface-tokens;', SHARED)
+			: b;
+	};
+
+	it('bar, glass and milk share ONE private block (Rule of Three): none re-declares the seven tokens itself', () => {
+		expect(SHARED).toBeTruthy();
+		const tokens = [...SHARED.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]);
+		expect(tokens.sort()).toEqual(
+			[
+				'--accent',
+				'--input-fill',
+				'--muted',
+				'--muted-foreground',
+				'--primary-text',
+				'--ring',
+				'--subtle-foreground'
+			].sort()
+		);
+		for (const n of ['material-bar', 'material-glass', 'material-milk']) {
+			expect(own(n), n).toContain('@apply material-surface-tokens;');
+			for (const t of tokens)
+				expect(own(n), `${n} ${t}`).not.toMatch(new RegExp(`^\\s*${t}:`, 'm'));
+		}
+		// the sidebar ones read the sidebar's own tokens, so they keep their own block
+		expect(own('material-sidebar')).not.toContain('@apply');
+	});
 
 	it('material-milk is the old pane without the blur: its own fill, no backdrop-filter at all, an edge in forced colours', () => {
 		const body = utility('material-milk')!;
@@ -293,11 +339,11 @@ describe('the material utilities', () => {
 	});
 
 	it.each(['sheet', 'clay', 'clay-sm', 'pebble', 'tray', 'trough'])(
-		'material-%s is solid, has a 1px transparent border (the forced-colours edge) and no filter',
+		'material-%s is solid, has a 1px border of --solid-edge (transparent: the forced-colours edge) and no filter',
 		(m) => {
 			const body = utility(`material-${m}`)!;
 			expect(body, m).not.toBeUndefined();
-			expect(body).toMatch(/^\s*border: 1px solid transparent;$/m);
+			expect(body).toMatch(/^\s*border: 1px solid var\(--solid-edge\);$/m);
 			expect(body).not.toMatch(/backdrop-filter|--material-/);
 			expect(body).toMatch(/box-shadow:/);
 		}
@@ -307,6 +353,12 @@ describe('the material utilities', () => {
 		expect(utility('material-clay')).toContain('var(--shadow-clay)');
 		expect(utility('material-clay-sm')).toContain('var(--shadow-clay-sm)');
 		expect(utility('material-pebble')).toContain('var(--shadow-pebble)');
+		// the coloured drop is built in the utility (a token would resolve --app-accent at :root), the token is insets only
+		expect(utility('material-pebble')).toMatch(
+			/0 6px 10px -6px color-mix\(in srgb, var\(--app-accent\)/
+		);
+		expect(root.get('--shadow-pebble')).not.toContain('--app-accent');
+		expect(root.get('--shadow-pebble')).not.toMatch(/(^|[ (,])(white|black)\b/);
 		expect(utility('material-sheet')).toContain('var(--shadow-sheet)');
 		expect(utility('material-tray')).toContain('var(--shadow-tray)');
 		expect(utility('material-trough')).toContain('var(--shadow-inset)');
@@ -320,7 +372,11 @@ describe('the material utilities', () => {
 
 	it('the pebble is the app colour lit from above: a gradient from --app-accent, a white glyph, a squircle', () => {
 		const body = utility('material-pebble')!;
-		expect(body).toContain('var(--app-accent) var(--pebble-top-mix)');
+		expect(body).toContain('var(--app-accent) var(--pebble-top-mix), var(--pebble-light)');
+		expect(body).toContain('var(--app-accent) 90%, var(--pebble-dark)');
+		expect(body).not.toMatch(/\b(white|black)\b/);
+		// the gate and the paint share the mix target
+		expect(root.get('--pebble-light')).toBe('var(--app-glyph)');
 		expect(body).toContain('color: var(--app-glyph)');
 		expect(body).toContain('border-radius: var(--radius-pebble)');
 		// the 1px transparent border must not tile the far end of the gradient into the edge
@@ -334,12 +390,12 @@ describe('the material utilities', () => {
 			['material-sidebar', 'sidebar-fill', 'glass-filter'],
 			['material-sidebar-bar', 'sidebar-fill', 'bar-filter']
 		]) {
-			const m = new RegExp(`@utility ${name} \\{([\\s\\S]*?)\\n\\}`).exec(UTILITIES);
-			expect(m, name).not.toBeNull();
-			expect(m![1]).toContain(`background-color: var(--material-${fill})`);
-			expect(m![1]).toContain(`backdrop-filter: var(--material-${filter})`);
-			expect(m![1]).toContain('-webkit-backdrop-filter');
-			expect(m![1]).toContain('forced-colors: active');
+			const body = utility(name)!;
+			expect(body, name).toBeTruthy();
+			expect(body).toContain(`background-color: var(--material-${fill})`);
+			expect(body).toContain(`backdrop-filter: var(--material-${filter})`);
+			expect(body).toContain('-webkit-backdrop-filter');
+			expect(body).toContain('forced-colors: active');
 		}
 	});
 
@@ -408,8 +464,7 @@ describe('the material utilities', () => {
 			['material-sidebar', '--sidebar-accent-foreground'],
 			['material-sidebar-bar', '--sidebar-accent-foreground']
 		] as const) {
-			const m = new RegExp(`@utility ${name} \\{([\\s\\S]*?)\\n\\}`).exec(UTILITIES)!;
-			expect(m[1], name).toContain(`--primary-text: var(${token})`);
+			expect(utility(name), name).toContain(`--primary-text: var(${token})`);
 		}
 		expect(root.has('--material-primary-text')).toBe(true);
 	});

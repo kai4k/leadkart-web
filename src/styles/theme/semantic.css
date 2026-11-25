@@ -31,8 +31,8 @@
  *   modifier (`/90`, `/50`, `/70`, `/30`) on a colour that carries contrast.
  *
  * Dark is designed on the same roles: a dark neutral wall (--dark-950, tinted by the palette in
- * --wall-1..3), the clay and card surfaces one step lighter (--dark-900), the sunken troughs one step
- * lighter again, the same status tokens on their 400 steps. The gate measures every pair in both modes.
+ * --wall-1..3), the clay and card surfaces one step lighter (--dark-900), the sunken troughs back at the
+ * wall's depth (--dark-950, a pit is darker than the surface it is cut into), the same status tokens on their 400 steps. The gate measures every pair in both modes.
  * ───────────────────────────────────────────────────────────────────── */
 :root {
 	/* `only light`: Safari 27.3's Adaptive Dark Mode may re-colour a page that has not opted out, and the gated light

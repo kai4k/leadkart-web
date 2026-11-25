@@ -249,6 +249,61 @@ test.describe('materials: computed styles on the built app', () => {
 			}
 		});
 
+		test('a pebble drops a shadow in ITS OWN app colour, not the brand colour', async ({
+			page
+		}) => {
+			await guide(page);
+			const drop = (name: string) =>
+				page.locator(`[data-material="${name}"]`).evaluate((el) => {
+					const s = getComputedStyle(el).boxShadow;
+					// the first shadow of the list: its colour is the part before the offsets
+					return /^(color\([^)]*\)|oklab\([^)]*\)|oklch\([^)]*\)|rgba?\([^)]*\))/.exec(s)?.[1] ?? s;
+				});
+			const leads = await drop('pebble');
+			const home = await drop('pebble-home');
+			expect(leads).not.toBe(home);
+			// and the leads pebble is not tinted by the brand: its gradient colour differs too
+			const bg = (name: string) =>
+				page
+					.locator(`[data-material="${name}"]`)
+					.evaluate((el) => getComputedStyle(el).backgroundImage);
+			expect(await bg('pebble')).not.toBe(await bg('pebble-home'));
+		});
+
+		test('increased contrast: clay, clay-sm, sheet, tray and the pebble get a visible edge of 3:1 against the surface', async ({
+			page
+		}) => {
+			await guide(page);
+			await page.emulateMedia({ contrast: 'more' });
+			for (const name of ['clay', 'clay-sm', 'sheet', 'tray']) {
+				const e = await page.locator(`[data-material="${name}"]`).evaluate((el) => {
+					const cs = getComputedStyle(el);
+					return { border: cs.borderTopColor, width: cs.borderTopWidth };
+				});
+				expect(e.width, name).toBe('1px');
+				expect(e.border, `${name} border`).not.toBe('rgba(0, 0, 0, 0)');
+			}
+			// the edge colour against the swatch's page background: >= 3:1 (WCAG 1.4.11)
+			const ratio = await page.evaluate(() => {
+				const lum = (c: string) => {
+					const cv = document.createElement('canvas').getContext('2d')!;
+					cv.fillStyle = c;
+					cv.fillRect(0, 0, 1, 1);
+					const [r, g, b] = cv.getImageData(0, 0, 1, 1).data.map((v) => {
+						const s = v / 255;
+						return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+					});
+					return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+				};
+				const el = document.querySelector('[data-material="clay-sm"]')!;
+				const edge = lum(getComputedStyle(el).borderTopColor);
+				const surface = lum(getComputedStyle(el.parentElement!).backgroundColor);
+				const [hi, lo] = edge > surface ? [edge, surface] : [surface, edge];
+				return (hi + 0.05) / (lo + 0.05);
+			});
+			expect(ratio).toBeGreaterThanOrEqual(3);
+		});
+
 		test('reduced transparency: glass turns opaque and the solid materials keep their shape', async ({
 			page,
 			browserName

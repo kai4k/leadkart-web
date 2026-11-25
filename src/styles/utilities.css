@@ -163,7 +163,23 @@
  * would be invisible on a dark, brand, purple or sky sidebar). Every re-declared token appears in the
  * gate's layer for that utility (tests/unit/contract/arch-token-contrast-materials.test.ts proves it).
  * A material is never nested in another: the last rule of this file makes the inner one opaque. */
+/* PRIVATE (never written in a component): what bar, glass and milk share, the seven re-declarations and the forced-colours
+ * edge. `@apply`ed into each, so a variant class such as `data-[type=default]:material-milk!` still carries the whole recipe. */
+@utility material-surface-tokens {
+	--muted-foreground: var(--material-muted-foreground);
+	--subtle-foreground: var(--material-muted-foreground);
+	--ring: var(--material-ring);
+	--muted: var(--material-control);
+	--accent: var(--material-control-hover);
+	--input-fill: var(--material-input-fill);
+	--primary-text: var(--material-primary-text);
+	@media (forced-colors: active) {
+		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
+		border: 1px solid CanvasText;
+	}
+}
 @utility material-bar {
+	@apply material-surface-tokens;
 	background-color: var(--material-bar-fill);
 	-webkit-backdrop-filter: var(--material-bar-filter);
 	backdrop-filter: var(--material-bar-filter);
@@ -171,45 +187,25 @@
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
 		var(--material-bar-shadow);
-	--muted-foreground: var(--material-muted-foreground);
-	--subtle-foreground: var(--material-muted-foreground);
-	--ring: var(--material-ring);
-	--muted: var(--material-control);
-	--accent: var(--material-control-hover);
-	--input-fill: var(--material-input-fill);
-	--primary-text: var(--material-primary-text);
 	--primary-indicator: var(--material-indicator);
 	/* the logo on a translucent bar: a deeper capsule and frame (semantic.css), gated on the topbar layer */
 	--brand-frame: var(--brand-frame-bar);
 	--brand-capsule: var(--brand-capsule-bar);
-	@media (forced-colors: active) {
-		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
-		border: 1px solid CanvasText;
-	}
 }
 /* milk: popovers, menus, dialogs, sheets and toasts. Near-opaque and NEVER blurred (no backdrop-filter at all:
  * the blur budget is for glass), so a milk surface may open over anything without being glass on glass. */
 @utility material-milk {
+	@apply material-surface-tokens;
 	background-color: var(--material-milk-fill);
 	box-shadow:
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
 		var(--material-milk-shadow);
-	--muted-foreground: var(--material-muted-foreground);
-	--subtle-foreground: var(--material-muted-foreground);
-	--ring: var(--material-ring);
-	--muted: var(--material-control);
-	--accent: var(--material-control-hover);
-	--input-fill: var(--material-input-fill);
-	--primary-text: var(--material-primary-text);
-	@media (forced-colors: active) {
-		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
-		border: 1px solid CanvasText;
-	}
 }
 /* large glass: the auth card, and the command palette, notifications and New overlays. The pane recipe (24px
  * blur, 84-88% fill), opaque on a coarse pointer through its tokens. */
 @utility material-glass {
+	@apply material-surface-tokens;
 	background-color: var(--material-glass-fill);
 	-webkit-backdrop-filter: var(--material-glass-filter);
 	backdrop-filter: var(--material-glass-filter);
@@ -217,17 +213,6 @@
 		inset 0 1px 0 0 var(--material-highlight),
 		0 0 0 1px var(--material-edge),
 		var(--material-glass-shadow);
-	--muted-foreground: var(--material-muted-foreground);
-	--subtle-foreground: var(--material-muted-foreground);
-	--ring: var(--material-ring);
-	--muted: var(--material-control);
-	--accent: var(--material-control-hover);
-	--input-fill: var(--material-input-fill);
-	--primary-text: var(--material-primary-text);
-	@media (forced-colors: active) {
-		/* stylelint-disable-next-line no-invalid-position-declaration -- a nested @media inside @utility is valid (Tailwind 4) */
-		border: 1px solid CanvasText;
-	}
 }
 @utility material-sidebar {
 	background-color: var(--material-sidebar-fill);
@@ -272,50 +257,53 @@
 }
 
 /* The solid materials (spec 4.3): sheet, clay, clay-sm, pebble, tray, trough. Each is opaque, draws its depth
- * with the shadow tokens of theme/materials.css, and carries a transparent 1px border: forced colours drops
- * every shadow and turns that border into a system-colour edge, so the shape still reads. Radius is not here
+ * with the shadow tokens of theme/materials.css, and carries a 1px border of `--solid-edge` (transparent: forced colours drops
+ * every shadow and turns it into a system-colour edge; `prefers-contrast: more` makes it the field border). Radius is not here
  * (`rounded-sheet`, `rounded-card`, `rounded-control`); the pebble is the exception, a squircle by definition. */
 @utility material-sheet {
 	background-color: var(--card);
 	box-shadow: var(--shadow-sheet);
-	border: 1px solid transparent;
+	border: 1px solid var(--solid-edge);
 }
 @utility material-clay {
 	background-color: var(--card);
 	box-shadow: var(--shadow-clay);
-	border: 1px solid transparent;
+	border: 1px solid var(--solid-edge);
 }
 @utility material-clay-sm {
 	background-color: var(--card);
 	box-shadow: var(--shadow-clay-sm);
-	border: 1px solid transparent;
+	border: 1px solid var(--solid-edge);
 }
 /* the app colour in scope (`.app-<key>`, `--app-accent`), lit from above; the glyph on it is the white `--app-glyph`.
  * `background-origin` keeps the 1px transparent border from tiling the far end of the gradient. */
 @utility material-pebble {
 	background-image: linear-gradient(
 		180deg,
-		color-mix(in srgb, var(--app-accent) var(--pebble-top-mix), white),
+		color-mix(in srgb, var(--app-accent) var(--pebble-top-mix), var(--pebble-light)),
 		var(--app-accent) 58%,
-		color-mix(in srgb, var(--app-accent) 90%, black)
+		color-mix(in srgb, var(--app-accent) 90%, var(--pebble-dark))
 	);
 	background-origin: border-box;
 	color: var(--app-glyph);
 	border-radius: var(--radius-pebble);
-	box-shadow: var(--shadow-pebble);
-	border: 1px solid transparent;
+	/* the coloured drop is built HERE: a token would substitute --app-accent at :root and every app would get the brand's */
+	box-shadow:
+		0 6px 10px -6px color-mix(in srgb, var(--app-accent) 70%, var(--clay-shade)),
+		var(--shadow-pebble);
+	border: 1px solid var(--solid-edge);
 }
 @utility material-tray {
 	background-color: var(--tray);
 	box-shadow: var(--shadow-tray);
-	border: 1px solid transparent;
+	border: 1px solid var(--solid-edge);
 }
 @utility material-trough {
 	background-color: var(--trough);
 	box-shadow:
 		var(--shadow-inset),
 		inset 0 0 0 1px var(--field-border);
-	border: 1px solid transparent;
+	border: 1px solid var(--solid-edge);
 }
 
 /* No glass on glass, structurally: a glass element INSIDE another glass element is OPAQUE and has no filter (the

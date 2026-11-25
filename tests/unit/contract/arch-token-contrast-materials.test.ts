@@ -22,7 +22,7 @@ import {
 	corners
 } from '../../../scripts/arch/lib/material-bound.mjs';
 
-// the real gate resolves 1,320 combinations: slow on a loaded runner
+// the real gate resolves 120 combinations x every pair and layer: slow on a loaded runner
 vi.setConfig({ testTimeout: 30_000 });
 
 describe('check-token-contrast: the legibility bound of a material (plan G3)', () => {
@@ -140,8 +140,8 @@ describe('check-token-contrast: the legibility bound of a material (plan G3)', (
 		expect(r.combinations).toBe(
 			AXES.palette.length * AXES.mode.length * AXES.sidebarColors.length * 3
 		);
-		// 120 combinations x 8 layers: never vacuous (it was 1,320 combinations before the palette and mode axes shrank)
-		expect(r.materialChecks).toBeGreaterThan(20_000);
+		// never vacuous: at least two backdrop corners for every layer in every combination
+		expect(r.materialChecks).toBeGreaterThanOrEqual(r.combinations * MATERIAL_LAYERS.length * 2);
 	});
 
 	it('8. the real files pass', () => {
@@ -222,9 +222,11 @@ describe('Pebble World materials in the gate (Task 3)', () => {
 	});
 
 	it('every app colour is measured on the glossy top of its pebble, at 3:1', () => {
-		const pebble = (PAIRS as Array<{ fg: string; bg: string; min: number; alpha?: number }>).filter(
-			(p) => p.alpha === PEBBLE_TOP
-		);
+		const pebble = (
+			PAIRS as Array<{ fg: string; bg: string; min: number; alpha?: number; over?: string }>
+		).filter((p) => p.alpha === PEBBLE_TOP);
+		// the mix target is the same token the paint mixes toward (`--pebble-light`)
+		for (const p of pebble) expect(p.over, p.bg).toBe('pebble-light');
 		expect(pebble.map((p) => p.bg).sort()).toEqual(
 			(PAIRS as Array<{ fg: string; bg: string; alpha?: number }>)
 				.filter((p) => p.fg === 'app-glyph' && p.alpha === undefined)
@@ -270,6 +272,16 @@ describe('Pebble World materials in the gate (Task 3)', () => {
 		const text = checkCss(files, { layers: [] }).problems.join('\n');
 		expect(text).toContain('field-border on trough');
 		expect(text).toContain('field-border on tray');
+	});
+
+	it('the focus ring is gated at 3:1 on the wall, the tray and the trough as well as the page and the card', () => {
+		const rings = (PAIRS as Array<{ fg: string; bg: string; min: number }>)
+			.filter((p) => p.fg === 'focus-ring')
+			.map((p) => p.bg)
+			.sort();
+		expect(rings).toEqual(
+			['background', 'card', 'tray', 'trough', 'wall-1', 'wall-2', 'wall-3'].sort()
+		);
 	});
 
 	it('the tray and the trough carry the text levels at 4.5', () => {

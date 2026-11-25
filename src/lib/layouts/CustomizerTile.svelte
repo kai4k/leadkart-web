@@ -85,7 +85,7 @@
 	.cz-dots i {
 		inline-size: var(--spacing-1_5);
 		block-size: var(--spacing-1_5);
-		border-radius: 9999px;
+		border-radius: var(--radius-full);
 		background: var(--destructive-indicator);
 	}
 	.cz-dots i:nth-child(2) {
@@ -345,7 +345,7 @@
 		block-size: var(--spacing-2);
 		margin-inline: 30%;
 		margin-block-end: var(--spacing-1);
-		border-radius: 9999px;
+		border-radius: var(--radius-full);
 		background: var(--primary);
 	}
 	[data-preview='dock-side'] .cz-frame {
@@ -361,7 +361,7 @@
 		grid-row: 2;
 		margin: var(--spacing-1);
 		margin-inline: 0;
-		border-radius: 9999px;
+		border-radius: var(--radius-full);
 	}
 	[data-preview='autoHideDock-on'] .cz-nav {
 		opacity: 0.35;

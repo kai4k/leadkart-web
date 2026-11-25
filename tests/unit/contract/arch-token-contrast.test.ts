@@ -12,7 +12,7 @@ import {
 	UNGATED_THEME_FILES
 } from '../../../scripts/arch/check-token-contrast.mjs';
 
-// the real gate resolves 1,320 combinations: slow on a loaded runner
+// the real gate resolves 120 combinations x every pair and layer: slow on a loaded runner
 vi.setConfig({ testTimeout: 30_000 });
 
 /** Self-test of the contrast gate: tiny fixtures, then the real token files. */

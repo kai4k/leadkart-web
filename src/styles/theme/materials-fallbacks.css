@@ -1,8 +1,9 @@
 /* MATERIAL FALLBACKS — every condition under which glass must degrade to an opaque surface (plan G2).
  * Not gated: each block only resolves to the gated `off` values of materials.css (a unit test,
  * tests/unit/styles/materials.test.ts, proves every block repeats the `off` declarations exactly).
- * Clay, pebble, tray and trough are solid in every state, so no block touches them: they keep their shape
- * and their transparent 1px border (which forced colours turn into a visible edge).
+ * Clay, pebble, tray and trough are solid in every state, so no block changes their shape: they keep their
+ * 1px border, transparent (which forced colours turn into a visible edge) except under `prefers-contrast: more`,
+ * the one block that sets `--solid-edge`.
  *
  * `:root:root` has the same specificity as `:root[data-transparency]` (0,2,0) and comes later, so the
  * OS setting wins over the customizer. That is deliberate: Apple's system settings apply across the board. */
@@ -60,6 +61,8 @@
 		--brand-plate-solid: 1;
 		--material-edge: var(--input);
 		--material-highlight: transparent;
+		/* clay, sheet, tray and pebble keep their shape; only their edge turns visible (3:1, gated as --field-border) */
+		--solid-edge: var(--field-border);
 	}
 }
 @media (forced-colors: active) {

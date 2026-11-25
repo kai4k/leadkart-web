@@ -250,6 +250,14 @@
 			>
 				<Icon icon={Plus} size="md" />
 			</div>
+			<div
+				data-material="pebble-home"
+				class="app-home material-pebble grid size-14 place-items-center"
+				aria-label="home pebble"
+				role="img"
+			>
+				<Icon icon={Plus} size="md" />
+			</div>
 		</div>
 	</section>
 

@@ -129,11 +129,17 @@
 	--shadow-clay-sm:
 		0 4px 8px -4px var(--clay-drop), 0 0 0 0.5px var(--clay-hair),
 		inset 0 -2px 3px var(--clay-belly), inset 0 1.5px 1px var(--clay-light);
-	/* a pebble: the app colour is lit from above and shaded below; the outer drop is the colour itself */
+	/* a pebble: lit from above and shaded below. Only the colour-independent insets live here; the outer drop is
+	   the app colour itself and is built in `material-pebble` (a token would resolve --app-accent at :root). */
 	--shadow-pebble:
-		0 6px 10px -6px color-mix(in srgb, var(--app-accent) 70%, var(--clay-shade)),
-		inset 0 -3px 5px color-mix(in srgb, black 20%, transparent),
-		inset 0 2.5px 3px color-mix(in srgb, white 50%, transparent);
+		inset 0 -3px 5px color-mix(in srgb, var(--pebble-dark) 20%, transparent),
+		inset 0 2.5px 3px color-mix(in srgb, var(--pebble-light) 50%, transparent);
+	/* what a pebble's gradient mixes toward at its lit and shaded ends; the gate measures the glyph on the lit end */
+	--pebble-light: var(--app-glyph);
+	--pebble-dark: oklch(0 0 0);
+	/* the 1px border of every solid material: transparent (forced colours paints it), the field border when the
+	   viewer asks for more contrast (materials-fallbacks.css) */
+	--solid-edge: transparent;
 	/* the glossy top of a pebble: the share of the app colour kept at the lit end of the gradient. The gate
 	   measures the white glyph on that exact mix for every app colour (PEBBLE_TOP in check-token-contrast). */
 	--pebble-top-mix: 82%;

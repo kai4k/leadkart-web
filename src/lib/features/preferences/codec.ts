@@ -11,7 +11,7 @@ export const PREFERENCES_COOKIE_MAX_AGE = 31_536_000;
 
 /**
  * The cookie is attacker-controllable text. It is length-capped BEFORE anything decodes it (a real
- * value is about 230 characters), and only ever feeds a presentation-only enum.
+ * value is about 325 characters at most, with every axis at its longest value), and only ever feeds a presentation-only enum.
  */
 const MAX_RAW_LENGTH = 400;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;

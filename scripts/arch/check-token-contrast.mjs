@@ -274,7 +274,13 @@ const RAW_PAIRS = [
 	['primary-tonal-foreground', 'primary-tonal', TEXT, { note: 'soft brand button' }],
 	...['card', 'muted'].map((s) => ['field-border', s, UI, { note: 'field border' }]),
 	['meter-track', 'primary-indicator', UI, { note: 'meter: track against fill' }],
-	...['background', 'card'].map((s) => ['focus-ring', s, UI, { note: 'focus ring' }]),
+	// the ring sits on the page, a card, the wallpaper (a focusable pebble), and a tray or trough (a focused field)
+	...['background', 'card', 'wall-1', 'wall-2', 'wall-3', 'tray', 'trough'].map((s) => [
+		'focus-ring',
+		s,
+		UI,
+		{ note: 'focus ring' }
+	]),
 	['badge-count-foreground', 'badge-count', TEXT, { note: 'neutral count' }],
 	...['wall-1', 'wall-2', 'wall-3'].flatMap((w) =>
 		['foreground', 'muted-foreground'].map((fg) => [fg, w, TEXT, { note: 'text on the wallpaper' }])
@@ -286,7 +292,12 @@ const RAW_PAIRS = [
 		'app-glyph',
 		`app-${a}`,
 		UI,
-		{ alpha: PEBBLE_TOP, alphaOn: 'bg', over: 'app-glyph', note: 'white glyph on the pebble top' }
+		{
+			alpha: PEBBLE_TOP,
+			alphaOn: 'bg',
+			over: 'pebble-light',
+			note: 'white glyph on the pebble top'
+		}
 	]),
 	// the solid fills under a sheet: text and the field border on the tray and the trough (the card is `over`
 	// nothing: both are opaque, so there is no backdrop to vary)

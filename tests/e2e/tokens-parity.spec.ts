@@ -63,7 +63,8 @@ async function setMode(page: Page, mode: string): Promise<void> {
 		.addCookies([{ name: 'lk_ui', value: withMode(mode), url: 'http://localhost:4173' }]);
 }
 
-// Recorded on the tree before the token rebuild (computed values, as Chromium reports them).
+// Chromium's computed values on the Pebble World tokens (re-pinned by hand where a role was deliberately changed,
+// e.g. the primary button is the Iris button step), not the values from before the token rebuild.
 const EXPECTED: Record<string, Measured> = {
 	'/styleguide': {
 		body: { backgroundColor: 'oklch(0.96 0.008 268)', color: 'oklch(0.18 0.02 250)' },

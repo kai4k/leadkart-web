@@ -22,7 +22,7 @@ import {
 } from '../../../scripts/arch/lib/material-bound.mjs';
 import { base, gate, layer, pair, propsFor } from './material-fixtures.ts';
 
-// the real gate resolves 1,320 combinations: slow on a loaded runner
+// the real gate resolves 120 combinations x every pair and layer: slow on a loaded runner
 vi.setConfig({ testTimeout: 30_000 });
 
 type Corner = { side: string; color: { r: number; g: number; b: number } };
@@ -206,8 +206,15 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 		'--brand-capsule': 'the logo is drawn only in the topbar; gated on that layer (next test)'
 	};
 
+	const SHARED_NAME = 'material-surface-tokens';
+	/** a utility's body, with the private shared block spliced in where it is `@apply`ed */
+	const bodyOf = (name: string) => {
+		const b = utilities.find((m) => m[1] === name)![2];
+		return b.replace(`@apply ${SHARED_NAME};`, utilities.find((m) => m[1] === SHARED_NAME)![2]);
+	};
+
 	it('there are five layered utilities, each with at least one layer, and six solid ones that no layer measures', () => {
-		expect(utilities.map((m) => m[1]).sort()).toEqual([...LAYERED, ...SOLID].sort());
+		expect(utilities.map((m) => m[1]).sort()).toEqual([...LAYERED, ...SOLID, SHARED_NAME].sort());
 		for (const name of LAYERED) expect(layersOf(name).length, name).toBeGreaterThan(0);
 		for (const name of SOLID) expect(layersOf(name).length, name).toBe(0);
 	});
@@ -216,19 +223,19 @@ describe('fix round D: the utilities and the gate describe the same surfaces (it
 		for (const name of SOLID) {
 			const body = utilities.find((m) => m[1] === name)![2];
 			expect(body, name).not.toMatch(/backdrop-filter|--material-/);
-			expect(body, name).toContain('border: 1px solid transparent');
+			expect(body, name).toContain('border: 1px solid var(--solid-edge)');
 		}
 	});
 
 	it('the milk utility has no filter at all, and its layers are solid with the filter tokens at 1', () => {
-		const body = utilities.find((m) => m[1] === 'material-milk')![2];
+		const body = bodyOf('material-milk');
 		expect(body).not.toMatch(/backdrop-filter/);
 		for (const l of layersOf('material-milk'))
 			expect((l as { solid?: boolean }).solid, l.layer).toBe(true);
 	});
 
 	it.each(LAYERED)('%s: every re-declared token is gated on each of its layers', (name) => {
-		const body = utilities.find((m) => m[1] === name)![2];
+		const body = bodyOf(name);
 		const redeclared = [...body.matchAll(/^\s*(--[\w-]+):\s*var\(--([\w-]+)\);/gm)];
 		expect(redeclared.length).toBeGreaterThan(4);
 		for (const [, prop, token] of redeclared) {
