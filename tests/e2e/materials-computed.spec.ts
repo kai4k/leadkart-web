@@ -237,8 +237,13 @@ test.describe('materials: computed styles on the built app', () => {
 		});
 
 		test('forced colours: a trough (and every clay) draws a visible edge, not a transparent one', async ({
-			page
+			page,
+			browserName
 		}) => {
+			test.skip(
+				browserName === 'webkit',
+				'WebKit matches (forced-colors: active) under emulation but never repaints; Safari has no forced-colours mode'
+			);
 			await guide(page);
 			await page.emulateMedia({ forcedColors: 'active' });
 			for (const name of MATERIALS) {
@@ -273,8 +278,9 @@ test.describe('materials: computed styles on the built app', () => {
 		test('increased contrast: clay, clay-sm, sheet, tray and the pebble get a visible edge of 3:1 against the surface', async ({
 			page
 		}) => {
-			await guide(page);
+			// Firefox applies a contrast emulation only to a page loaded after it
 			await page.emulateMedia({ contrast: 'more' });
+			await guide(page);
 			for (const name of ['clay', 'clay-sm', 'sheet', 'tray']) {
 				const e = await page.locator(`[data-material="${name}"]`).evaluate((el) => {
 					const cs = getComputedStyle(el);
