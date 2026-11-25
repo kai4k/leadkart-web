@@ -16,7 +16,7 @@
 	export const buttonVariants = cva(
 		[
 			'group/button inline-flex shrink-0 items-center justify-center gap-2 border border-transparent text-sm font-semibold whitespace-nowrap',
-			'transition-[transform,box-shadow,background-color,color,filter] duration-(--duration-fast) outline-none select-none',
+			'transition-[transform,background-color,color,filter] duration-(--duration-fast) outline-none select-none',
 			'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
 			'disabled:pointer-events-none disabled:opacity-60 aria-disabled:pointer-events-none aria-disabled:opacity-60',
 			'motion-reduce:transition-none',
